@@ -1,0 +1,18 @@
+{
+  "services": {
+    "seoul-ttareungi-typing": {
+      "root": ".",
+      "framework": "vite",
+      "buildCommand": "npm ci && npm run build"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "seoul-ttareungi-typing"
+      }
+    }
+  ]
+}
