@@ -1,3 +1,4 @@
+https://seoul-ttareungi-typing.vercel.app
 # 서울 타자 라이딩
 
 서울의 따릉이 코스를 달리며 다음 대여소 이름을 입력하는 반응형 한글 타자 웹게임입니다.
