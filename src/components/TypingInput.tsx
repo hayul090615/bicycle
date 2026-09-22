@@ -25,7 +25,7 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
   const handleCompositionEnd = (event: CompositionEvent<HTMLInputElement>) => {
     setIsComposing(false)
     const committedValue = event.currentTarget.value
-    onValueChange(committedValue, true)
+    onValueChange(committedValue, false)
     onCompositionCommit(committedValue)
   }
   return <section className={`typing-panel ${analysis.isWrong ? 'typing-panel--wrong' : ''}`}>
@@ -48,20 +48,21 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
       <div className="typing-romanization" aria-hidden="true">{romanizeHangul(target)}</div>
       <input ref={ref} id="station-input" className="typing-input" value={value} disabled={disabled}
         autoComplete="off" autoCorrect="off" spellCheck={false} inputMode="text"
-        onChange={(event) => onValueChange(event.target.value, isComposing || (event.nativeEvent as InputEvent).isComposing)}
+        onChange={(event) => onValueChange(event.target.value, (event.nativeEvent as InputEvent).isComposing)}
         onCompositionStart={() => setIsComposing(true)}
         onCompositionUpdate={(event) => onValueChange(event.currentTarget.value, true)}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={(event) => {
+          const compositionInProgress = isComposing || event.nativeEvent.isComposing || event.keyCode === 229
           if (event.key === ' ') {
+            if (compositionInProgress) return
             event.preventDefault()
-            setIsComposing(false)
             onSubmitAttempt(event.currentTarget.value)
             return
           }
           if (event.key === 'Enter') {
+            if (compositionInProgress) return
             event.preventDefault()
-            if (isComposing || event.nativeEvent.isComposing || event.keyCode === 229) return
             onSubmitAttempt(event.currentTarget.value)
           }
         }} />
