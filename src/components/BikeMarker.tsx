@@ -1,6 +1,6 @@
 import type { RoutePoint } from '../types/game'
 
-export const BIKE_IMAGE_PATH = '/bike.svg'
+export const BIKE_IMAGE_PATH = `${import.meta.env.BASE_URL}bike.svg`
 
 interface BikeMarkerProps {
   position: RoutePoint
