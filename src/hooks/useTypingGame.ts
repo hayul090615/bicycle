@@ -23,7 +23,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const [highScore, setHighScore] = useState(() => Number(localStorage.getItem(HIGH_SCORE_KEY) ?? 0))
   const maxPrefixRef = useRef(0)
   const correctUnitsRef = useRef(0)
-  const lastCommittedErrorRef = useRef('')
   const resultSentRef = useRef(false)
   const arrivingRef = useRef(false)
   const lastCompletedValueRef = useRef('')
@@ -36,15 +35,15 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const targetText = nextStation?.typingName ?? nextStation?.name ?? ''
   const rawAnalysis = useMemo(() => analyzeInput(input, targetText), [input, targetText])
   const analysis = useMemo(() => {
-    if (!compositionActive || rawAnalysis.validPrefixLength >= visualPrefixRef.current) return rawAnalysis
-    return {
-      ...rawAnalysis,
-      validPrefixLength: visualPrefixRef.current,
-      firstWrongIndex: -1,
-      isWrong: false,
-      isComplete: false,
-      progress: segmentProgress,
-    }
+    const stableAnalysis = !compositionActive || rawAnalysis.validPrefixLength >= visualPrefixRef.current
+      ? rawAnalysis
+      : {
+          ...rawAnalysis,
+          validPrefixLength: visualPrefixRef.current,
+          progress: segmentProgress,
+        }
+    if (!stableAnalysis.isWrong) return stableAnalysis
+    return { ...stableAnalysis, firstWrongIndex: -1, isWrong: false, isComplete: false }
   }, [compositionActive, rawAnalysis, segmentProgress])
 
   useEffect(() => {
@@ -109,7 +108,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     maxPrefixRef.current = 0
     visualPrefixRef.current = 0
     inputLengthRef.current = 0
-    lastCommittedErrorRef.current = ''
     lastCompletedValueRef.current = completedTarget
     if (nextIndex === course.stations.length - 1) finish(true, nextIndex, nextScore, finalCorrectUnits, nextCombo, Math.max(bestCombo, nextCombo))
   }, [bestCombo, combo, course.stations.length, finish, nextStation, score, stationIndex])
@@ -147,12 +145,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
       setCorrectUnits((count) => count + addedUnits)
       maxPrefixRef.current = nextAnalysis.validPrefixLength
     }
-    if (nextAnalysis.isWrong && !isComposing && sanitizedValue !== lastCommittedErrorRef.current) {
-      setWrongAttempts((count) => count + 1)
-      setCombo(0)
-      setErrorPulse((pulse) => pulse + 1)
-      lastCommittedErrorRef.current = sanitizedValue
-    }
     // 조합 중에도 완성형 음절에 맞춰 이동하되, 목적지 전환은 조합 종료 뒤 처리한다.
     if (nextAnalysis.isComplete && !isComposing) arrive(correctUnitsRef.current)
   }, [arrive, nextStation, status])
@@ -167,12 +159,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     visualPrefixRef.current = committed.validPrefixLength
     inputLengthRef.current = toCharacters(sanitizedValue).length
     setSegmentProgress(committed.progress)
-    if (committed.isWrong && sanitizedValue !== lastCommittedErrorRef.current) {
-      setWrongAttempts((count) => count + 1)
-      setCombo(0)
-      setErrorPulse((pulse) => pulse + 1)
-      lastCommittedErrorRef.current = sanitizedValue
-    }
     if (committed.isComplete) {
       arrive(correctUnitsRef.current)
     }
@@ -197,7 +183,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     setWrongAttempts((count) => count + 1)
     setCombo(0)
     setErrorPulse((pulse) => pulse + 1)
-    lastCommittedErrorRef.current = ''
   }, [arrive, nextStation, status])
 
   const togglePause = () => setStatus((value) => value === 'playing' ? 'paused' : 'playing')

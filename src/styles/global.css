@@ -596,8 +596,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .game-hud .typing-kicker { color: #9ac9c8; }
 .game-hud .typing-input { border-color: #267f83; background: rgba(2,15,21,.82); caret-color: #ffcf63; }
 .game-hud .typing-input:focus { border-color: #3de0cf; box-shadow: 0 0 0 3px rgba(61,224,207,.12), 0 0 20px rgba(61,224,207,.14); }
-.game-hud .target-word .is-correct { color: #52f2cf; border-color: #52f2cf; }
-.game-hud .target-word .is-composing { color: #ffcf63; border-color: #ffcf63; }
+.game-hud .target-word .is-correct,
+.game-hud .target-word .is-composing { color: #fff; border-color: #55c7ff; text-shadow: 0 0 10px rgba(85,199,255,.28); }
 .game-hud .typing-entry {
   position: relative;
   width: min(100%, 780px);
@@ -777,6 +777,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .game-screen--light .typing-kicker { color: #52766c; }
 .game-screen--light .target-word span { color: #869b95; border-color: #cbded7; }
 .game-screen--light .target-word .is-correct { color: #08765b; border-color: #00a875; text-shadow: none; }
+.game-screen--light .target-word .is-composing { color: #08765b; border-color: #00a875; text-shadow: none; }
 .game-screen--light .typing-input { color: #173d36; border-color: #77bebc; background: #f8fcfb; caret-color: #e45840; }
 .game-screen--light .game-hud .typing-entry { background: transparent; }
 .game-screen--light .game-hud .typing-entry:focus-within { background: rgba(7,139,135,.05); box-shadow: inset 0 -2px #078b87; }

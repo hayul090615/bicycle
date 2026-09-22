@@ -60,7 +60,7 @@ function FollowCourse({ course, stationIndex }: { course: DistrictCourse; statio
     const options: FitBoundsOptions = {
       paddingTopLeft: [120, 145],
       paddingBottomRight: [120, 235],
-      maxZoom: 15.5,
+      maxZoom: stationIndex === 0 ? 16.75 : 15.5,
       animate: stationIndex > 0,
       duration: .65,
     }
