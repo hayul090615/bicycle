@@ -1,8 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="초록색 따릉이 자전거">
-  <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#0bd18a"/><stop offset="1" stop-color="#008f68"/></linearGradient></defs>
-  <circle cx="27" cy="80" r="21" fill="white" stroke="#123f38" stroke-width="6"/>
-  <circle cx="91" cy="80" r="21" fill="white" stroke="#123f38" stroke-width="6"/>
-  <path d="M27 80 47 48l18 32H27l14-24h42L91 80M60 39h22l7-12" fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M41 43h17M82 27h12" stroke="#123f38" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="65" cy="80" r="6" fill="#ffce4b" stroke="#123f38" stroke-width="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 388 299" role="img" aria-label="남색 전기 따릉이 자전거">
+  <g fill="none" stroke="#293d4e" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="108" cy="202" r="51" fill="#fff" stroke-width="12"/>
+    <circle cx="294" cy="202" r="51" fill="#fff" stroke-width="12"/>
+    <circle cx="108" cy="202" r="6" fill="#293d4e" stroke-width="4"/>
+    <circle cx="294" cy="202" r="9" fill="#fff" stroke-width="5"/>
+
+    <path d="M75 132h79l18 70H108l38-74 28 74h48" stroke-width="10"/>
+    <path d="M76 132l-8-10M88 142h64" stroke-width="7"/>
+    <path d="M108 202h69l-22-93" stroke-width="10"/>
+    <path d="M137 91h31" stroke-width="14"/>
+    <path d="M151 96l14 43" stroke-width="9"/>
+
+    <path d="M247 89l16 22 31 91" stroke-width="12"/>
+    <path d="M247 89l9-18" stroke-width="9"/>
+    <circle cx="260" cy="65" r="8" fill="#293d4e" stroke-width="4"/>
+    <path d="M256 109h22" stroke-width="8"/>
+    <path d="M177 202l76-92" stroke-width="12"/>
+
+    <path d="M108 202h92" stroke-width="9"/>
+    <path d="M177 202l28 16h22" stroke-width="7"/>
+    <circle cx="177" cy="202" r="9" fill="#293d4e" stroke-width="4"/>
+  </g>
+
+  <path d="M205 115l39-39 18 44-48 83-37-43z" fill="#293d4e" stroke="#293d4e" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M229 116h17l-15 23h14l-29 37 8-28h-14z" fill="#ffd400"/>
 </svg>

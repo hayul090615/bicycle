@@ -227,7 +227,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .leaflet-course-map.map-zoom--far .leaflet-tooltip.route-station-name--active { font-size: 10px; font-weight: 900; }
 .bike-map-marker { background: none; border: 0; transition: transform .58s cubic-bezier(.18,.78,.22,1) !important; will-change: transform; }
 .leaflet-course-map.map-is-zooming .bike-map-marker { transition: none !important; }
-.bike-map-halo { width: 38px; height: 38px; display: grid; place-items: center; border: 2px solid #b7ff3c; border-radius: 50% 50% 50% 12px; background: #0b211b; box-shadow: 0 0 16px rgba(183,255,60,.35); transform: rotate(-10deg); }
+.bike-map-halo { width: 38px; height: 38px; display: grid; place-items: center; border: 2px solid #b7ff3c; border-radius: 50% 50% 50% 12px; background: #fff; box-shadow: 0 0 16px rgba(183,255,60,.35); transform: rotate(-10deg); }
 .bike-map-halo img { width: 31px; height: 31px; transform-origin: center; rotate: 10deg; }
 .bike-map-marker--wrong .bike-map-halo { animation: shake .32s ease; border-color: var(--danger); }
 .bike-map-marker--arriving .bike-map-halo { animation: arrive .48s ease; box-shadow: 0 0 0 9px rgba(24,214,151,.2), 0 4px 13px rgba(10,78,62,.28); }
