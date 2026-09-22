@@ -28,6 +28,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const lastCompletedValueRef = useRef('')
   const visualPrefixRef = useRef(0)
   const inputLengthRef = useRef(0)
+  const acceptedInputRef = useRef('')
   const active = status === 'playing' && hasStartedTyping
   const { elapsedSeconds } = useGameTimer(active)
   const currentStation = course.stations[stationIndex]
@@ -104,6 +105,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     maxPrefixRef.current = 0
     visualPrefixRef.current = 0
     inputLengthRef.current = 0
+    acceptedInputRef.current = ''
     lastCompletedValueRef.current = completedTarget
     if (nextIndex === course.stations.length - 1) finish(true, nextIndex, nextScore, finalCorrectUnits, nextCombo, Math.max(bestCombo, nextCombo))
   }, [bestCombo, combo, course.stations.length, finish, nextStation, score, stationIndex])
@@ -113,23 +115,33 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   }, [stationIndex])
 
   const updateInput = useCallback((value: string, isComposing: boolean) => {
-    if (status !== 'playing' || !nextStation) return
+    if (status !== 'playing' || !nextStation) return acceptedInputRef.current
     // 한글 조합 확정을 위해 누른 스페이스는 게임 입력에서 제거한다.
     const sanitizedValue = value.replace(/\s+/gu, '')
-    if (sanitizedValue.length > 0) setHasStartedTyping(true)
     setCompositionActive(isComposing)
     const nextInputLength = toCharacters(sanitizedValue).length
     const deletedBackward = nextInputLength < inputLengthRef.current
-    inputLengthRef.current = nextInputLength
     const target = nextStation.typingName ?? nextStation.name
     if (sanitizedValue === lastCompletedValueRef.current && sanitizedValue !== target) {
       // A completed Hangul composition can dispatch one last change event after
       // the station has already advanced. Ignore that stale value without
       // clearing input the player may have started for the new station.
-      return
+      return acceptedInputRef.current
     }
     const nextAnalysis = analyzeInput(sanitizedValue, target)
+    const hasIncompleteUnit = nextAnalysis.validPrefixLength < nextAnalysis.inputCharacters.length
+    if ((nextAnalysis.isWrong || hasIncompleteUnit) && !isComposing) {
+      setCompositionActive(false)
+      setInput(acceptedInputRef.current)
+      inputLengthRef.current = toCharacters(acceptedInputRef.current).length
+      return acceptedInputRef.current
+    }
+    if (sanitizedValue.length > 0 && !nextAnalysis.isWrong) setHasStartedTyping(true)
+    inputLengthRef.current = nextInputLength
     setInput(sanitizedValue)
+    if (!nextAnalysis.isWrong) {
+      acceptedInputRef.current = nextAnalysis.inputCharacters.slice(0, nextAnalysis.validPrefixLength).join('')
+    }
     const visualPrefix = isComposing && !deletedBackward
       ? Math.max(visualPrefixRef.current, nextAnalysis.validPrefixLength)
       : nextAnalysis.validPrefixLength
@@ -143,21 +155,34 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     }
     // 조합 중에도 완성형 음절에 맞춰 이동하되, 목적지 전환은 조합 종료 뒤 처리한다.
     if (nextAnalysis.isComplete && !isComposing) arrive(correctUnitsRef.current)
+    return sanitizedValue
   }, [arrive, nextStation, status])
 
   const commitComposition = useCallback((value: string) => {
-    if (status !== 'playing' || !nextStation) return
+    if (status !== 'playing' || !nextStation) return acceptedInputRef.current
     const sanitizedValue = value.replace(/\s+/gu, '')
     setCompositionActive(false)
     const target = nextStation.typingName ?? nextStation.name
-    if (sanitizedValue === lastCompletedValueRef.current && sanitizedValue !== target) return
+    if (sanitizedValue === lastCompletedValueRef.current && sanitizedValue !== target) return acceptedInputRef.current
     const committed = analyzeInput(sanitizedValue, target)
+    if (committed.isWrong || committed.validPrefixLength < committed.inputCharacters.length) {
+      const acceptedValue = acceptedInputRef.current
+      const acceptedAnalysis = analyzeInput(acceptedValue, target)
+      setInput(acceptedValue)
+      visualPrefixRef.current = acceptedAnalysis.validPrefixLength
+      inputLengthRef.current = toCharacters(acceptedValue).length
+      setSegmentProgress(acceptedAnalysis.progress)
+      return acceptedValue
+    }
+    setInput(sanitizedValue)
+    acceptedInputRef.current = sanitizedValue
     visualPrefixRef.current = committed.validPrefixLength
     inputLengthRef.current = toCharacters(sanitizedValue).length
     setSegmentProgress(committed.progress)
     if (committed.isComplete) {
       arrive(correctUnitsRef.current)
     }
+    return sanitizedValue
   }, [arrive, nextStation, status])
 
   const submitInput = useCallback((value: string) => {
@@ -176,6 +201,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     visualPrefixRef.current = 0
     maxPrefixRef.current = 0
     inputLengthRef.current = 0
+    acceptedInputRef.current = ''
     setWrongAttempts((count) => count + 1)
     setCombo(0)
     setErrorPulse((pulse) => pulse + 1)

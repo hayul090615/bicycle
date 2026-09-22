@@ -1,4 +1,4 @@
-import { forwardRef, useState, type CompositionEvent } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CompositionEvent } from 'react'
 import { romanizeHangul, type InputAnalysis } from '../utils/hangul'
 
 interface TypingInputProps {
@@ -7,15 +7,20 @@ interface TypingInputProps {
   analysis: InputAnalysis
   disabled: boolean
   timerStarted: boolean
-  onValueChange: (value: string, isComposing: boolean) => void
-  onCompositionCommit: (value: string) => void
+  onValueChange: (value: string, isComposing: boolean) => string
+  onCompositionCommit: (value: string) => string
   onSubmitAttempt: (value: string) => void
 }
 
 export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(function TypingInput(
   { target, value, analysis, disabled, timerStarted, onValueChange, onCompositionCommit, onSubmitAttempt }, ref,
 ) {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [isComposing, setIsComposing] = useState(false)
+  useImperativeHandle(ref, () => inputRef.current!, [])
+  useEffect(() => {
+    if (!isComposing && inputRef.current && inputRef.current.value !== value) inputRef.current.value = value
+  }, [isComposing, target, value])
   const targetLength = analysis.targetCharacters.length
   const displayCharacters = Array.from(
     { length: Math.max(targetLength, analysis.inputCharacters.length) },
@@ -25,8 +30,8 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
   const handleCompositionEnd = (event: CompositionEvent<HTMLInputElement>) => {
     setIsComposing(false)
     const committedValue = event.currentTarget.value
-    onValueChange(committedValue, false)
-    onCompositionCommit(committedValue)
+    const acceptedValue = onCompositionCommit(committedValue)
+    if (event.currentTarget.value !== acceptedValue) event.currentTarget.value = acceptedValue
   }
   return <section className={`typing-panel ${analysis.isWrong ? 'typing-panel--wrong' : ''}`}>
     <p className="typing-kicker">다음 대여소 이름을 입력하세요</p>
@@ -46,9 +51,13 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
         })}
       </div>
       <div className="typing-romanization" aria-hidden="true">{romanizeHangul(target)}</div>
-      <input ref={ref} id="station-input" className="typing-input" value={value} disabled={disabled}
+      <input ref={inputRef} id="station-input" className="typing-input" defaultValue={value} disabled={disabled}
         autoComplete="off" autoCorrect="off" spellCheck={false} inputMode="text"
-        onChange={(event) => onValueChange(event.target.value, (event.nativeEvent as InputEvent).isComposing)}
+        onChange={(event) => {
+          const composing = (event.nativeEvent as InputEvent).isComposing
+          const acceptedValue = onValueChange(event.target.value, composing)
+          if (!composing && event.currentTarget.value !== acceptedValue) event.currentTarget.value = acceptedValue
+        }}
         onCompositionStart={() => setIsComposing(true)}
         onCompositionUpdate={(event) => onValueChange(event.currentTarget.value, true)}
         onCompositionEnd={handleCompositionEnd}
