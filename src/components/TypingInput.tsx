@@ -16,6 +16,7 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
   { target, value, analysis, disabled, timerStarted, onValueChange, onCompositionCommit, onSubmitAttempt }, ref,
 ) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const composingRef = useRef(false)
   const [isComposing, setIsComposing] = useState(false)
   useImperativeHandle(ref, () => inputRef.current!, [])
   useEffect(() => {
@@ -28,6 +29,7 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
   )
   const lengthClass = targetLength > 14 ? 'target-word--very-long' : targetLength > 7 ? 'target-word--long' : ''
   const handleCompositionEnd = (event: CompositionEvent<HTMLInputElement>) => {
+    composingRef.current = false
     setIsComposing(false)
     const committedValue = event.currentTarget.value
     const acceptedValue = onCompositionCommit(committedValue)
@@ -54,15 +56,15 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
       <input ref={inputRef} id="station-input" className="typing-input" defaultValue={value} disabled={disabled}
         autoComplete="off" autoCorrect="off" spellCheck={false} inputMode="text"
         onChange={(event) => {
-          const composing = (event.nativeEvent as InputEvent).isComposing
+          const composing = composingRef.current || (event.nativeEvent as InputEvent).isComposing
           const acceptedValue = onValueChange(event.target.value, composing)
           if (!composing && event.currentTarget.value !== acceptedValue) event.currentTarget.value = acceptedValue
         }}
-        onCompositionStart={() => setIsComposing(true)}
+        onCompositionStart={() => { composingRef.current = true; setIsComposing(true) }}
         onCompositionUpdate={(event) => onValueChange(event.currentTarget.value, true)}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={(event) => {
-          const compositionInProgress = isComposing || event.nativeEvent.isComposing || event.keyCode === 229
+          const compositionInProgress = composingRef.current || isComposing || event.nativeEvent.isComposing || event.keyCode === 229
           if (event.key === ' ') {
             if (compositionInProgress) return
             event.preventDefault()

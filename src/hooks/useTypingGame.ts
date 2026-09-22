@@ -129,13 +129,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
       return acceptedInputRef.current
     }
     const nextAnalysis = analyzeInput(sanitizedValue, target)
-    const hasIncompleteUnit = nextAnalysis.validPrefixLength < nextAnalysis.inputCharacters.length
-    if ((nextAnalysis.isWrong || hasIncompleteUnit) && !isComposing) {
-      setCompositionActive(false)
-      setInput(acceptedInputRef.current)
-      inputLengthRef.current = toCharacters(acceptedInputRef.current).length
-      return acceptedInputRef.current
-    }
     if (sanitizedValue.length > 0 && !nextAnalysis.isWrong) setHasStartedTyping(true)
     inputLengthRef.current = nextInputLength
     setInput(sanitizedValue)
