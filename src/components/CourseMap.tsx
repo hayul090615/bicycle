@@ -1,4 +1,4 @@
-import { Fragment, memo, useEffect, useMemo, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import { divIcon, latLngBounds, type FitBoundsOptions, type LatLngExpression } from 'leaflet'
 import { CircleMarker, GeoJSON, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import type { BikeStation, DistrictCourse, GeoPoint } from '../types/game'
@@ -53,6 +53,7 @@ function expandDistrictFeature(feature: DistrictGeoFeature, scale = 1.1): Distri
 
 function FollowCourse({ course, stationIndex }: { course: DistrictCourse; stationIndex: number }) {
   const map = useMap()
+  const courseZoomRef = useRef<number | null>(null)
   useEffect(() => {
     const visibleStations = course.stations.slice(stationIndex, Math.min(course.stations.length, stationIndex + 2))
     const bounds = latLngBounds(visibleStations.map((station) => [station.lat, station.lng]))
@@ -60,12 +61,15 @@ function FollowCourse({ course, stationIndex }: { course: DistrictCourse; statio
     const options: FitBoundsOptions = {
       paddingTopLeft: [120, 145],
       paddingBottomRight: [120, 235],
-      maxZoom: stationIndex === 0 ? 16.75 : 15.5,
-      animate: stationIndex > 0,
-      duration: .65,
+      maxZoom: 16.75,
+      animate: false,
     }
-    if (stationIndex === 0) map.fitBounds(bounds, options)
-    else map.flyToBounds(bounds, options)
+    if (stationIndex === 0 || courseZoomRef.current === null) {
+      map.fitBounds(bounds, options)
+      courseZoomRef.current = map.getZoom()
+      return
+    }
+    map.flyTo(bounds.getCenter(), courseZoomRef.current, { animate: true, duration: .65 })
   }, [course, map, stationIndex])
   return null
 }

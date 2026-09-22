@@ -76,8 +76,8 @@ export function DistrictSelector({ selected, onSelect, onStart, highScore, playe
         <div className="start-bike-decor" aria-hidden="true">
           <img src={BIKE_IMAGE_PATH} alt="" />
           <div>
-            <b>{selected ? `${selected} 1·2차 코스` : '자치구별 1·2차 코스'}</b>
-            <small>{selected && course ? `1차 ${course.stations.length}곳 · 완주 후 2차` : '대여소를 절반씩 나눠 달려요'}</small>
+            <b>{selected ? `${selected} 1·2·3차 코스` : '자치구별 1·2·3차 코스'}</b>
+            <small>{selected && course ? `1차 ${course.stations.length}곳 · 완주 후 2·3차` : '대여소를 세 코스로 나눠 달려요'}</small>
           </div>
         </div>
         <SeoulDistrictMap selected={selected} onSelect={onSelect} playedStationCounts={playedStationCounts} />

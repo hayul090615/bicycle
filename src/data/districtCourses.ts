@@ -142,15 +142,23 @@ export function createDistrictCourse(district: SeoulDistrict, playedStationIds: 
   const districtStations = boundaryStations.length >= 2 ? boundaryStations : taggedStations
   const playedIds = new Set(playedStationIds)
   const unplayedStations = districtStations.filter((station) => !playedIds.has(station.id))
-  const stationPool = unplayedStations.length >= 2 ? unplayedStations : districtStations
-  const stationsPerCourse = Math.ceil(districtStations.length / 2)
-  const selectedStations = pickNearbyRoute(stationPool, Math.min(stationsPerCourse, stationPool.length))
+  const targetsPerCourse = Math.ceil(Math.max(1, districtStations.length - 1) / 3)
+  const restarting = unplayedStations.length === 0
+  const previousFinish = !restarting ? districtStations.find((station) => station.id === playedStationIds.at(-1)) : undefined
+  const stationPool = restarting ? districtStations : unplayedStations
+  const selectedStations = pickNearbyRoute(
+    stationPool,
+    Math.min(targetsPerCourse + 1, stationPool.length + (previousFinish ? 1 : 0)),
+    previousFinish ? [previousFinish] : [],
+  )
   const typingNames = makeDistrictTypingNames(districtStations)
-  const coursePart = playedStationIds.length > 0 && unplayedStations.length < districtStations.length ? 2 : 1
+  const playedInDistrict = districtStations.filter((station) => playedIds.has(station.id)).length
+  const completedTargets = Math.max(0, playedInDistrict - 1)
+  const coursePart = restarting ? 1 : Math.min(3, Math.floor(completedTargets / targetsPerCourse) + 1)
   return {
     district,
-    title: `${district} 따릉이 타자 코스 ${coursePart}/2`,
-    description: `${district}의 실제 따릉이 대여소를 두 코스로 나누어 달립니다.`,
+    title: `${district} 따릉이 타자 코스 ${coursePart}/3`,
+    description: `${district}의 실제 따릉이 대여소를 세 코스로 나누어 달립니다.`,
     durationSeconds: Math.max(180, selectedStations.length * 4),
     isSample: false,
     source: stationData.source,

@@ -22,20 +22,23 @@ export function GameResult({ district, result, highScore, totalStations, leaderb
   const rankingRows = currentRank > 10 && currentEntry
     ? [...leaderboard.slice(0, 10), currentEntry]
     : leaderboard.slice(0, 10)
-  return <main className="result-screen"><section className="result-card">
-    <div className={`result-icon ${result.completed ? 'result-icon--complete' : ''}`}>{result.completed ? '⚑' : '⌛'}</div>
-    <span className="eyebrow">{district} RIDE REPORT</span>
-    <h1>{result.completed ? '코스 완주!' : '시간 종료'}</h1>
-    <p>{result.completed ? '모든 대여소를 지나 도착점에 도착했어요.' : '여기까지도 멋진 라이딩이었어요. 다시 도전해 보세요.'}</p>
-    <div className="score-block"><span>총점</span><strong>{result.score.toLocaleString()}</strong><small>최고 점수 {highScore.toLocaleString()}</small></div>
-    <div className="result-stats">
-      <div><span>걸린 시간</span><strong>{minutes}:{String(seconds).padStart(2, '0')}</strong></div>
-      <div><span>정확도</span><strong>{result.accuracy}%</strong></div>
-      <div><span>분당 타수</span><strong>{result.cpm}</strong></div>
-      <div><span>최고 연속 정답</span><strong>{result.bestCombo}</strong></div>
-      <div><span>통과한 대여소</span><strong>{result.passedStations} / {totalStations - 1}</strong></div>
-    </div>
-    <section className="leaderboard" aria-label="라이딩 랭킹">
+  return <main className="result-screen"><div className="result-layout"><section className="result-card">
+      <div className={`result-icon ${result.completed ? 'result-icon--complete' : ''}`}>{result.completed ? '⚑' : '⌛'}</div>
+      <span className="eyebrow">{district} RIDE REPORT</span>
+      <h1>{result.completed ? '코스 완주!' : '라이딩 종료'}</h1>
+      <p>{result.completed ? '모든 대여소를 지나 도착점에 도착했어요.' : '여기까지도 멋진 라이딩이었어요. 다시 도전해 보세요.'}</p>
+      <div className="score-block"><span>총점</span><strong>{result.score.toLocaleString()}</strong><small>최고 점수 {highScore.toLocaleString()}</small></div>
+      <div className="result-stats">
+        <div><span>걸린 시간</span><strong>{minutes}:{String(seconds).padStart(2, '0')}</strong></div>
+        <div><span>정확도</span><strong>{result.accuracy}%</strong></div>
+        <div><span>분당 타수</span><strong>{result.cpm}</strong></div>
+        <div><span>최고 연속 정답</span><strong>{result.bestCombo}</strong></div>
+        <div><span>통과한 대여소</span><strong>{result.passedStations} / {totalStations - 1}</strong></div>
+      </div>
+      <div className="result-actions"><button className="button button--primary" onClick={onRetry}>다시 하기</button><button className="button button--secondary" onClick={onHome}>자치구 선택으로</button></div>
+    </section>
+    <aside className="result-ranking-sidebar">
+      <section className="leaderboard" aria-label="라이딩 랭킹">
       <header><div><span>LOCAL RANKING</span><h2>라이딩 랭킹</h2></div>{currentRank > 0 && <strong>이번 기록 {currentRank}위</strong>}</header>
       <div className="leaderboard-list">
         {rankingRows.map((entry, rowIndex) => {
@@ -52,7 +55,7 @@ export function GameResult({ district, result, highScore, totalStations, leaderb
           </div>
         })}
       </div>
-    </section>
-    <div className="result-actions"><button className="button button--primary" onClick={onRetry}>다시 하기</button><button className="button button--secondary" onClick={onHome}>자치구 선택으로</button></div>
-  </section></main>
+      </section>
+    </aside>
+  </div></main>
 }

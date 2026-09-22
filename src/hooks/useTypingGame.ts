@@ -29,7 +29,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const visualPrefixRef = useRef(0)
   const inputLengthRef = useRef(0)
   const active = status === 'playing' && hasStartedTyping
-  const { remainingSeconds, elapsedSeconds } = useGameTimer(course.durationSeconds, active)
+  const { elapsedSeconds } = useGameTimer(active)
   const currentStation = course.stations[stationIndex]
   const nextStation = course.stations[stationIndex + 1]
   const targetText = nextStation?.typingName ?? nextStation?.name ?? ''
@@ -84,10 +84,6 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     setHighScore(nextHighScore)
     onFinish(result)
   }, [buildResult, highScore, onFinish])
-
-  useEffect(() => {
-    if (status === 'playing' && remainingSeconds === 0) finish(false)
-  }, [finish, remainingSeconds, status])
 
   const arrive = useCallback((finalCorrectUnits = correctUnitsRef.current) => {
     if (!nextStation || arrivingRef.current) return
@@ -192,7 +188,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   return {
     status, countdown, stationIndex, currentStation, nextStation, targetText, input, analysis, segmentProgress, hasStartedTyping,
     score, combo, bestCombo, accuracy, correctUnits, wrongAttempts,
-    remainingSeconds, elapsedSeconds, highScore, errorPulse, arrivalPulse,
+    elapsedSeconds, highScore, errorPulse, arrivalPulse,
     updateInput, commitComposition, submitInput, togglePause,
   }
 }

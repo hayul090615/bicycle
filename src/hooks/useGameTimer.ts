@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 
-export function useGameTimer(durationSeconds: number, active: boolean) {
-  const [remainingSeconds, setRemainingSeconds] = useState(durationSeconds)
+export function useGameTimer(active: boolean) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   useEffect(() => {
     if (!active) return
-    const intervalId = window.setInterval(() => setRemainingSeconds((current) => Math.max(0, current - 1)), 1000)
+    const intervalId = window.setInterval(() => setElapsedSeconds((current) => current + 1), 1000)
     return () => window.clearInterval(intervalId)
   }, [active])
-  return { remainingSeconds, elapsedSeconds: durationSeconds - remainingSeconds }
+  return { elapsedSeconds }
 }
