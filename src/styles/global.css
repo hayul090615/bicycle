@@ -908,7 +908,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map { height: 325px; width: 100%; }
 .tour-map-note { margin: 0; padding: .55rem .75rem; color: #5a7668; background: #f2f8f3; font-size: .68rem; line-height: 1.45; }
 .tour-ride-preview { overflow: hidden; border: 1px solid #dce8dc; border-radius: 14px; background: #ecf4ef; }
-.third-person-scene { width: 100%; height: clamp(300px, 48vh, 430px); min-height: 280px; background: linear-gradient(#a9d8e4,#78ae78); }
+.third-person-scene { position: relative; width: 100%; height: clamp(300px, 48vh, 430px); min-height: 280px; background: linear-gradient(#a9d8e4,#78ae78); }
+.third-person-scene::after { content: attr(data-map-label); position: absolute; left: .7rem; bottom: .7rem; max-width: calc(100% - 1.4rem); padding: .42rem .62rem; border: 1px solid rgba(255,255,255,.65); border-radius: 7px; color: #f7fffb; background: rgba(20,48,43,.76); font-size: .68rem; font-weight: 650; line-height: 1.35; pointer-events: none; backdrop-filter: blur(5px); }
 .third-person-scene canvas { width: 100%; height: 100%; display: block; }
 .tour-cctv-card h2 { margin: .35rem 0 .3rem; font-size: 1.25rem; letter-spacing: -.035em; }
 .tour-locate-button { width: 100%; justify-content: center; cursor: pointer; font: inherit; }
