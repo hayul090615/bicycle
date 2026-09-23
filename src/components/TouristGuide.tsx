@@ -41,6 +41,62 @@ function TourMap({ route, locale }: { route: TouristRoute; locale: Locale }) {
   </div>
 }
 
+function RideThrough3D({ route, locale }: { route: TouristRoute; locale: Locale }) {
+  const [stopIndex, setStopIndex] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [view, setView] = useState<'ride' | 'map'>('ride')
+  const stop = route.stops[stopIndex]
+  const station = getTouristStation(stop.stationId)
+
+  useEffect(() => {
+    setStopIndex(0)
+    setPlaying(false)
+  }, [route.id])
+  useEffect(() => {
+    if (!playing) return
+    const timer = window.setInterval(() => {
+      setStopIndex((index) => {
+        if (index >= route.stops.length - 1) {
+          setPlaying(false)
+          return 0
+        }
+        return index + 1
+      })
+    }, 2800)
+    return () => window.clearInterval(timer)
+  }, [playing, route.stops.length])
+
+  return <section className="tour-ride-preview" aria-label={textFor(locale, '3D ride-through preview', '3D 주행 미리보기')}>
+    <div className="tour-ride-toolbar">
+      <div><span className="tour-card-kicker">{textFor(locale, 'STREET-LEVEL VIEW', '거리 시점')}</span>
+        <strong>{textFor(locale, 'Ride through this route', '자전거를 타고 코스를 달려보세요')}</strong></div>
+      <div className="tour-view-switch" role="group" aria-label={textFor(locale, 'View mode', '보기 방식')}>
+        <button type="button" aria-pressed={view === 'ride'} onClick={() => setView('ride')}>3D</button>
+        <button type="button" aria-pressed={view === 'map'} onClick={() => setView('map')}>{textFor(locale, 'Map', '지도')}</button>
+      </div>
+    </div>
+    {view === 'ride' ? <>
+      <div className={`tour-ride-scene ${playing ? 'is-moving' : ''}`}>
+        <div className="tour-ride-sky"><span className="tour-ride-sun" /><span className="tour-ride-cloud cloud-one" /><span className="tour-ride-cloud cloud-two" /></div>
+        <div className="tour-ride-city" aria-hidden="true">
+          <i className="ride-building building-one" /><i className="ride-building building-two" /><i className="ride-building building-three" />
+          <i className="ride-tree tree-one">🌳</i><i className="ride-tree tree-two">🌳</i>
+        </div>
+        <div className="tour-ride-landmark"><span>📍</span><strong>{textFor(locale, stop.place, stop.placeKo)}</strong></div>
+        <div className="tour-ride-path"><span className="ride-path-center" /><i className="ride-path-rail rail-left" /><i className="ride-path-rail rail-right" /></div>
+        <div className="tour-ride-rider" aria-hidden="true"><span>🚴</span></div>
+        <div className="tour-ride-hud"><span>3D RIDE</span><span>{stopIndex + 1} / {route.stops.length}</span></div>
+      </div>
+      <div className="tour-ride-controls">
+        <button type="button" className="tour-ride-play" onClick={() => setPlaying(!playing)}>{playing ? 'Ⅱ' : '▶'} {textFor(locale, playing ? 'Pause ride' : 'Start ride', playing ? '일시정지' : '주행 시작')}</button>
+        <input aria-label={textFor(locale, 'Ride progress', '주행 위치')} type="range" min="0" max={route.stops.length - 1} value={stopIndex} onChange={(event) => { setStopIndex(Number(event.target.value)); setPlaying(false) }} />
+        <span>{textFor(locale, `${Math.round((stopIndex / Math.max(1, route.stops.length - 1)) * 100)}%`, `${Math.round((stopIndex / Math.max(1, route.stops.length - 1)) * 100)}%`)}</span>
+      </div>
+      <p className="tour-map-note">{textFor(locale, `Illustrated 3D-style preview at ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}. It is not recorded street footage or turn-by-turn navigation.`, `${station.lat.toFixed(4)}, ${station.lng.toFixed(4)} 위치를 바탕으로 만든 3D 스타일 일러스트입니다. 실제 촬영 영상이나 길안내는 아닙니다.`)}</p>
+    </> : <TourMap route={route} locale={locale} />}
+  </section>
+}
+
 function ShadowPreview({ route, locale }: { route: TouristRoute; locale: Locale }) {
   const [date, setDate] = useState(todayInSeoul)
   const [minutes, setMinutes] = useState(15 * 60)
@@ -162,7 +218,7 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
           <div className="tour-panel-heading"><div><span className="tour-card-kicker">{textFor(locale, 'YOUR ROUTE', '선택한 코스')}</span>
             <h2>{textFor(locale, route.title, route.titleKo)}</h2><p>{textFor(locale, route.summary, route.summaryKo)}</p></div>
             <span className="tour-duration">◷ {textFor(locale, route.suggestedTime, route.suggestedTimeKo)}</span></div>
-          <TourMap route={route} locale={locale} />
+          <RideThrough3D route={route} locale={locale} />
           <ol className="tour-stops">
             {route.stops.map((stop, index) => {
               const station = getTouristStation(stop.stationId)

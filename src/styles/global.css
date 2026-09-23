@@ -907,6 +907,36 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map-wrap { overflow: hidden; border: 1px solid #dce8dc; border-radius: 14px; background: #ecf4ef; }
 .tour-map { height: 325px; width: 100%; }
 .tour-map-note { margin: 0; padding: .55rem .75rem; color: #5a7668; background: #f2f8f3; font-size: .68rem; line-height: 1.45; }
+.tour-ride-preview { overflow: hidden; border: 1px solid #dce8dc; border-radius: 14px; background: #ecf4ef; }
+.tour-ride-toolbar { min-height: 57px; padding: .65rem .8rem; display: flex; align-items: center; justify-content: space-between; gap: .7rem; background: #fff; }
+.tour-ride-toolbar > div:first-child { display: grid; gap: .16rem; }
+.tour-ride-toolbar strong { color: #20463b; font-size: .8rem; }
+.tour-view-switch { display: flex; padding: 3px; border: 1px solid #dce9de; border-radius: 8px; background: #f3f8f4; }
+.tour-view-switch button { padding: .35rem .6rem; border: 0; border-radius: 6px; color: #527365; background: transparent; font-size: .68rem; font-weight: 800; cursor: pointer; }
+.tour-view-switch button[aria-pressed='true'] { color: #fff; background: #168e61; }
+.tour-ride-scene { height: 325px; position: relative; overflow: hidden; perspective: 650px; isolation: isolate; background: linear-gradient(#9bd9e7 0%, #d9f0df 58%, #83bc83 100%); }
+.tour-ride-sky { position: absolute; inset: 0 0 38%; overflow: hidden; }
+.tour-ride-sun { position: absolute; top: 12%; right: 15%; width: 42px; height: 42px; border-radius: 50%; background: #ffe28b; box-shadow: 0 0 35px #ffe28b; }
+.tour-ride-cloud { position: absolute; width: 100px; height: 24px; border-radius: 50%; background: rgba(255,255,255,.72); filter: blur(1px); }
+.cloud-one { top: 25%; left: 17%; }.cloud-two { top: 13%; left: 53%; transform: scale(.72); }
+.tour-ride-city { position: absolute; inset: 17% 0 32%; display: flex; align-items: end; justify-content: space-around; perspective: 500px; }
+.ride-building { display: block; width: 13%; border: 2px solid rgba(255,255,255,.35); background: repeating-linear-gradient(90deg, transparent 0 14px, rgba(255,245,192,.7) 15px 19px), repeating-linear-gradient(0deg, #648e80 0 19px, #9cc4a9 20px 25px); box-shadow: 8px 10px 0 rgba(45,96,79,.17); transform: rotateY(-12deg); }
+.building-one { height: 52%; }.building-two { height: 83%; width: 17%; background-color: #8ba69a; }.building-three { height: 63%; width: 12%; }
+.ride-tree { position: absolute; bottom: -9%; font-style: normal; font-size: 3rem; filter: drop-shadow(5px 7px 0 rgba(37,88,61,.15)); }.tree-one { left: 9%; }.tree-two { right: 11%; }
+.tour-ride-landmark { position: absolute; top: 17%; left: 50%; z-index: 2; display: grid; justify-items: center; gap: .2rem; transform: translateX(-50%); color: #194b3a; text-shadow: 0 1px white; }
+.tour-ride-landmark span { font-size: 1.4rem; filter: drop-shadow(0 2px 2px #fff); }.tour-ride-landmark strong { max-width: 220px; padding: .3rem .55rem; border: 1px solid rgba(255,255,255,.85); border-radius: 20px; background: rgba(255,255,255,.8); font-size: .72rem; text-align: center; }
+.tour-ride-path { position: absolute; z-index: 1; left: -35%; right: -35%; bottom: -44%; height: 88%; border: 14px solid #d7d0b8; border-bottom: 0; border-radius: 50% 50% 0 0; background: repeating-linear-gradient(0deg,#455c5d 0 28px,#4b6664 29px 52px); transform: rotateX(58deg); transform-origin: center top; box-shadow: 0 -12px 0 #83b77b; }
+.ride-path-center { position: absolute; top: 8%; bottom: 0; left: 50%; border-left: 4px dashed rgba(255,255,255,.76); }
+.ride-path-rail { position: absolute; top: 11%; bottom: 0; width: 3px; background: rgba(255,255,255,.72); }.rail-left { left: 15%; }.rail-right { right: 15%; }
+.tour-ride-rider { position: absolute; z-index: 4; left: 50%; bottom: 6%; font-size: 3.4rem; transform: translateX(-50%); filter: drop-shadow(0 5px 3px rgba(0,0,0,.22)); }
+.tour-ride-hud { position: absolute; z-index: 5; inset: .65rem .7rem auto; display: flex; justify-content: space-between; color: white; font: 800 .65rem 'DM Sans', sans-serif; letter-spacing: .08em; text-shadow: 0 1px 4px #234a42; }
+.tour-ride-scene.is-moving .tour-ride-path { animation: ride-path-move .8s linear infinite; }
+.tour-ride-scene.is-moving .tour-ride-city { animation: ride-city-sway 2.8s ease-in-out infinite; }
+@keyframes ride-path-move { to { background-position-y: 52px; } }
+@keyframes ride-city-sway { 50% { transform: translateX(-3px); } }
+.tour-ride-controls { min-height: 43px; padding: .4rem .75rem; display: flex; align-items: center; gap: .7rem; background: white; }
+.tour-ride-controls input { flex: 1; accent-color: #168e61; }.tour-ride-controls > span { color: #567769; font-size: .68rem; font-weight: 700; }
+.tour-ride-play { padding: .42rem .65rem; border: 0; border-radius: 8px; color: white; background: #168e61; font-size: .68rem; font-weight: 800; cursor: pointer; }
 .tour-stops { margin: 1.05rem 0 0; padding: 0; list-style: none; }
 .tour-stops li { position: relative; display: flex; gap: .85rem; padding: .65rem .1rem .9rem; }
 .tour-stops li:not(:last-child)::before { content: ''; position: absolute; top: 2rem; bottom: -.2rem; left: .91rem; border-left: 2px dashed #bedfca; }
