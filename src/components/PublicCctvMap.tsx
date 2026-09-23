@@ -30,9 +30,14 @@ export function PublicCctvMap({ route, locale }: { route: TouristRoute; locale: 
 
   useEffect(() => {
     let active = true
-    fetch('/datasets/seoul-cctv.json.gz')
+    setLoading(true)
+    setError('')
+    fetch(`${import.meta.env.BASE_URL}datasets/seoul-cctv.json.gz`)
       .then((response) => { if (!response.ok) throw new Error(String(response.status)); return response.arrayBuffer() })
       .then(async (compressed) => {
+        // Some hosts send Content-Encoding: gzip, which fetch already decodes.
+        const signature = new Uint8Array(compressed, 0, Math.min(2, compressed.byteLength))
+        if (signature[0] !== 0x1f || signature[1] !== 0x8b) return JSON.parse(new TextDecoder().decode(compressed)) as CameraBundle
         if (!('DecompressionStream' in window)) throw new Error('GZIP_UNSUPPORTED')
         const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'))
         return await new Response(stream).json() as CameraBundle

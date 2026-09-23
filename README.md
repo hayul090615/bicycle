@@ -189,3 +189,21 @@ seoul-typing-bike-high-score
 ```
 
 브라우저 저장 데이터를 삭제하면 최고 점수도 초기화됩니다.
+
+## 관광 코스와 Google Earth / Google 3D
+
+- 코스 선택 → 지도·경유지 → 출발 전 햇빛·CCTV 확인 순서로 연결됩니다. 선택한 코스는 `?lang=en&route=yeouido`처럼 주소에 남습니다.
+- 경유지를 선택하면 지도와 **Google Earth에서 보기** 링크가 같은 좌표로 바뀝니다. Google Earth는 새 탭으로 열립니다.
+- **Earth용 코스 받기**는 모든 경유지와 연결선을 담은 KML 파일입니다. Google Earth에 파일을 가져와 사용하세요. 연결선은 실제 자전거 길안내가 아닙니다.
+- 사이트 내 지도는 **Google Maps JavaScript API의 3D Maps**로 구현합니다. Google Earth 웹 앱을 iframe으로 넣은 것이 아닙니다. 기존의 임의 건물 3D 장면은 관광 화면에서 사용하지 않습니다.
+
+사이트 안에서 Google 3D를 활성화하려면:
+
+1. 결제가 설정된 Google Cloud 프로젝트에서 Maps JavaScript API를 활성화합니다.
+2. 브라우저 API 키를 발급하고 HTTP 리퍼러 제한에 `https://hayul090615.github.io/*`를, API 제한에 Maps JavaScript API를 설정합니다. 로컬 개발 도메인은 필요할 때만 별도로 허용하세요.
+3. GitHub Actions 저장소 시크릿 `VITE_GOOGLE_MAPS_API_KEY`에 등록하고 Pages 워크플로를 다시 실행합니다. 로컬에서는 `.env.local`에 같은 변수 이름으로 설정합니다. 브라우저용 키는 번들에서 공개되므로 도메인/API 제한이 필요합니다.
+4. 실제 키로 지도 초기화, 경유지 이동, 사용량을 확인합니다. 키가 없거나 네트워크·권한 오류가 발생하면 실제 코스의 2D 지도와 Google Earth 링크를 표시합니다.
+
+Google의 3D 건물 제공 범위는 지역별로 다릅니다. 서울의 모든 건물이나 자전거도로가 정밀 3D로 제공된다고 보장하지 않습니다.
+
+공식 문서: [3D 시작하기](https://developers.google.com/maps/documentation/javascript/3d/get-started), [인증 설정](https://developers.google.com/maps/documentation/javascript/get-api-key), [3D 제공 범위](https://developers.google.com/maps/documentation/javascript/3d/coverage).

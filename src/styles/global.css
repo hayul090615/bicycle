@@ -914,6 +914,51 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-route-tab strong { font-size: .99rem; }
 .tour-route-tab small { color: #6e8375; font-size: .73rem; }
 .tour-main-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, .85fr); align-items: start; gap: 1rem; }
+.tour-plan-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin: -1rem 0 2rem; }
+.tour-plan-nav a { display: flex; align-items: center; gap: .65rem; padding: 1rem; border: 1px solid #d4e6da; border-radius: 13px; color: #2d5d4b; background: #fff; font-size: .85rem; font-weight: 750; text-decoration: none; }
+.tour-plan-nav a:hover { border-color: #19996f; background: #edf8f0; }
+.tour-plan-nav a > span { color: #118c64; font: 800 .8rem 'DM Sans', sans-serif; }
+.tour-plan-content { display: grid; gap: 2rem; }
+.tour-route-tab .tour-route-open { margin-top: .35rem; color: #08765b; font-size: .66rem; font-weight: 750; letter-spacing: 0; text-transform: none; }
+#tour-detail, #tour-checks, .tour-earth-preview { scroll-margin-top: 1rem; }
+.tour-explorer-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 1.25rem; align-items: start; }
+.tour-earth-preview { min-width: 0; overflow: hidden; border: 1px solid #d8e6dc; border-radius: 15px; background: #f7faf7; }
+.tour-explorer-map, .google-route-3d { width: 100%; height: clamp(340px, 48vh, 480px); }
+.google-route-3d { position: relative; background: #e9f0eb; }
+.google-route-host { width: 100%; height: 100%; }
+.google-route-loading { position: absolute; top: 1rem; left: 1rem; right: 1rem; margin: 0; padding: .7rem; border-radius: 8px; background: #ffffffe8; color: #365c48; font-size: .8rem; pointer-events: none; }
+.tour-earth-notice { margin: 0; padding: .8rem 1rem; color: #48644e; background: #edf6e7; font-size: .76rem; line-height: 1.7; }
+.tour-earth-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .9rem; background: #fff; }
+.tour-earth-actions .button { padding: .65rem .8rem; font-size: .74rem; text-decoration: none; }
+.tour-show-all { padding: .4rem; border: 0; color: #227252; background: transparent; font: inherit; font-size: .72rem; text-decoration: underline; cursor: pointer; }
+.tour-itinerary { min-width: 0; }
+.tour-itinerary-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: .4rem 0 1rem; }
+.tour-itinerary-heading h3 { margin: 0; font-size: 1rem; }
+.tour-itinerary-heading > span { padding: .3rem .5rem; border-radius: 6px; color: #527261; background: #edf5ef; font-size: .7rem; white-space: nowrap; }
+.tour-connected-stops { margin: 0; padding: 0; list-style: none; display: grid; gap: .6rem; }
+.tour-connected-stops button { width: 100%; padding: 1rem .8rem; display: flex; align-items: start; gap: .7rem; border: 1px solid #dce8df; border-radius: 12px; text-align: left; color: #214d3b; background: #fff; cursor: pointer; }
+.tour-connected-stops button:hover, .tour-connected-stops button[aria-pressed="true"] { border-color: #15966c; background: #edf9f1; box-shadow: inset 3px 0 #15966c; }
+.tour-connected-stops strong { display: block; font-size: .85rem; }
+.tour-connected-stops .tour-stop-number { flex-shrink: 0; }
+.tour-stop-detail { display: block; margin: .4rem 0; color: #5f796b; font-size: .76rem; line-height: 1.7; }
+.tour-connected-stops small { display: block; color: #6b8575; font-size: .65rem; line-height: 1.7; }
+.tour-stop-action { display: block; margin-top: .55rem; color: #09835b; font-size: .69rem; font-weight: 750; }
+.tour-checks-route { margin: .5rem 0 0; color: #698274; font-size: .8rem; line-height: 1.7; }
+.tour-preflight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 1rem; }
+.tour-preflight-grid .tour-safety-card { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .tour-explorer-grid { grid-template-columns: minmax(0, 1fr); }
+  .tour-connected-stops { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tour-connected-stops button { height: 100%; flex-direction: column; }
+}
+@media (max-width: 650px) {
+  .tour-plan-nav { gap: .35rem; margin-top: -.2rem; }
+  .tour-plan-nav a { flex-direction: column; align-items: start; gap: .3rem; padding: .65rem; font-size: .65rem; }
+  .tour-preflight-grid, .tour-connected-stops { grid-template-columns: minmax(0, 1fr); }
+  .tour-connected-stops button { flex-direction: row; }
+  .tour-earth-actions .button { flex: 1 1 auto; text-align: center; }
+  .tour-earth-preview .tour-ride-toolbar { flex-wrap: wrap; }
+}
 .tour-route-panel, .tour-info-card { border: 1px solid #dce9de; border-radius: 19px; background: #fff; box-shadow: 0 10px 32px rgba(17,68,50,.045); }
 .tour-route-panel { min-width: 0; padding: 1.4rem; }
 .tour-panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; }
