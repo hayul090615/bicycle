@@ -61,7 +61,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult }: { course: Di
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen>(() => new URLSearchParams(window.location.search).get('lang') === 'en' ? 'tour' : 'select')
+  const [screen, setScreen] = useState<AppScreen>(() => ['en', 'ko'].includes(new URLSearchParams(window.location.search).get('lang') ?? '') ? 'tour' : 'select')
   const [selected, setSelected] = useState<SeoulDistrict | null>(null)
   const [runKey, setRunKey] = useState(0)
   const [result, setResult] = useState<GameResultData | null>(null)

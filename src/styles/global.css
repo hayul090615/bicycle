@@ -866,6 +866,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-brand img { width: 42px; height: 42px; padding: 5px; border-radius: 11px; background: #e3f7ec; }
 .tour-brand span { display: grid; gap: .1rem; }
 .tour-brand small { color: #698378; font: 500 .71rem 'Noto Sans KR', sans-serif; letter-spacing: 0; }
+.tour-header-actions { display: flex; align-items: center; gap: .55rem; }
+.tour-language-button { padding: .6rem .85rem; border: 1px solid #0c805b; border-radius: 10px; color: #fff; background: #0c805b; font-size: .77rem; font-weight: 800; cursor: pointer; }
+.tour-language-button:hover { background: #096a4b; }
 .tour-back { padding: .6rem .85rem; border: 1px solid #c8dfd2; border-radius: 10px; color: #155d49; background: #f4fbf6; font-size: .77rem; font-weight: 700; cursor: pointer; }
 .tour-back:hover { background: #e0f4e7; }
 .tour-content { width: min(1240px, 92vw); margin: 0 auto; padding-bottom: 2rem; }
@@ -883,6 +886,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-route-heading h2 { margin: .25rem 0 0; font-size: 1.7rem; letter-spacing: -.04em; }
 .tour-route-heading a, .tour-route-source a, .tour-footer a, .tour-fine-print a { color: #08765b; font-weight: 700; }
 .tour-route-heading a { font-size: .81rem; }
+.tour-category-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; margin: .8rem 0 .65rem; }
+.tour-category-tab { min-height: 42px; padding: .55rem .7rem; border: 1px solid #d5e7da; border-radius: 10px; color: #3d6852; background: #fff; font-size: .77rem; font-weight: 800; cursor: pointer; }
+.tour-category-tab:hover { border-color: #80cda6; }
+.tour-category-tab.is-selected { border-color: #168e61; color: #fff; background: #168e61; }
 .tour-route-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-bottom: 1rem; }
 .tour-route-tab { min-height: 100px; padding: 1rem 1.1rem; display: grid; gap: .25rem; text-align: left; border: 1px solid #d6e7db; border-radius: 15px; color: #1b4037; background: #fff; cursor: pointer; box-shadow: 0 7px 24px rgba(17,68,50,.035); }
 .tour-route-tab:hover { border-color: #80cda6; }
@@ -940,6 +947,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .start-tour-button { margin-right: 0; font-size: .66rem; }
   .tour-brand { font-size: .72rem; }
   .tour-brand small { font-size: .6rem; }
+  .tour-header-actions { gap: .35rem; }
+  .tour-language-button, .tour-back { padding: .48rem .58rem; font-size: .63rem; }
   .tour-back { font-size: .64rem; }
   .tour-hero { min-height: 0; }
   .tour-hero-badge { display: none; }
@@ -947,6 +956,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-route-heading h2 { font-size: 1.35rem; }
   .tour-route-heading a { max-width: 135px; text-align: right; font-size: .69rem; }
   .tour-route-tabs { grid-template-columns: 1fr; gap: .45rem; }
+  .tour-category-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+  .tour-category-tab { min-height: 38px; padding: .48rem .4rem; font-size: .7rem; }
   .tour-route-tab { min-height: 0; padding: .75rem 1rem; }
   .tour-route-panel, .tour-info-card { padding: 1rem; }
   .tour-panel-heading { display: block; }

@@ -3,7 +3,7 @@ https://seoul-ttareungi-typing.vercel.app
 
 서울의 따릉이 코스를 달리며 다음 대여소 이름을 입력하는 반응형 한글 타자 웹게임입니다.
 
-영어 관광 안내는 시작 화면의 **English city rides** 버튼 또는 `/?lang=en`에서 열 수 있습니다. 여의도, 서울숲~뚝섬, 반포~잠원 코스의 관광 지점과 공식 따릉이 대여소를 보여줍니다. 날짜·서울 현지 시간을 바꾸면 [NOAA 태양 위치 계산식](https://gml.noaa.gov/grad/solcalc/solareqns.PDF)에 따른 그림자 방향과 1m 물체의 예상 그림자 길이가 바뀝니다. 건물·나무·날씨에 따른 실제 그늘은 계산하지 않습니다. 코스 지도 선은 대여소를 잇는 참고 표시이며 주행 경로 안내가 아닙니다. CCTV와 자전거 전용차로 단속 정보는 [서울 TOPIS CCTV 지도](https://topis.seoul.go.kr/map/openCctvMap.do)와 [서울시 공개 단속 현황](https://news.seoul.go.kr/traffic/archives/35252)으로 연결됩니다.
+영어 관광 안내는 시작 화면의 **English city rides** 버튼 또는 `/?lang=en`에서 열립니다. 상단 언어 버튼으로 한국어와 영어를 전환할 수 있습니다. 관광·운동·야경·봄·여름·가을·겨울 코스에 공식 따릉이 대여소를 연결했습니다. 날짜·서울 현지 시간을 바꾸면 [NOAA 태양 위치 계산식](https://gml.noaa.gov/grad/solcalc/solareqns.PDF)에 따른 그림자 방향과 1m 물체의 예상 그림자 길이가 바뀝니다. 건물·나무·날씨에 따른 실제 그늘은 계산하지 않습니다. 코스 지도 선은 대여소를 잇는 참고 표시이며 주행 경로 안내가 아닙니다. CCTV와 자전거 전용차로 단속 정보는 [서울 TOPIS CCTV 지도](https://topis.seoul.go.kr/map/openCctvMap.do)와 [서울시 공개 단속 현황](https://news.seoul.go.kr/traffic/archives/35252)으로 연결됩니다.
 
 서울 열린데이터광장의 **2026년 6월 공식 따릉이 대여소 정보**로 서울 25개 자치구 코스를 모두 플레이할 수 있습니다. 시작 화면의 서울 행정구역 지도에서 구 경계를 직접 선택하며, 게임 지도에는 선택한 구의 대여소만 표시됩니다.
 
