@@ -79,6 +79,10 @@ VITE_SEOUL_API_KEY=발급받은_인증키
 
 개발 서버와 Vite 미리보기 서버는 `/seoul-api` 요청을 서울시 API로 프록시합니다. 별도 호스팅 서비스에 배포할 때도 같은 경로를 프록시하도록 구성해야 합니다.
 
+## 로그인 및 회원가입 연결
+
+로그인·회원가입은 Supabase Auth를 사용합니다. Supabase 프로젝트를 만든 뒤 Project URL과 공개 anon/publishable key를 로컬 `.env.local`과 GitHub Actions 설정에 넣어야 활성화됩니다. GitHub 저장소의 **Settings → Secrets and variables → Actions**에서 `VITE_SUPABASE_URL`을 variable로, `VITE_SUPABASE_ANON_KEY`를 secret으로 등록합니다. Service role key는 브라우저에 공개하면 안 되므로 사용하지 않습니다.
+
 ## 게임 방법
 
 1. 서울 지도에서 플레이할 자치구를 선택합니다.
