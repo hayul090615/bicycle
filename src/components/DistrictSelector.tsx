@@ -6,11 +6,12 @@ interface DistrictSelectorProps {
   selected: SeoulDistrict | null
   onSelect: (district: SeoulDistrict) => void
   onStart: () => void
+  onOpenTours: () => void
   highScore: number
   playedStations: Partial<Record<SeoulDistrict, string[]>>
 }
 
-export function DistrictSelector({ selected, onSelect, onStart, highScore, playedStations }: DistrictSelectorProps) {
+export function DistrictSelector({ selected, onSelect, onStart, onOpenTours, highScore, playedStations }: DistrictSelectorProps) {
   const course = selected ? districtCourses[selected] : undefined
   const stationCount = selected ? allBikeStations.filter((station) => station.district === selected).length : 0
   const playedCount = selected ? (playedStations[selected]?.length ?? 0) : 0
@@ -59,7 +60,7 @@ export function DistrictSelector({ selected, onSelect, onStart, highScore, playe
     </div>
     <header className="start-topbar">
       <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
-      <div className="start-record"><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
+      <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>English city rides ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
     </header>
 
     <section className="start-map-layout">

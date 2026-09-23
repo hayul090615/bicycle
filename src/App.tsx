@@ -5,12 +5,13 @@ import { DistrictSelector } from './components/DistrictSelector'
 import { GameHeader } from './components/GameHeader'
 import { GameResult } from './components/GameResult'
 import { TypingInput } from './components/TypingInput'
+import { TouristGuide } from './components/TouristGuide'
 import { createDistrictCourse, districtCourses, type SeoulDistrict } from './data/districtCourses'
 import { useTypingGame } from './hooks/useTypingGame'
 import { useBikeStations } from './hooks/useBikeStations'
 import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/game'
 
-type AppScreen = 'select' | 'game' | 'result'
+type AppScreen = 'select' | 'game' | 'result' | 'tour'
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 const PLAYED_STATIONS_KEY = 'seoul-typing-bike-played-stations-v1'
 const GAME_THEME_KEY = 'seoul-typing-bike-light-mode'
@@ -60,7 +61,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult }: { course: Di
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen>('select')
+  const [screen, setScreen] = useState<AppScreen>(() => new URLSearchParams(window.location.search).get('lang') === 'en' ? 'tour' : 'select')
   const [selected, setSelected] = useState<SeoulDistrict | null>(null)
   const [runKey, setRunKey] = useState(0)
   const [result, setResult] = useState<GameResultData | null>(null)
@@ -106,7 +107,18 @@ export default function App() {
     }
     setScreen('result')
   }, [activeCourse, selected])
-  const goHome = () => { setScreen('select'); setResult(null); setActiveCourse(null) }
+  const goHome = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('lang')
+    window.history.replaceState(null, '', url)
+    setScreen('select'); setResult(null); setActiveCourse(null)
+  }
+  const openTours = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('lang', 'en')
+    window.history.replaceState(null, '', url)
+    setScreen('tour')
+  }
   const startGame = () => {
     if (!selected || !selectedCourse) return
     setActiveCourse(createDistrictCourse(selected, playedStations[selected] ?? []))
@@ -115,5 +127,7 @@ export default function App() {
   if (screen === 'game' && activeCourse) return <GameScreen key={runKey} course={activeCourse} playedStationIds={selected ? (playedStations[selected] ?? []) : []} onHome={goHome} onResult={handleResult} />
   if (screen === 'result' && activeCourse && result) return <GameResult district={activeCourse.district} result={result} highScore={highScore}
     totalStations={activeCourse.stations.length} leaderboard={leaderboard} currentRankingId={currentRankingId} onRetry={startGame} onHome={goHome} />
-  return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} highScore={highScore} playedStations={playedStations} />
+  if (screen === 'tour') return <TouristGuide onBack={goHome} />
+  return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
+    highScore={highScore} playedStations={playedStations} />
 }
