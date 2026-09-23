@@ -41,11 +41,14 @@ function readText(district: string) {
   catch { return starterText(district) }
 }
 
-export function TextPractice({ district: initialDistrict, onDistrictChange, embedded = false }: { district: SeoulDistrict | null; onDistrictChange: (district: SeoulDistrict) => void; embedded?: boolean }) {
+export function TextPractice({ district: initialDistrict, onDistrictChange, embedded = false, onBack }: { district: SeoulDistrict | null; onDistrictChange: (district: SeoulDistrict) => void; embedded?: boolean; onBack?: () => void }) {
   const [district, setDistrict] = useState<SeoulDistrict>(initialDistrict ?? SEOUL_DISTRICTS[0])
   const key = `${TEXT_KEY_PREFIX}${district}`
   const [target, setTarget] = useState(() => readText(initialDistrict ?? SEOUL_DISTRICTS[0]))
   const [typed, setTyped] = useState('')
+  useEffect(() => {
+    if (!embedded) window.scrollTo(0, 0)
+  }, [embedded])
   useEffect(() => {
     if (initialDistrict && initialDistrict !== district) { setDistrict(initialDistrict); setTarget(readText(initialDistrict)); setTyped('') }
   }, [initialDistrict, district])
@@ -86,6 +89,7 @@ export function TextPractice({ district: initialDistrict, onDistrictChange, embe
   return <main className="text-practice-screen">
     <header className="text-practice-topbar">
       <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
+      {onBack && <button type="button" className="button button--ghost" onClick={onBack}>← 타자 연습으로</button>}
     </header>
     {content}
   </main>

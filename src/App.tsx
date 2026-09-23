@@ -6,12 +6,13 @@ import { GameHeader } from './components/GameHeader'
 import { GameResult } from './components/GameResult'
 import { TypingInput } from './components/TypingInput'
 import { TouristGuide } from './components/TouristGuide'
+import { TextPractice } from './components/TextPractice'
 import { createDistrictCourse, districtCourses, type SeoulDistrict } from './data/districtCourses'
 import { useTypingGame } from './hooks/useTypingGame'
 import { useBikeStations } from './hooks/useBikeStations'
 import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/game'
 
-type AppScreen = 'select' | 'game' | 'result' | 'tour'
+type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour'
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 const PLAYED_STATIONS_KEY = 'seoul-typing-bike-played-stations-v1'
 const GAME_THEME_KEY = 'seoul-typing-bike-light-mode'
@@ -121,7 +122,7 @@ export default function App() {
   }
   const openTextPractice = () => {
     if (!selected) setSelected('강남구')
-    window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('.text-practice-input')?.focus())
+    setScreen('text')
   }
   const startGame = () => {
     if (!selected || !selectedCourse) return
@@ -132,6 +133,7 @@ export default function App() {
   if (screen === 'result' && activeCourse && result) return <GameResult district={activeCourse.district} result={result} highScore={highScore}
     totalStations={activeCourse.stations.length} leaderboard={leaderboard} currentRankingId={currentRankingId} onRetry={startGame} onHome={goHome} />
   if (screen === 'tour') return <TouristGuide onBack={goHome} />
+  if (screen === 'text') return <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
   return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
     onOpenTextPractice={openTextPractice}
     highScore={highScore} playedStations={playedStations} />
