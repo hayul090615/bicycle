@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, touristRoutes, type TourCategory, type TouristRoute } from '../data/touristRoutes'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
+import { PublicCctvMap } from './PublicCctvMap'
+
+const ThirdPersonRideScene = lazy(() => import('./ThirdPersonRideScene').then((module) => ({ default: module.ThirdPersonRideScene })))
 
 function FitTourMap({ points }: { points: LatLngExpression[] }) {
   const map = useMap()
@@ -42,57 +45,36 @@ function TourMap({ route, locale }: { route: TouristRoute; locale: Locale }) {
 }
 
 function RideThrough3D({ route, locale }: { route: TouristRoute; locale: Locale }) {
-  const [stopIndex, setStopIndex] = useState(0)
+  const [progress, setProgress] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [view, setView] = useState<'ride' | 'map'>('ride')
+  const stopIndex = Math.min(route.stops.length - 1, Math.floor(progress * route.stops.length))
   const stop = route.stops[stopIndex]
-  const station = getTouristStation(stop.stationId)
 
   useEffect(() => {
-    setStopIndex(0)
+    setProgress(0)
     setPlaying(false)
   }, [route.id])
-  useEffect(() => {
-    if (!playing) return
-    const timer = window.setInterval(() => {
-      setStopIndex((index) => {
-        if (index >= route.stops.length - 1) {
-          setPlaying(false)
-          return 0
-        }
-        return index + 1
-      })
-    }, 2800)
-    return () => window.clearInterval(timer)
-  }, [playing, route.stops.length])
 
   return <section className="tour-ride-preview" aria-label={textFor(locale, '3D ride-through preview', '3D 주행 미리보기')}>
     <div className="tour-ride-toolbar">
       <div><span className="tour-card-kicker">{textFor(locale, 'STREET-LEVEL VIEW', '거리 시점')}</span>
-        <strong>{textFor(locale, 'Ride through this route', '자전거를 타고 코스를 달려보세요')}</strong></div>
+        <strong>{textFor(locale, `Third-person ride · ${stop.place}`, `3인칭 주행 · ${stop.placeKo}`)}</strong></div>
       <div className="tour-view-switch" role="group" aria-label={textFor(locale, 'View mode', '보기 방식')}>
         <button type="button" aria-pressed={view === 'ride'} onClick={() => setView('ride')}>3D</button>
         <button type="button" aria-pressed={view === 'map'} onClick={() => setView('map')}>{textFor(locale, 'Map', '지도')}</button>
       </div>
     </div>
     {view === 'ride' ? <>
-      <div className={`tour-ride-scene ${playing ? 'is-moving' : ''}`}>
-        <div className="tour-ride-sky"><span className="tour-ride-sun" /><span className="tour-ride-cloud cloud-one" /><span className="tour-ride-cloud cloud-two" /></div>
-        <div className="tour-ride-city" aria-hidden="true">
-          <i className="ride-building building-one" /><i className="ride-building building-two" /><i className="ride-building building-three" />
-          <i className="ride-tree tree-one">🌳</i><i className="ride-tree tree-two">🌳</i>
-        </div>
-        <div className="tour-ride-landmark"><span>📍</span><strong>{textFor(locale, stop.place, stop.placeKo)}</strong></div>
-        <div className="tour-ride-path"><span className="ride-path-center" /><i className="ride-path-rail rail-left" /><i className="ride-path-rail rail-right" /></div>
-        <div className="tour-ride-rider" aria-hidden="true"><span>🚴</span></div>
-        <div className="tour-ride-hud"><span>3D RIDE</span><span>{stopIndex + 1} / {route.stops.length}</span></div>
-      </div>
+      <Suspense fallback={<div className="third-person-scene" role="status">{textFor(locale, 'Loading 3D ride…', '3D 주행 화면을 불러오는 중…')}</div>}>
+        <ThirdPersonRideScene route={route} progress={progress} playing={playing} onProgress={setProgress} locale={locale} />
+      </Suspense>
       <div className="tour-ride-controls">
         <button type="button" className="tour-ride-play" onClick={() => setPlaying(!playing)}>{playing ? 'Ⅱ' : '▶'} {textFor(locale, playing ? 'Pause ride' : 'Start ride', playing ? '일시정지' : '주행 시작')}</button>
-        <input aria-label={textFor(locale, 'Ride progress', '주행 위치')} type="range" min="0" max={route.stops.length - 1} value={stopIndex} onChange={(event) => { setStopIndex(Number(event.target.value)); setPlaying(false) }} />
-        <span>{textFor(locale, `${Math.round((stopIndex / Math.max(1, route.stops.length - 1)) * 100)}%`, `${Math.round((stopIndex / Math.max(1, route.stops.length - 1)) * 100)}%`)}</span>
+        <input aria-label={textFor(locale, 'Ride progress', '주행 위치')} type="range" min="0" max="100" value={Math.round(progress * 100)} onChange={(event) => { setProgress(Number(event.target.value) / 100); setPlaying(false) }} />
+        <span>{Math.round(progress * 100)}%</span>
       </div>
-      <p className="tour-map-note">{textFor(locale, `Illustrated 3D-style preview at ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}. It is not recorded street footage or turn-by-turn navigation.`, `${station.lat.toFixed(4)}, ${station.lng.toFixed(4)} 위치를 바탕으로 만든 3D 스타일 일러스트입니다. 실제 촬영 영상이나 길안내는 아닙니다.`)}</p>
+      <p className="tour-map-note">{textFor(locale, 'Interactive third-person 3D route visualization built from stop coordinates; the streetscape is illustrative, not a surveyed 3D city model or turn-by-turn navigation.', '정류장 좌표를 바탕으로 자전거를 따라가는 3인칭 3D 경로를 보여줍니다. 주변 건물은 실제 도시의 정밀 3D 모델이나 길안내가 아닌 시각화입니다.')}</p>
     </> : <TourMap route={route} locale={locale} />}
   </section>
 }
@@ -235,15 +217,14 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
         </section>
         <div className="tour-side-column">
           <ShadowPreview route={route} locale={locale} />
+          <PublicCctvMap route={route} locale={locale} />
           <section className="tour-info-card tour-safety-card" aria-labelledby="tour-safety-title">
             <div className="tour-card-kicker">{textFor(locale, 'RIDE INFORMED', '안전하게 달리기')}</div>
-            <h2 id="tour-safety-title">{textFor(locale, 'CCTV & riding rules', 'CCTV·자전거 안전 정보')}</h2>
-            <p>{textFor(locale, "Open Seoul's official traffic map for available road-camera feeds. Camera feeds and conditions are managed by the city.", '서울시 공식 교통정보 지도에서 제공 중인 도로 CCTV를 확인할 수 있습니다. 영상과 운영 상태는 서울시가 관리합니다.')}</p>
-            <a className="tour-resource-link" href="https://topis.seoul.go.kr/map/openCctvMap.do" target="_blank" rel="noopener noreferrer">{textFor(locale, 'Open live TOPIS CCTV map', '서울 TOPIS CCTV 지도')} <span>↗</span></a>
-            <a className="tour-resource-link" href="https://news.seoul.go.kr/traffic/archives/35252" target="_blank" rel="noopener noreferrer">{textFor(locale, 'Official bike-lane camera locations', '자전거전용차로 단속 CCTV 위치')} <span>↗</span></a>
+            <h2 id="tour-safety-title">{textFor(locale, 'Cycling safety', '자전거 안전 정보')}</h2>
+            <p>{textFor(locale, 'Ride on marked bike paths, yield to pedestrians, and walk your bike where riding is restricted.', '자전거도로 표지를 따르고 보행자에게 양보하며, 주행 제한 구간에서는 자전거를 끌고 가세요.')}</p>
             <p className="tour-fine-print">{textFor(locale,
-              'Published bike-lane enforcement cameras monitor vehicles entering reserved lanes; they are not a live cyclist enforcement feed. Follow signs, yield to pedestrians, and walk your bike where riding is restricted.',
-              '공개된 자전거전용차로 단속 CCTV는 전용차로에 진입한 차량을 단속합니다. 자전거 이용자를 실시간 단속하는 영상은 아닙니다. 표지판을 따르고 보행자에게 양보하며, 주행 제한 구간에서는 자전거를 끌고 가세요.')}</p>
+              'CCTV markers show public installation records. They do not confirm that a camera covers the bike path.',
+              'CCTV 표시는 공개된 설치 위치를 나타냅니다. 자전거도로를 촬영하는지는 확인되지 않습니다.')}</p>
             <a className="tour-resource-link" href="https://english.seoul.go.kr/wp-content/uploads/2020/01/guide-for-safe-travel-in-seoul-e.pdf" target="_blank" rel="noopener noreferrer">{textFor(locale, "Seoul's English bike safety guide", '서울시 자전거 안전 안내')} <span>↗</span></a>
           </section>
         </div>

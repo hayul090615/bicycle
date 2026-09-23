@@ -908,6 +908,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map { height: 325px; width: 100%; }
 .tour-map-note { margin: 0; padding: .55rem .75rem; color: #5a7668; background: #f2f8f3; font-size: .68rem; line-height: 1.45; }
 .tour-ride-preview { overflow: hidden; border: 1px solid #dce8dc; border-radius: 14px; background: #ecf4ef; }
+.third-person-scene { width: 100%; height: clamp(300px, 48vh, 430px); min-height: 280px; background: linear-gradient(#a9d8e4,#78ae78); }
+.third-person-scene canvas { width: 100%; height: 100%; display: block; }
+.tour-cctv-card h2 { margin: .35rem 0 .3rem; font-size: 1.25rem; letter-spacing: -.035em; }
+.tour-locate-button { width: 100%; justify-content: center; cursor: pointer; font: inherit; }
+.tour-cctv-map-wrap { margin-top: .65rem; overflow: hidden; border: 1px solid #dce8dc; border-radius: 12px; }
+.tour-cctv-map { width: 100%; height: 300px; }
+.tour-cctv-map .leaflet-popup-content { font: .72rem/1.55 'Noto Sans KR', sans-serif; }
+.tour-cctv-map .leaflet-popup-content strong { color: #573cb5; }
+.tour-cctv-count, .tour-cctv-message { margin: .55rem 0 0 !important; color: #627b70 !important; font-size: .68rem !important; line-height: 1.5 !important; }
+.tour-cctv-source { display: block; margin-top: .5rem; color: #08765b; font-size: .67rem; font-weight: 700; }
 .tour-ride-toolbar { min-height: 57px; padding: .65rem .8rem; display: flex; align-items: center; justify-content: space-between; gap: .7rem; background: #fff; }
 .tour-ride-toolbar > div:first-child { display: grid; gap: .16rem; }
 .tour-ride-toolbar strong { color: #20463b; font-size: .8rem; }
