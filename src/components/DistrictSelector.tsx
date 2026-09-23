@@ -4,7 +4,6 @@ import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { TextPractice } from './TextPractice'
 import { useEffect, useState } from 'react'
 import { SiteDialog, type SiteDialogKind } from './SiteDialog'
-import type { PracticeMode } from './TextPractice'
 import { siteAuth } from '../services/siteAuth'
 
 interface DistrictSelectorProps {
@@ -19,7 +18,6 @@ interface DistrictSelectorProps {
 
 export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, highScore, playedStations }: DistrictSelectorProps) {
   const [activeTab, setActiveTab] = useState('타자 연습')
-  const [practiceMode, setPracticeMode] = useState<PracticeMode>('장문 연습')
   const [dialog, setDialog] = useState<SiteDialogKind | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   useEffect(() => {
@@ -35,17 +33,12 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
   const playedStationCounts = Object.fromEntries(
     Object.entries(playedStations).map(([district, ids]) => [district, ids?.length ?? 0]),
   ) as Partial<Record<SeoulDistrict, number>>
-  const mainTabs = ['타자 연습', '타자 학습', '필사', '오락실', '랭킹', '상점', '새 소식']
-  const openTextMode = (mode: PracticeMode) => {
-    setPracticeMode(mode); setActiveTab('타자 연습'); onOpenTextPractice()
-  }
+  const mainTabs = ['타자 연습', '타자 학습', '필사']
   const selectMainTab = (tab: string) => {
     setActiveTab(tab)
     if (tab === '타자 연습') return
-    if (tab === '필사') { openTextMode('장문 연습'); return }
-    if (tab === '오락실') { onOpenTours(); return }
-    if (tab === '타자 학습') { setDialog('learn'); return }
-    setDialog(tab === '랭킹' ? 'ranking' : tab === '상점' ? 'store' : 'news')
+    if (tab === '필사') { onOpenTextPractice(); return }
+    setDialog('learn')
   }
 
   return <main className="start-screen start-screen--map">
@@ -88,27 +81,22 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
       </svg>
     </div>
     <header className="start-topbar">
-      <div className="start-brand-group">
-        <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
-        <button type="button" className="start-poem-button" onClick={onOpenTextPractice}>구별 시 연습</button>
+      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
+      <nav className="typing-main-nav" aria-label="주 메뉴">
+        {mainTabs.map((tab) => <button key={tab} type="button" className={activeTab === tab ? 'is-active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => selectMainTab(tab)}>{tab}</button>)}
+      </nav>
+      <div className="start-top-actions">
+        <div className="typing-account-actions">
+          {userEmail && <span className="typing-account-email">{userEmail}</span>}
+          {!userEmail && <button type="button" onClick={() => setDialog('login')}>로그인</button>}
+          {!userEmail && <button type="button" onClick={() => setDialog('signup')}>회원가입</button>}
+          <button type="button" onClick={() => setDialog('logout')}>로그아웃</button>
+        </div>
+        <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>English city rides ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
       </div>
-      <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>English city rides ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
     </header>
-    <nav className="typing-main-nav" aria-label="주 메뉴">
-      {mainTabs.map((tab) => <button key={tab} type="button" className={activeTab === tab ? 'is-active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => selectMainTab(tab)}>{tab}</button>)}
-      <div className="typing-account-actions">
-        {userEmail && <span className="typing-account-email">{userEmail}</span>}
-        {!userEmail && <button type="button" onClick={() => setDialog('login')}>로그인</button>}
-        {!userEmail && <button type="button" onClick={() => setDialog('signup')}>회원가입</button>}
-        <button type="button" onClick={() => setDialog('logout')}>로그아웃</button>
-      </div>
-    </nav>
-    <nav className="typing-subnav" aria-label="타자 연습 종류">
-      {(['자리 연습', '낱말 연습', '단문 연습', '장문 연습'] as PracticeMode[]).map((mode) => <button key={mode} type="button" className={practiceMode === mode ? 'is-active' : ''} onClick={() => openTextMode(mode)}>{mode}</button>)}
-    </nav>
 
     <section className="start-map-layout">
-      <div className="typing-welcome-banner"><span aria-hidden="true">✎</span><div><strong>따릉이 타고, 글 한 줄씩 서울을 달려요</strong><small>자치구를 고르고 시를 쓰거나, 대여소 코스를 달리며 타자 연습을 해 보세요.</small></div></div>
       <div className="district-map-panel">
         <div className="district-map-heading">
           <div><span className="step-number">01</span><h2>자치구를 선택하세요</h2></div>
@@ -134,8 +122,8 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
           </> : <p>지도 위 자치구에 마우스를 올리고 선택해 주세요.</p>}
         </div>
       </div>
-      <TextPractice district={selected} onDistrictChange={onSelect} embedded mode={practiceMode} />
+      <TextPractice district={selected} onDistrictChange={onSelect} embedded />
     </section>
-    {dialog && <SiteDialog kind={dialog} highScore={highScore} userEmail={userEmail} onClose={() => setDialog(null)} onChangeKind={setDialog} />}
+    {dialog && <SiteDialog kind={dialog} userEmail={userEmail} onClose={() => setDialog(null)} onChangeKind={setDialog} />}
   </main>
 }

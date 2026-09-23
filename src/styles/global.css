@@ -69,7 +69,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .selection-bar--pending span { color: var(--muted); }
 
 /* 클릭 가능한 서울 자치구 지도 시작 화면 */
-.start-screen--map { position: fixed; inset: 0; width: 100%; height: 100dvh; min-height: 620px; padding: 0; overflow: hidden; display: grid; grid-template-rows: 70px 44px 42px 1fr; background: linear-gradient(145deg, #F2F8F6 0%, #E4F3EE 100%); }
+.start-screen--map { position: fixed; inset: 0; width: 100%; height: 100dvh; min-height: 620px; padding: 0; overflow: hidden; display: grid; grid-template-rows: 70px 1fr; background: linear-gradient(145deg, #F2F8F6 0%, #E4F3EE 100%); }
 .start-screen--map::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: radial-gradient(circle at 5% 12%, rgba(0,168,117,.045), transparent 23%), radial-gradient(circle at 94% 84%, rgba(8,118,91,.04), transparent 25%); }
 .city-bike-backdrop { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
 .city-bike-backdrop svg { width: 100%; height: 100%; display: block; }
@@ -81,7 +81,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .city-sign { fill: none; stroke: #08765b; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; opacity: .045; }
 .city-bike { fill: none; stroke: #08765b; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: .055; }
 .start-topbar, .start-map-layout { position: relative; z-index: 1; }
-.start-topbar { padding: 0 max(3vw, calc((100vw - 1280px) / 2)); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(197,222,213,.82); background: rgba(255,255,255,.94); backdrop-filter: blur(10px); }
+.start-topbar { padding: 0 max(3vw, calc((100vw - 1450px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: clamp(.55rem, 1.2vw, 1.15rem); border-bottom: 1px solid rgba(197,222,213,.82); background: rgba(255,255,255,.94); backdrop-filter: blur(10px); }
 .start-brand { display: flex; align-items: center; gap: .7rem; }
 .start-brand .brand-bike { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--green-soft); font-size: 1.3rem; }
 .start-brand div { display: grid; }
@@ -90,7 +90,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .start-record { display: flex; align-items: center; gap: .65rem; }
 .start-record span { color: var(--muted); font-size: .72rem; }
 .start-record strong { color: var(--green-dark); font: 700 1.05rem 'DM Sans'; }
-.start-map-layout { width: min(1480px, 96vw); min-height: 0; margin: 0 auto; padding: .5rem 0; display: grid; grid-template-columns: minmax(300px, .82fr) minmax(470px, 1.18fr); grid-template-rows: auto minmax(0, 1fr); align-items: center; gap: .65rem clamp(.8rem, 1.8vw, 1.5rem); }
+.start-map-layout { width: min(1480px, 96vw); min-height: 0; margin: 0 auto; padding: .5rem 0; display: grid; grid-template-columns: minmax(300px, .82fr) minmax(470px, 1.18fr); grid-template-rows: minmax(0, 1fr); align-items: center; gap: .65rem clamp(.8rem, 1.8vw, 1.5rem); }
 .start-intro { align-self: center; }
 .start-intro h1 { margin: .75rem 0 1rem; font-size: clamp(2.4rem, 4.4vw, 4.5rem); line-height: 1.08; letter-spacing: -.065em; }
 .start-intro h1 em { color: var(--green); font-style: normal; }
@@ -106,24 +106,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .district-map-panel { position: relative; height: min(60vh, 620px); min-height: 450px; padding: 1.1rem 1.2rem 5.8rem; display: flex; flex-direction: column; border: 1px solid #b9dfd2; border-radius: 24px; background-color: #dff3ec; background-image: radial-gradient(circle at 50% 42%, rgba(255,255,255,.78) 0%, rgba(247,253,250,.58) 25%, rgba(232,247,241,.28) 48%, transparent 66%), radial-gradient(circle at 8% 12%, rgba(78,210,167,.16), transparent 30%), radial-gradient(circle at 94% 88%, rgba(0,168,117,.13), transparent 32%), linear-gradient(135deg, #effaf6 0%, #d8f1e8 50%, #c6e9dd 100%); box-shadow: 0 18px 50px rgba(23,61,54,.13); }
 .text-practice-panel { min-width: 0; height: min(60vh, 620px); min-height: 450px; overflow: hidden; border: 1px solid #d7e8dc; border-radius: 22px; background: rgba(255,255,255,.94); box-shadow: 0 18px 48px rgba(26,76,57,.08); }
 .text-practice-content--embedded { width: 100%; height: 100%; max-height: 100%; margin: 0; padding: 1.1rem; overflow-y: auto; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.start-brand-group { display: flex; align-items: center; gap: .9rem; }
-.start-poem-button { padding: .58rem .82rem; border: 1px solid #b8dfd0; border-radius: 10px; color: #08765b; background: #eef9f3; font: inherit; font-size: .76rem; font-weight: 750; white-space: nowrap; cursor: pointer; }
-.start-poem-button:hover { background: #ddf3e7; border-color: #7ec7a8; }
-.typing-main-nav, .typing-subnav { display: flex; align-items: center; justify-content: center; gap: clamp(.5rem, 2.4vw, 2.3rem); overflow-x: auto; scrollbar-width: none; background: rgba(255,255,255,.94); }
-.typing-main-nav::-webkit-scrollbar, .typing-subnav::-webkit-scrollbar { display: none; }
-.typing-main-nav { padding: 0 2vw; border-bottom: 1px solid #e3eee7; }
-.typing-main-nav > button, .typing-account-actions button, .typing-subnav button { padding: .55rem .25rem; border: 0; color: #4d635a; background: transparent; font: inherit; font-size: .84rem; white-space: nowrap; cursor: pointer; }
-.typing-main-nav > button.is-active, .typing-subnav button.is-active { color: #08765b; font-weight: 800; box-shadow: inset 0 -2px #00a875; }
-.typing-account-actions { margin-left: auto; display: flex; flex: 0 0 auto; gap: .65rem; }
-.typing-account-actions button { color: #08765b; font-size: .72rem; font-weight: 750; }
+.typing-main-nav { min-width: 0; display: flex; align-items: center; justify-content: center; gap: clamp(.6rem, 1.7vw, 1.65rem); overflow-x: auto; scrollbar-width: none; }
+.typing-main-nav::-webkit-scrollbar { display: none; }
+.typing-main-nav > button, .typing-account-actions button { padding: .55rem .3rem; border: 0; color: #4d635a; background: transparent; font: inherit; font-size: .82rem; white-space: nowrap; cursor: pointer; }
+.typing-main-nav > button.is-active { color: #08765b; font-weight: 800; box-shadow: inset 0 -2px #00a875; }
+.start-top-actions { display: flex; align-items: center; gap: .65rem; flex: 0 0 auto; }
+.typing-account-actions { display: flex; flex: 0 0 auto; gap: .35rem; }
+.typing-account-actions button { color: #08765b; font-size: .68rem; font-weight: 750; }
 .typing-account-email { max-width: 160px; overflow: hidden; color: #74887f; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
-.typing-subnav { gap: clamp(1rem, 4vw, 3.4rem); border-bottom: 1px solid #e0e8e1; }
-.typing-subnav button { color: #657a70; font-size: .76rem; }
-.typing-welcome-banner { grid-column: 1 / -1; min-height: 52px; padding: .55rem 1rem; display: flex; align-items: center; gap: .7rem; border: 1px solid #efdfd1; border-radius: 12px; background: linear-gradient(100deg, #fff7ef, #fffdf9); }
-.typing-welcome-banner > span { color: #df7b43; font-size: 1.5rem; }
-.typing-welcome-banner div { display: grid; gap: .1rem; }
-.typing-welcome-banner strong { color: #344f43; font-size: .85rem; }
-.typing-welcome-banner small { color: #73847a; font-size: .66rem; }
 .district-map-heading { display: flex; align-items: center; justify-content: space-between; }
 .district-map-heading > div { display: flex; align-items: center; gap: .6rem; }
 .district-map-heading h2 { margin: 0; font-size: 1.1rem; }
@@ -476,9 +466,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .leaderboard > header { padding-inline: .7rem; }
 }
 
-/* 중앙 집중형 시작 지도 */
-.start-map-layout { width: min(1180px, 96vw); min-height: 0; margin: 0 auto; padding: .8rem 0 1rem; display: block; }
-.district-map-panel { width: 100%; height: calc(100dvh - 96px); min-height: 550px; }
+/* 중앙 집중형 지도와 시 연습 */
+.start-map-layout { width: min(1480px, 96vw); min-height: 0; margin: 0 auto; padding: .5rem 0; display: grid; grid-template-columns: minmax(300px, .82fr) minmax(470px, 1.18fr); grid-template-rows: minmax(0, 1fr); align-items: center; gap: .65rem clamp(.8rem, 1.8vw, 1.5rem); }
+.district-map-panel { width: auto; height: min(60vh, 620px); min-height: 450px; }
 .seoul-district-map { max-height: 680px; }
 .district-played-marker circle { fill: #08765b; stroke: #fff; stroke-width: 1; }
 .district-played-marker text { fill: #fff; stroke: none; font-size: 6px; font-weight: 900; }
@@ -494,8 +484,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .course-station-label { max-width: min(250px, 32vw); overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 
 @media (max-width: 720px) {
-  .start-map-layout { width: 96vw; height: 100%; display: block; padding: .6rem 0; }
-  .district-map-panel { height: calc(100dvh - 70px); min-height: 540px; }
+  .start-map-layout { width: 94vw; height: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(500px, 68dvh) auto; align-items: stretch; gap: .8rem; padding: .8rem 0 1rem; }
+  .district-map-panel { width: auto; height: auto; min-height: 500px; }
+  .text-practice-panel { height: auto; min-height: 520px; }
   .game-screen .map-source { bottom: 205px; }
 }
 
@@ -1041,7 +1032,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 880px) and (min-width: 721px) {
   .start-screen--map { position: relative; height: auto; min-height: 100dvh; overflow: visible; display: block; }
   .start-topbar { position: sticky; top: 0; z-index: 10; min-height: 70px; }
-  .start-map-layout { width: 92vw; height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(500px, 62vh) auto; align-items: stretch; gap: .8rem; padding: .9rem 0 1.2rem; }
+  .start-map-layout { width: 92vw; height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(500px, 62vh) auto; align-items: stretch; gap: .8rem; padding: .9rem 0 1.2rem; }
   .district-map-panel, .text-practice-panel { height: auto; min-height: 500px; }
 }
 @media (max-width: 650px) {
@@ -1052,8 +1043,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .start-brand .brand-bike { width: 32px; height: 32px; }
   .start-brand b { font-size: .84rem; }
   .start-brand small { display: none; }
-  .start-brand-group { gap: .4rem; }
-  .start-poem-button { padding: .43rem .5rem; font-size: .62rem; }
+  .start-topbar { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: .1rem .45rem; padding: .35rem 4vw .15rem; }
+  .start-brand { grid-column: 1; grid-row: 1; }
+  .start-top-actions { grid-column: 2; grid-row: 1; justify-self: end; gap: .25rem; }
+  .typing-main-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; gap: 1.3rem; }
+  .typing-main-nav > button { padding: .4rem .2rem; font-size: .76rem; }
+  .typing-account-actions { gap: .1rem; }
+  .typing-account-actions button { padding: .4rem .2rem; font-size: .56rem; }
+  .typing-account-email { max-width: 72px; font-size: .52rem; }
   .start-record > span, .start-record > strong { display: none; }
   .start-tour-button { margin-right: 0; padding: .43rem .5rem; font-size: .58rem; }
   .tour-brand { font-size: .72rem; }
@@ -1075,4 +1072,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-duration { display: inline-block; margin-top: .5rem; }
   .tour-map { height: 275px; }
   .tour-side-column { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 880px) {
+  .start-topbar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; gap: .2rem .8rem; padding-block: .35rem; }
+  .start-brand { grid-column: 1; grid-row: 1; }
+  .typing-main-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; gap: clamp(1rem, 5vw, 3rem); }
+  .start-top-actions { grid-column: 2; grid-row: 1; justify-self: end; gap: .4rem; }
 }

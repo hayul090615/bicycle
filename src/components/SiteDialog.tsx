@@ -1,15 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { siteAuth } from '../services/siteAuth'
 
-export type SiteDialogKind = 'login' | 'signup' | 'logout' | 'learn' | 'ranking' | 'store' | 'news'
+export type SiteDialogKind = 'login' | 'signup' | 'logout' | 'learn'
 
 const headings: Record<SiteDialogKind, string> = {
   login: '로그인', signup: '회원가입', logout: '로그아웃', learn: '타자 학습',
-  ranking: '랭킹', store: '상점', news: '새 소식',
 }
 
-export function SiteDialog({ kind, highScore, userEmail, onClose, onChangeKind }: {
-  kind: SiteDialogKind; highScore: number; userEmail: string | null; onClose: () => void; onChangeKind: (kind: 'login' | 'signup') => void
+export function SiteDialog({ kind, userEmail, onClose, onChangeKind }: {
+  kind: SiteDialogKind; userEmail: string | null; onClose: () => void; onChangeKind: (kind: 'login' | 'signup') => void
 }) {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -67,14 +66,10 @@ export function SiteDialog({ kind, highScore, userEmail, onClose, onChangeKind }
           if (error) setMessage(error.message); else onClose()
         }}>{busy ? '로그아웃 중…' : '로그아웃'}</button> : <button className="button button--ghost" type="button" onClick={onClose}>닫기</button>}
         {message && <p className="site-dialog-message" role="status">{message}</p>}
-      </> : kind === 'learn' ? <>
+      </> : <>
         <p className="site-dialog-copy">화면에 보이는 글감을 읽고 아래 입력칸에 그대로 입력해 보세요. 맞은 글자는 초록색으로 표시됩니다.</p>
-        <p className="site-dialog-copy">구별 시 연습에서는 자치구를 선택하고, 글감을 직접 고칠 수 있습니다. 낱말·단문·장문 연습은 아래 메뉴에서 바꿔 보세요.</p>
-      </> : kind === 'ranking' ? <>
-        <p className="site-dialog-copy">이 브라우저의 최고 점수</p><strong className="site-dialog-score">{highScore.toLocaleString()}점</strong>
-        <p className="site-dialog-note">온라인 랭킹은 계정 서버 연결 후 제공할 수 있습니다.</p>
-      </> : kind === 'store' ? <p className="site-dialog-copy">따릉이 장식 아이템 상점을 준비하고 있습니다.</p>
-        : <p className="site-dialog-copy">구별 시 타자 연습과 실제 자전거 경로 주변 3D 풍경을 추가했습니다.</p>}
+        <p className="site-dialog-copy">오른쪽 연습 패널에서 자치구를 바꾸고 시를 직접 고칠 수 있습니다. 맞은 글자는 초록색으로 표시됩니다.</p>
+      </>}
     </section>
   </div>
 }

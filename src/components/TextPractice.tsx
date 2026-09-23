@@ -3,7 +3,6 @@ import { SEOUL_DISTRICTS, type SeoulDistrict } from '../data/districtCourses'
 import { romanizeHangul, toCharacters } from '../utils/hangul'
 
 const TEXT_KEY_PREFIX = 'seoul-district-writing-v1-'
-export type PracticeMode = '자리 연습' | '낱말 연습' | '단문 연습' | '장문 연습'
 
 const districtPoems: Record<string, string> = {
   강남구: '유리 빌딩에 저녁빛이 내려앉고\n바쁜 거리 사이로 바람이 지난다\n페달을 밟으며 오늘을 천천히 읽는다.',
@@ -42,7 +41,7 @@ function readText(district: string) {
   catch { return starterText(district) }
 }
 
-export function TextPractice({ district: initialDistrict, onDistrictChange, embedded = false, mode = '장문 연습' }: { district: SeoulDistrict | null; onDistrictChange: (district: SeoulDistrict) => void; embedded?: boolean; mode?: PracticeMode }) {
+export function TextPractice({ district: initialDistrict, onDistrictChange, embedded = false }: { district: SeoulDistrict | null; onDistrictChange: (district: SeoulDistrict) => void; embedded?: boolean }) {
   const [district, setDistrict] = useState<SeoulDistrict>(initialDistrict ?? SEOUL_DISTRICTS[0])
   const key = `${TEXT_KEY_PREFIX}${district}`
   const [target, setTarget] = useState(() => readText(initialDistrict ?? SEOUL_DISTRICTS[0]))
@@ -50,18 +49,11 @@ export function TextPractice({ district: initialDistrict, onDistrictChange, embe
   useEffect(() => {
     if (initialDistrict && initialDistrict !== district) { setDistrict(initialDistrict); setTarget(readText(initialDistrict)); setTyped('') }
   }, [initialDistrict, district])
-  useEffect(() => { setTyped('') }, [mode])
   useEffect(() => {
     try { localStorage.setItem(key, target) } catch { /* local saving is optional */ }
   }, [key, target])
 
-  const practiceText = useMemo(() => {
-    if (mode === '자리 연습') return 'asdf jkl; asdf jkl; fdsa ;lkj fdsa ;lkj'
-    if (mode === '낱말 연습') return target.replace(/[\n\s]+/gu, ' ').trim()
-    if (mode === '단문 연습') return target.split(/\r?\n/u).find((line) => line.trim()) ?? target
-    return target
-  }, [mode, target])
-  const targetCharacters = useMemo(() => toCharacters(practiceText), [practiceText])
+  const targetCharacters = useMemo(() => toCharacters(target), [target])
   const typedCharacters = toCharacters(typed)
   let validPrefix = 0
   while (validPrefix < typedCharacters.length && validPrefix < targetCharacters.length && typedCharacters[validPrefix] === targetCharacters[validPrefix]) validPrefix += 1
@@ -77,10 +69,9 @@ export function TextPractice({ district: initialDistrict, onDistrictChange, embe
           setDistrict(nextDistrict); onDistrictChange(nextDistrict); setTarget(readText(nextDistrict)); setTyped('')
         }}>{SEOUL_DISTRICTS.map((name) => <option key={name} value={name}>{name}</option>)}</select>
         <h1>이 구의 시로 타자 연습</h1><p>구마다 다른 글감이 준비되어 있어요. 직접 쓴 시도 구별로 저장됩니다.</p></div>
-      {mode !== '자리 연습' && <><label className="text-practice-label" htmlFor="practice-prompt">연습할 글감</label>
-        <textarea id="practice-prompt" className="text-practice-prompt" value={target} maxLength={1200}
-          onChange={(event) => { setTarget(event.target.value); setTyped('') }} spellCheck={false} />
-      </>}
+      <label className="text-practice-label" htmlFor="practice-prompt">연습할 글감</label>
+      <textarea id="practice-prompt" className="text-practice-prompt" value={target} maxLength={1200}
+        onChange={(event) => { setTarget(event.target.value); setTyped('') }} spellCheck={false} />
       <div className="text-practice-stats"><span>{targetCharacters.length}자</span><span>정확도 {accuracy}%</span><span>{Math.round(validPrefix / Math.max(targetCharacters.length, 1) * 100)}% 완료</span></div>
       <div className={`text-practice-target ${isComplete ? 'is-complete' : ''}`} aria-label="따라 입력할 문장">
         {targetCharacters.map((character, index) => <span key={index} className={index < validPrefix ? 'is-matched' : index < typedCharacters.length ? 'is-mismatch' : ''}>{character}</span>)}
@@ -88,7 +79,7 @@ export function TextPractice({ district: initialDistrict, onDistrictChange, embe
       <label className="text-practice-label" htmlFor="practice-input">여기에 입력하세요</label>
       <textarea id="practice-input" className="text-practice-input" value={typed} onChange={(event) => setTyped(event.target.value)}
         placeholder="위 글감을 보고 그대로 입력해 보세요." spellCheck={false} autoCapitalize="off" autoCorrect="off" />
-      <div className="text-practice-footer"><span>{romanizeHangul(practiceText.slice(0, validPrefix))}</span><button className="button button--ghost" onClick={() => setTyped('')}>다시 시작</button></div>
+      <div className="text-practice-footer"><span>{romanizeHangul(target.slice(0, validPrefix))}</span><button className="button button--ghost" onClick={() => setTyped('')}>다시 시작</button></div>
       {isComplete && <p className="text-practice-complete" role="status">완료했어요! 다른 문장을 써서 계속 연습할 수 있습니다.</p>}
   </div>
   if (embedded) return <section className="text-practice-panel" id="district-text-practice" aria-label="자치구 시 타자 연습">{content}</section>
