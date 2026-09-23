@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { SEOUL_DISTRICTS, type SeoulDistrict } from '../data/districtCourses'
 import { romanizeHangul, toCharacters } from '../utils/hangul'
 
 const TEXT_KEY_PREFIX = 'seoul-district-writing-v1-'
@@ -35,11 +36,15 @@ function starterText(district: string) {
   return districtPoems[district] ?? `바람이 머무는 ${district}\n오늘의 길 위에 나만의 이야기를 씁니다.\n천천히 두드린 글자마다 새로운 풍경이 열립니다.`
 }
 
-export function TextPractice({ district, onBack }: { district: string; onBack: () => void }) {
+function readText(district: string) {
+  try { return localStorage.getItem(`${TEXT_KEY_PREFIX}${district}`) ?? starterText(district) }
+  catch { return starterText(district) }
+}
+
+export function TextPractice({ district: initialDistrict, onDistrictChange, onBack }: { district: SeoulDistrict | null; onDistrictChange: (district: SeoulDistrict) => void; onBack: () => void }) {
+  const [district, setDistrict] = useState<SeoulDistrict>(initialDistrict ?? SEOUL_DISTRICTS[0])
   const key = `${TEXT_KEY_PREFIX}${district}`
-  const [target, setTarget] = useState(() => {
-    try { return localStorage.getItem(key) ?? starterText(district) } catch { return starterText(district) }
-  })
+  const [target, setTarget] = useState(() => readText(initialDistrict ?? SEOUL_DISTRICTS[0]))
   const [typed, setTyped] = useState('')
   useEffect(() => {
     try { localStorage.setItem(key, target) } catch { /* local saving is optional */ }
@@ -56,11 +61,16 @@ export function TextPractice({ district, onBack }: { district: string; onBack: (
 
   return <main className="text-practice-screen">
     <header className="text-practice-topbar">
-      <div className="start-brand"><span className="brand-bike">⌨️</span><div><b>서울 타자 연습</b><small>SEOUL TYPING PRACTICE</small></div></div>
+      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
       <button className="button button--ghost" onClick={onBack}>← 자치구 선택</button>
     </header>
     <section className="text-practice-content">
-      <div className="text-practice-heading"><span className="step-number">{district}</span><h1>내 문장으로 타자 연습</h1><p>글감을 직접 쓰거나 고쳐 보세요. 이 글감은 {district} 연습용으로 저장됩니다.</p></div>
+      <div className="text-practice-heading"><label className="text-practice-label" htmlFor="practice-district">연습할 자치구</label>
+        <select id="practice-district" className="text-practice-district" value={district} onChange={(event) => {
+          const nextDistrict = event.target.value as SeoulDistrict
+          setDistrict(nextDistrict); onDistrictChange(nextDistrict); setTarget(readText(nextDistrict)); setTyped('')
+        }}>{SEOUL_DISTRICTS.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+        <h1>이 구의 시로 타자 연습</h1><p>구마다 다른 글감이 준비되어 있어요. 직접 쓴 시도 구별로 저장됩니다.</p></div>
       <label className="text-practice-label" htmlFor="practice-prompt">연습할 글감</label>
       <textarea id="practice-prompt" className="text-practice-prompt" value={target} maxLength={1200}
         onChange={(event) => { setTarget(event.target.value); setTyped('') }} spellCheck={false} />

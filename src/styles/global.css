@@ -104,7 +104,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .official-data-note strong { font-size: .72rem; }
 .official-data-note small { color: var(--muted); font-size: .62rem; }
 .district-map-panel { position: relative; height: min(76vh, 690px); min-height: 510px; padding: 1.1rem 1.2rem 5.8rem; display: flex; flex-direction: column; border: 1px solid #b9dfd2; border-radius: 24px; background-color: #dff3ec; background-image: radial-gradient(circle at 50% 42%, rgba(255,255,255,.78) 0%, rgba(247,253,250,.58) 25%, rgba(232,247,241,.28) 48%, transparent 66%), radial-gradient(circle at 8% 12%, rgba(78,210,167,.16), transparent 30%), radial-gradient(circle at 94% 88%, rgba(0,168,117,.13), transparent 32%), linear-gradient(135deg, #effaf6 0%, #d8f1e8 50%, #c6e9dd 100%); box-shadow: 0 18px 50px rgba(23,61,54,.13); }
-.district-start-actions { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+.start-brand-group { display: flex; align-items: center; gap: .9rem; }
+.start-poem-button { padding: .58rem .82rem; border: 1px solid #b8dfd0; border-radius: 10px; color: #08765b; background: #eef9f3; font: inherit; font-size: .76rem; font-weight: 750; white-space: nowrap; cursor: pointer; }
+.start-poem-button:hover { background: #ddf3e7; border-color: #7ec7a8; }
 .district-map-heading { display: flex; align-items: center; justify-content: space-between; }
 .district-map-heading > div { display: flex; align-items: center; gap: .6rem; }
 .district-map-heading h2 { margin: 0; font-size: 1.1rem; }
@@ -983,6 +985,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .text-practice-topbar { min-height: 84px; padding: .8rem max(5vw, calc((100vw - 1180px)/2)); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #d9e9df; background: rgba(255,255,255,.92); }
 .text-practice-content { width: min(900px, 92vw); margin: 3rem auto; padding: clamp(1.1rem, 3vw, 2.2rem); border: 1px solid #d8e9dd; border-radius: 22px; background: white; box-shadow: 0 18px 48px rgba(26,76,57,.08); }
 .text-practice-heading { margin-bottom: 1.5rem; }
+.text-practice-district { min-width: 170px; padding: .55rem .7rem; border: 1px solid #cddfd3; border-radius: 9px; color: #274b3d; background: #fff; font: inherit; font-size: .86rem; }
 .text-practice-heading h1 { margin: .7rem 0 .35rem; font-size: clamp(1.6rem, 3vw, 2.25rem); letter-spacing: -.045em; }
 .text-practice-heading p { margin: 0; color: #668175; font-size: .88rem; line-height: 1.6; }
 .text-practice-label { display: block; margin: 1.05rem 0 .45rem; color: #395b4e; font-size: .78rem; font-weight: 800; }
@@ -1002,11 +1005,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .start-record .start-tour-button { margin-right: .4rem; }
 }
 @media (max-width: 650px) {
-  .district-start-actions { align-items: stretch; flex-direction: column; }
   .text-practice-topbar { min-height: 70px; padding-inline: 4vw; }
   .text-practice-content { margin: 1.2rem auto; padding: 1rem; }
+  .start-brand { gap: .45rem; }
+  .start-brand .brand-bike { width: 32px; height: 32px; }
+  .start-brand b { font-size: .84rem; }
+  .start-brand small { display: none; }
+  .start-brand-group { gap: .4rem; }
+  .start-poem-button { padding: .43rem .5rem; font-size: .62rem; }
   .start-record > span, .start-record > strong { display: none; }
-  .start-tour-button { margin-right: 0; font-size: .66rem; }
+  .start-tour-button { margin-right: 0; padding: .43rem .5rem; font-size: .58rem; }
   .tour-brand { font-size: .72rem; }
   .tour-brand small { font-size: .6rem; }
   .tour-header-actions { gap: .35rem; }

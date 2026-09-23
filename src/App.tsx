@@ -130,7 +130,7 @@ export default function App() {
   if (screen === 'result' && activeCourse && result) return <GameResult district={activeCourse.district} result={result} highScore={highScore}
     totalStations={activeCourse.stations.length} leaderboard={leaderboard} currentRankingId={currentRankingId} onRetry={startGame} onHome={goHome} />
   if (screen === 'tour') return <TouristGuide onBack={goHome} />
-  if (screen === 'text' && selected) return <TextPractice district={selected} onBack={() => setScreen('select')} />
+  if (screen === 'text') return <TextPractice district={selected} onDistrictChange={setSelected} onBack={() => setScreen('select')} />
   return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
     onOpenTextPractice={openTextPractice}
     highScore={highScore} playedStations={playedStations} />

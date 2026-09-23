@@ -148,7 +148,7 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     document.documentElement.lang = locale
     document.title = locale === 'en' ? 'Seoul Bike Journeys | Ttareungi' : '따릉이 서울 여행 코스'
-    return () => { document.documentElement.lang = 'ko'; document.title = '서울 타자 연습' }
+    return () => { document.documentElement.lang = 'ko'; document.title = '서울 타자 라이딩' }
   }, [locale])
 
   const toggleLanguage = () => {
