@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { siteAuth } from '../services/siteAuth'
+import { SeoulRideIllustration } from './SeoulRideIllustration'
 
 export type AuthPageKind = 'login' | 'signup'
 
@@ -49,6 +50,7 @@ export function AuthPage({ kind, onHome, onNavigate }: {
   }
 
   return <main className="auth-screen">
+    <div className="auth-scenery" aria-hidden="true"><SeoulRideIllustration /></div>
     <header className="auth-topbar">
       <button type="button" className="auth-brand start-brand" onClick={onHome} aria-label="서울 타자 라이딩 홈">
         <span className="brand-bike" aria-hidden="true">🚲</span>

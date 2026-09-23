@@ -877,23 +877,28 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-brand img { width: 42px; height: 42px; padding: 5px; border-radius: 11px; background: #e3f7ec; }
 .tour-brand span { display: grid; gap: .1rem; }
 .tour-brand small { color: #698378; font: 500 .71rem 'Noto Sans KR', sans-serif; letter-spacing: 0; }
-.tour-header-actions { display: flex; align-items: center; gap: .55rem; }
+.tour-header-actions { display: flex; flex-shrink: 0; align-items: center; gap: .55rem; }
+.tour-language-button, .tour-back { white-space: nowrap; }
 .tour-language-button { padding: .6rem .85rem; border: 1px solid #0c805b; border-radius: 10px; color: #fff; background: #0c805b; font-size: .77rem; font-weight: 800; cursor: pointer; }
 .tour-language-button:hover { background: #096a4b; }
 .tour-back { padding: .6rem .85rem; border: 1px solid #c8dfd2; border-radius: 10px; color: #155d49; background: #f4fbf6; font-size: .77rem; font-weight: 700; cursor: pointer; }
 .tour-back:hover { background: #e0f4e7; }
 .tour-content { width: min(1240px, 92vw); margin: 0 auto; padding-bottom: 2rem; }
-.tour-hero { position: relative; min-height: 230px; margin: 1.4rem 0 2.1rem; padding: clamp(1.5rem, 4vw, 2.7rem); display: flex; align-items: center; justify-content: space-between; gap: 2rem; overflow: hidden; border-radius: 24px; color: #fff; background: radial-gradient(circle at 85% 25%, rgba(255,215,108,.15), transparent 30%), linear-gradient(130deg, #0d4d3d, #123c41); }
-.tour-hero::after { content: ''; position: absolute; right: -3%; bottom: -95px; width: 360px; height: 225px; border: 2px dashed rgba(169,235,194,.22); border-radius: 50%; transform: rotate(-23deg); }
+.tour-hero { position: relative; margin: 1.4rem 0 2.1rem; padding: clamp(1.5rem, 3.5vw, 2.7rem); display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 1rem; overflow: hidden; border: 1px solid #d7e5d6; border-radius: 26px; color: #183f36; background: radial-gradient(ellipse at 78% 22%, #fff3d4, transparent 52%), linear-gradient(110deg, #f7faf1, #e8f2e6); }
+.tour-hero-copy { position: relative; z-index: 1; min-width: 0; }
+.seoul-ride-illustration { display: block; width: 100%; height: auto; }
+.tour-hero-art { position: relative; min-width: 0; margin: -1rem -2rem -1rem 0; }
+.tour-scene-label { position: absolute; bottom: 7%; right: 8%; padding: .65rem .85rem; display: flex; align-items: center; gap: .45rem; border: 1px solid #fff; border-radius: 30px; color: #315c4e; background: #fffffff0; box-shadow: 0 5px 20px #234c3810; font-size: .68rem; }
+.tour-scene-label i { width: 7px; height: 7px; border-radius: 50%; background: #15926b; }
+.tour-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem; margin-top: 1.4rem; }
+.tour-hero-actions a { display: inline-flex; align-items: center; gap: 1.3rem; text-decoration: none; font-size: .82rem; }
+.tour-hero-count { color: #62786a; font-size: .71rem; }
 .tour-eyebrow, .tour-card-kicker { color: #36bd8b; font: 800 .67rem 'DM Sans', sans-serif; letter-spacing: .15em; }
-.tour-eyebrow { color: #a2efc3; }
-.tour-hero h1 { margin: .7rem 0 .6rem; font-size: clamp(2.1rem, 4.5vw, 4rem); line-height: 1.08; letter-spacing: -.055em; }
-.tour-hero h1 em { color: #f5d478; font-style: normal; }
-.tour-hero p { max-width: 660px; margin: 0; color: #d1e9dc; font-size: .91rem; line-height: 1.7; }
-.tour-hero-badge { position: relative; z-index: 1; min-width: 122px; display: grid; justify-items: center; text-align: center; }
-.tour-hero-badge span { color: #f6d270; font: 800 6rem/.9 'DM Sans', sans-serif; }
-.tour-hero-badge small { margin-top: .5rem; color: #c4e6d4; font: 700 .67rem/1.3 'DM Sans', sans-serif; letter-spacing: .15em; }
-.tour-route-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .85rem; }
+.tour-eyebrow { color: #36765b; font-size: .61rem; letter-spacing: .12em; }
+.tour-hero h1 { margin: .9rem 0 .85rem; font-size: clamp(2rem, 3.7vw, 3.45rem); line-height: 1.13; letter-spacing: -.055em; }
+.tour-hero h1 em { color: #168164; font-style: normal; }
+.tour-hero p { max-width: 440px; margin: 0; color: #5d7366; font-size: .88rem; line-height: 1.85; }
+.tour-route-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .85rem; scroll-margin-top: 1.5rem; }
 .tour-route-heading h2 { margin: .25rem 0 0; font-size: 1.7rem; letter-spacing: -.04em; }
 .tour-route-heading a, .tour-route-source a, .tour-footer a, .tour-fine-print a { color: #08765b; font-weight: 700; }
 .tour-route-heading a { font-size: .81rem; }
@@ -1012,10 +1017,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .site-dialog-close { position: absolute; top: .65rem; right: .8rem; width: 34px; height: 34px; border: 0; border-radius: 50%; color: #547367; background: #eef7f1; font-size: 1.35rem; cursor: pointer; }
 .site-dialog-kicker { margin: 0 0 .4rem; color: #0a9670; font: 800 .6rem 'DM Sans'; letter-spacing: .13em; }
 .site-dialog h2 { margin: 0 0 1rem; color: #21483a; font-size: 1.35rem; }
-.auth-screen { min-height: 100dvh; padding-bottom: 2.5rem; background: radial-gradient(ellipse at 15% 30%, #dff5eb, transparent 55%), #f4f9f6; }
-.auth-topbar { min-height: 76px; padding: .8rem max(4vw, calc((100vw - 1180px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line); background: #fff; }
+.auth-screen { position: relative; isolation: isolate; min-height: 100dvh; padding-bottom: 2.5rem; overflow: hidden; background: radial-gradient(ellipse at 85% 12%, #fff0cd, transparent 48%), linear-gradient(165deg, #eff7f0, #e0eee4); }
+.auth-scenery { position: absolute; z-index: -1; inset: 76px 0 0; overflow: hidden; pointer-events: none; }
+.auth-scenery .seoul-ride-illustration { position: absolute; bottom: -2%; left: 50%; width: max(1300px, 115%); max-width: 2100px; transform: translateX(-50%); opacity: .65; }
+.auth-topbar { position: relative; min-height: 76px; padding: .8rem max(4vw, calc((100vw - 1180px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #d9e6dc; background: #ffffffde; backdrop-filter: blur(12px); }
 .auth-brand { padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
-.auth-card { width: min(460px, 92vw); margin: clamp(1.5rem, 5vh, 3rem) auto 0; padding: clamp(1.3rem, 4vw, 2.4rem); border: 1px solid var(--line); border-radius: 24px; background: #fff; box-shadow: 0 16px 48px rgba(23,61,54,.07); }
+.auth-card { position: relative; width: min(460px, 92vw); margin: clamp(1.5rem, 5vh, 3rem) auto 0; padding: clamp(1.3rem, 4vw, 2.4rem); border: 1px solid #ffffff; border-radius: 24px; background: #fffffff5; box-shadow: 0 24px 70px rgba(34,77,57,.12), 0 2px 8px rgba(34,77,57,.04); }
 .auth-icon { width: 52px; height: 52px; margin-bottom: 1.5rem; display: grid; place-items: center; border-radius: 16px; background: var(--green-soft); font-size: 1.65rem; }
 .auth-card .eyebrow { font-size: .65rem; }
 .auth-card h1 { margin: .45rem 0 .6rem; font-size: 1.85rem; letter-spacing: -.05em; }
@@ -1068,12 +1075,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .start-record > span, .start-record > strong { display: none; }
   .start-tour-button { margin-right: 0; padding: .43rem .5rem; font-size: .58rem; }
   .tour-brand { font-size: .72rem; }
-  .tour-brand small { font-size: .6rem; }
+  .tour-brand { min-width: 0; gap: .45rem; }
+  .tour-brand img { width: 32px; height: 32px; }
+  .tour-brand small { display: none; }
   .tour-header-actions { gap: .35rem; }
   .tour-language-button, .tour-back { padding: .48rem .58rem; font-size: .63rem; }
   .tour-back { font-size: .64rem; }
-  .tour-hero { min-height: 0; }
-  .tour-hero-badge { display: none; }
+  .tour-hero { grid-template-columns: minmax(0, 1fr); gap: .4rem; padding: 1.5rem; margin-bottom: 1.4rem; }
+  .tour-hero-art { width: min(100%, 420px); margin: -.5rem auto -1.5rem; }
+  .tour-hero h1 { font-size: clamp(2rem, 8vw, 2.8rem); }
+  .tour-hero p { font-size: .8rem; }
+  .tour-hero-actions { gap: .7rem; margin-top: 1rem; }
+  .tour-scene-label { bottom: 11%; font-size: .6rem; padding: .45rem .65rem; }
+  .auth-scenery .seoul-ride-illustration { width: 1100px; opacity: .4; }
   .tour-route-heading { align-items: start; }
   .tour-route-heading h2 { font-size: 1.35rem; }
   .tour-route-heading a { max-width: 135px; text-align: right; font-size: .69rem; }

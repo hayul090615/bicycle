@@ -5,6 +5,7 @@ import { getTouristStation, touristRoutes, type TourCategory, type TouristRoute 
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { PublicCctvMap } from './PublicCctvMap'
+import { SeoulRideIllustration } from './SeoulRideIllustration'
 
 const ThirdPersonRideScene = lazy(() => import('./ThirdPersonRideScene').then((module) => ({ default: module.ThirdPersonRideScene })))
 
@@ -169,15 +170,18 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
     </header>
     <div className="tour-content">
       <section className="tour-hero">
-        <div><span className="tour-eyebrow">{textFor(locale, 'WELCOME TO SEOUL', '서울을 달려보세요')}</span>
-          <h1>{textFor(locale, <>See the city<br /><em>one bike stop at a time.</em></>, <>따릉이 타고<br /><em>서울 구석구석</em></>)}</h1>
+        <div className="tour-hero-copy"><span className="tour-eyebrow">{textFor(locale, 'A LITTLE PEDAL, A NEW PERSPECTIVE', '두 바퀴로 만나는 새로운 서울')}</span>
+          <h1>{textFor(locale, <>Your next stop:<br /><em>Seoul, by bike.</em></>, <>오늘의 목적지,<br /><em>따릉이로 서울.</em></>)}</h1>
           <p>{textFor(locale,
-            'Tourist, workout, night-view and seasonal rides paired with real Ttareungi stations. Choose a route, preview the sun, and check bike availability before you go.',
-            '실제 따릉이 대여소를 잇는 관광·운동·야경·계절 코스를 골라보세요. 시간별 햇빛을 확인하고 출발 전 대여 가능 여부를 확인하세요.')}</p></div>
-        <div className="tour-hero-badge"><span>{touristRoutes.length}</span><small>{textFor(locale, <>ROUTE<br />IDEAS</>, <>여행<br />코스</>)}</small></div>
+            'Riverside paths, city lights, and little detours. Find your kind of ride with Ttareungi.',
+            '한강의 바람부터 반짝이는 야경까지. 나에게 맞는 따릉이 코스로 서울을 만나보세요.')}</p>
+          <div className="tour-hero-actions"><a className="button button--primary" href="#tour-routes">{textFor(locale, 'Find your ride', '여행 코스 둘러보기')} <span aria-hidden="true">↗</span></a>
+            <span className="tour-hero-count">{textFor(locale, `${touristRoutes.length} routes · 4 ways to explore`, `${touristRoutes.length}개 코스 · 4가지 테마`)}</span></div>
+        </div>
+        <div className="tour-hero-art"><SeoulRideIllustration /><span className="tour-scene-label"><i />{textFor(locale, 'A day by the Han River', '한강을 따라 달리는 하루')}</span></div>
       </section>
 
-      <div className="tour-route-heading"><div><span className="tour-card-kicker">{textFor(locale, 'CHOOSE A JOURNEY', '원하는 코스를 선택하세요')}</span>
+      <div className="tour-route-heading" id="tour-routes" tabIndex={-1}><div><span className="tour-card-kicker">{textFor(locale, 'CHOOSE A JOURNEY', '원하는 코스를 선택하세요')}</span>
         <h2>{textFor(locale, 'Seoul bike routes', '서울 따릉이 코스')}</h2></div>
         <a href="https://english.seoul.go.kr/service/movement/seoul-public-bike/3-rent-return-bike/" target="_blank" rel="noopener noreferrer">{textFor(locale, 'How to rent Ttareungi ↗', '따릉이 대여 방법 ↗')}</a></div>
       <div className="tour-category-tabs" role="group" aria-label={textFor(locale, 'Route categories', '코스 종류')}>
