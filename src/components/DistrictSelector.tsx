@@ -6,12 +6,13 @@ interface DistrictSelectorProps {
   selected: SeoulDistrict | null
   onSelect: (district: SeoulDistrict) => void
   onStart: () => void
+  onOpenTextPractice: () => void
   onOpenTours: () => void
   highScore: number
   playedStations: Partial<Record<SeoulDistrict, string[]>>
 }
 
-export function DistrictSelector({ selected, onSelect, onStart, onOpenTours, highScore, playedStations }: DistrictSelectorProps) {
+export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, highScore, playedStations }: DistrictSelectorProps) {
   const course = selected ? districtCourses[selected] : undefined
   const stationCount = selected ? allBikeStations.filter((station) => station.district === selected).length : 0
   const playedCount = selected ? (playedStations[selected]?.length ?? 0) : 0
@@ -59,7 +60,7 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTours, hig
       </svg>
     </div>
     <header className="start-topbar">
-      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
+      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 연습</b><small>SEOUL TYPING PRACTICE</small></div></div>
       <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>English city rides ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
     </header>
 
@@ -85,7 +86,10 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTours, hig
         <div className={`map-selection-bar ${selected ? 'is-visible' : ''}`} aria-live="polite">
           {selected && course ? <>
             <div><span>선택한 지역</span><strong>{selected}</strong><small>전체 {stationCount}곳 · 플레이한 대여소 {playedCount}곳 · 다음 코스 {course.stations.length}개 지점</small></div>
-            <button className="button button--primary" onClick={onStart}>{selected} 코스 시작 <span>→</span></button>
+            <div className="district-start-actions">
+              <button className="button button--primary" onClick={onStart}>{selected} 따릉이 코스 <span>→</span></button>
+              <button className="button button--ghost" onClick={onOpenTextPractice}>{selected} 글감 타자 연습</button>
+            </div>
           </> : <p>지도 위 자치구에 마우스를 올리고 선택해 주세요.</p>}
         </div>
       </div>

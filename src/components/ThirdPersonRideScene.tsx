@@ -9,6 +9,46 @@ interface BikeRouteResult { geometry: LonLat[]; waypoints: LonLat[] }
 interface OsmElement { type: string; id: number; tags?: Record<string, string>; geometry?: LonLat[] }
 interface OsmResult { elements: OsmElement[] }
 
+class PolylineCurve extends THREE.Curve<THREE.Vector3> {
+  private readonly cumulative: number[] = [0]
+  private readonly length: number
+  constructor(private readonly points: THREE.Vector3[]) {
+    super()
+    for (let index = 1; index < points.length; index += 1) this.cumulative.push(this.cumulative[index - 1] + points[index].distanceTo(points[index - 1]))
+    this.length = this.cumulative.at(-1) ?? 0
+  }
+  override getLength() { return this.length }
+  override getPoint(t: number, target = new THREE.Vector3()) {
+    if (this.points.length < 2 || this.length === 0) return target.copy(this.points[0] ?? new THREE.Vector3())
+    const distance = THREE.MathUtils.clamp(t, 0, 1) * this.length
+    let low = 0, high = this.cumulative.length - 1
+    while (low < high) {
+      const middle = (low + high) >>> 1
+      if (this.cumulative[middle] < distance) low = middle + 1
+      else high = middle
+    }
+    const end = Math.max(1, low), start = end - 1
+    const span = this.cumulative[end] - this.cumulative[start]
+    return target.copy(this.points[start]).lerp(this.points[end], span > 0 ? (distance - this.cumulative[start]) / span : 0)
+  }
+  override getPointAt(u: number, target = new THREE.Vector3()) { return this.getPoint(u, target) }
+  override getTangentAt(u: number, target = new THREE.Vector3()) {
+    const distance = THREE.MathUtils.clamp(u, 0, 1) * this.length
+    let low = 0, high = this.cumulative.length - 1
+    while (low < high) {
+      const middle = (low + high) >>> 1
+      if (this.cumulative[middle] < distance) low = middle + 1
+      else high = middle
+    }
+    let end = Math.min(this.points.length - 1, Math.max(1, low))
+    if (this.points[end].distanceToSquared(this.points[end - 1]) < 1e-10) {
+      while (end < this.points.length - 1 && this.points[end].distanceToSquared(this.points[end - 1]) < 1e-10) end += 1
+      while (end > 1 && this.points[end].distanceToSquared(this.points[end - 1]) < 1e-10) end -= 1
+    }
+    return target.subVectors(this.points[end], this.points[end - 1]).normalize()
+  }
+}
+
 async function fetchBikeRoute(route: TouristRoute, signal: AbortSignal): Promise<BikeRouteResult> {
   const stations = route.stops.map(({ stationId }) => getTouristStation(stationId))
   const waypoints = stations.map(({ lng, lat }) => [lng, lat] as LonLat)
@@ -32,12 +72,12 @@ async function fetchBikeRoute(route: TouristRoute, signal: AbortSignal): Promise
 async function fetchOsmStreetContext(coords: LonLat[], signal: AbortSignal): Promise<OsmResult> {
   const sampleCount = Math.min(55, Math.max(12, Math.ceil(coords.length / 8)))
   const line = Array.from({ length: sampleCount }, (_, index) => coords[Math.round(index * (coords.length - 1) / (sampleCount - 1))])
-  const key = `osm-street-context-v1-${line.map(([lng, lat]) => `${lng.toFixed(3)},${lat.toFixed(3)}`).join(';')}`
+  const key = `osm-street-context-v2-${line.map(([lng, lat]) => `${lng.toFixed(3)},${lat.toFixed(3)}`).join(';')}`
   try {
     const cached = localStorage.getItem(key)
     if (cached) return JSON.parse(cached) as OsmResult
   } catch { /* cache is optional */ }
-  const around = `around:160,${line.map(([lng, lat]) => `${lat},${lng}`).join(',')}`
+  const around = `around:100,${line.map(([lng, lat]) => `${lat},${lng}`).join(',')}`
   const query = `[out:json][timeout:22];(way(${around})[building];way(${around})[highway~"cycleway|path|footway|pedestrian|residential|living_street|tertiary|service|unclassified"];way(${around})[leisure~"park|garden"];way(${around})[landuse~"grass|meadow|forest|recreation_ground"];way(${around})[natural=water];way(${around})[waterway~"river|canal|riverbank"];);out geom;`
   const body = new URLSearchParams({ data: query })
   const response = await fetch('https://overpass.kumi.systems/api/interpreter', { method: 'POST', body, signal })
@@ -84,17 +124,6 @@ function makeBike() {
   bar(new THREE.Vector3(0, 1.74, -.07), new THREE.Vector3(-.24, 1.28, .51), .065, shirt)
   bar(new THREE.Vector3(0, 1.74, -.07), new THREE.Vector3(.24, 1.28, .51), .065, shirt)
   return rider
-}
-
-function makeTree(scene: THREE.Group, x: number, z: number, scale: number) {
-  const tree = new THREE.Group()
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.12, .19, 1.4, 6), new THREE.MeshStandardMaterial({ color: '#70543c' }))
-  trunk.position.y = .7; tree.add(trunk)
-  for (let i = 0; i < 3; i += 1) {
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(.68 - i * .1, 1), new THREE.MeshStandardMaterial({ color: i === 1 ? '#309d69' : '#3db978', roughness: 1 }))
-    crown.position.set(0, 1.5 + i * .38, 0); tree.add(crown)
-  }
-  tree.position.set(x, 0, z); tree.scale.setScalar(scale); scene.add(tree)
 }
 
 function localPoint([lng, lat]: LonLat, centerLng: number, centerLat: number, scale: number) {
@@ -144,7 +173,23 @@ function addRibbon(group: THREE.Group, coords: THREE.Vector3[], width: number, m
   const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = true; group.add(mesh)
 }
 
-function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, centerLat: number, scale: number) {
+function pointInFootprint(point: THREE.Vector3, footprint: THREE.Vector3[]) {
+  let inside = false
+  for (let current = 0, previous = footprint.length - 1; current < footprint.length; previous = current, current += 1) {
+    const a = footprint[current], b = footprint[previous]
+    if ((a.z > point.z) !== (b.z > point.z) && point.x < (b.x - a.x) * (point.z - a.z) / (b.z - a.z || Number.EPSILON) + a.x) inside = !inside
+  }
+  return inside
+}
+
+function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3) {
+  const dx = end.x - start.x, dz = end.z - start.z
+  const length2 = dx * dx + dz * dz
+  const ratio = length2 === 0 ? 0 : THREE.MathUtils.clamp(((point.x - start.x) * dx + (point.z - start.z) * dz) / length2, 0, 1)
+  return Math.hypot(point.x - (start.x + ratio * dx), point.z - (start.z + ratio * dz))
+}
+
+function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, centerLat: number, scale: number, ridePoints: THREE.Vector3[]) {
   const buildings = new THREE.Group(), green = new THREE.Group(), water = new THREE.Group(), roads = new THREE.Group()
   const buildingMats = ['#d5c6ad', '#b8c8c4', '#d9d0bf', '#abbeb8'].map((color) => new THREE.MeshStandardMaterial({ color, roughness: .92, side: THREE.DoubleSide }))
   const greenMat = new THREE.MeshStandardMaterial({ color: '#68a86d', roughness: 1, side: THREE.DoubleSide })
@@ -156,6 +201,10 @@ function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, c
     const coords = element.geometry
     const closed = coords.length > 3 && coords[0][0] === coords.at(-1)![0] && coords[0][1] === coords.at(-1)![1]
     if (tags.building && closed) {
+      const footprint = coords.slice(0, -1).map((coord) => localPoint(coord, centerLng, centerLat, scale))
+      const containsRoute = ridePoints.some((point) => pointInFootprint(point, footprint))
+      const tooCloseToRoute = containsRoute || footprint.some((point) => ridePoints.some((ridePoint, index) => index > 0 && distanceToSegment(point, ridePoints[index - 1], ridePoint) < 14))
+      if (tooCloseToRoute) continue
       const levelHeight = Number.parseFloat(tags['building:levels'] ?? '') * 3.1
       const taggedHeight = Number.parseFloat(tags.height ?? '')
       const height = Math.max(1.5, Math.min(75, Number.isFinite(taggedHeight) && taggedHeight > 0 ? taggedHeight : (levelHeight || 8)))
@@ -251,8 +300,8 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
       : rideCoords
     const points = sampledRoute.map((point) => localPoint(point, centerX, centerY, scale))
     const stopPoints = (bikeRoute?.waypoints ?? stopCoordinates).map((point) => localPoint(point, centerX, centerY, scale))
-    const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal')
-    const trackPoints = curve.getPoints(Math.max(350, points.length * 2))
+    const curve = new PolylineCurve(points)
+    const trackPoints = curve.getPoints(Math.max(350, Math.min(2600, Math.ceil(curve.getLength() / 2))))
 
     const environment = new THREE.Group(); scene.add(environment)
     const waterGroup = new THREE.Group(); environment.add(waterGroup)
@@ -261,9 +310,8 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
       const mesh = polygonMesh(polygon as LonLat[][], centerX, centerY, scale, hanMaterial)
       if (mesh) waterGroup.add(mesh)
     }
-    const fallbackCity = new THREE.Group(); environment.add(fallbackCity)
-    addRibbon(environment, trackPoints, 7.4, new THREE.MeshStandardMaterial({ color: '#c7b995', roughness: 1, side: THREE.DoubleSide }), -.01)
-    addRibbon(environment, trackPoints, 6.3, new THREE.MeshStandardMaterial({ color: '#46565a', roughness: .95, side: THREE.DoubleSide }), .03)
+    addRibbon(environment, trackPoints, 5.2, new THREE.MeshStandardMaterial({ color: '#c7b995', roughness: 1, side: THREE.DoubleSide }), -.01)
+    addRibbon(environment, trackPoints, 3.4, new THREE.MeshStandardMaterial({ color: '#46565a', roughness: .95, side: THREE.DoubleSide }), .03)
     const dashMaterial = new THREE.MeshStandardMaterial({ color: '#f2e8ae', emissive: '#544d31', emissiveIntensity: .25 })
     for (let i = 0; i < 70; i += 1) {
       const at = curve.getPointAt(i / 70)
@@ -272,21 +320,6 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
       dash.position.set(at.x, .055, at.z); dash.lookAt(next.x, .055, next.z); environment.add(dash)
     }
 
-    const buildingMaterials = ['#d7c9b6', '#a8c4c8', '#ddc7a1', '#b2c9af'].map((color) => new THREE.MeshStandardMaterial({ color, roughness: .85 }))
-    for (let i = 0; i < 34; i += 1) {
-      const t = .04 + (i / 34) * .92
-      const point = curve.getPointAt(t)
-      const tangent = curve.getTangentAt(t)
-      const side = i % 2 ? -1 : 1
-      const x = point.x + tangent.z * side * (14 + (i % 4) * 4)
-      const z = point.z - tangent.x * side * (14 + (i % 4) * 4)
-      if (i % 3 === 0) { makeTree(fallbackCity, x, z, 3 + (i % 4)); continue }
-      const width = 8 + (i % 3) * 2.5, height = 16 + ((i * 7) % 11) * 2
-      const building = new THREE.Mesh(new THREE.BoxGeometry(width, height, width * .75), buildingMaterials[i % buildingMaterials.length])
-      building.position.set(x, height / 2, z); building.castShadow = true; building.receiveShadow = true; fallbackCity.add(building)
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(width * 1.08, .2, width * .84), new THREE.MeshStandardMaterial({ color: '#748c82' }))
-      roof.position.set(x, height + .08, z); fallbackCity.add(roof)
-    }
     const markerMaterial = new THREE.MeshStandardMaterial({ color: '#f5b13b', emissive: '#7a4d11', emissiveIntensity: .3 })
     stopPoints.forEach((point, index) => {
       const beacon = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 2.1, 8), markerMaterial)
@@ -336,8 +369,8 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
       fetchOsmStreetContext(bikeRoute.geometry, osmController.signal)
         .then((data) => {
           if (osmController.signal.aborted) return
-          const count = addOsmContext(environment, data, centerX, centerY, scale)
-          if (count > 0) { fallbackCity.visible = false; setMapStatus('osm') }
+          const count = addOsmContext(environment, data, centerX, centerY, scale, trackPoints)
+          if (count > 0) { setMapStatus('osm') }
           else setMapStatus('river')
         })
         .catch(() => setMapStatus('river'))

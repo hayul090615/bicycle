@@ -104,6 +104,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .official-data-note strong { font-size: .72rem; }
 .official-data-note small { color: var(--muted); font-size: .62rem; }
 .district-map-panel { position: relative; height: min(76vh, 690px); min-height: 510px; padding: 1.1rem 1.2rem 5.8rem; display: flex; flex-direction: column; border: 1px solid #b9dfd2; border-radius: 24px; background-color: #dff3ec; background-image: radial-gradient(circle at 50% 42%, rgba(255,255,255,.78) 0%, rgba(247,253,250,.58) 25%, rgba(232,247,241,.28) 48%, transparent 66%), radial-gradient(circle at 8% 12%, rgba(78,210,167,.16), transparent 30%), radial-gradient(circle at 94% 88%, rgba(0,168,117,.13), transparent 32%), linear-gradient(135deg, #effaf6 0%, #d8f1e8 50%, #c6e9dd 100%); box-shadow: 0 18px 50px rgba(23,61,54,.13); }
+.district-start-actions { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
 .district-map-heading { display: flex; align-items: center; justify-content: space-between; }
 .district-map-heading > div { display: flex; align-items: center; gap: .6rem; }
 .district-map-heading h2 { margin: 0; font-size: 1.1rem; }
@@ -978,12 +979,32 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-resource-link { margin-top: .62rem; padding: .72rem .8rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem; border: 1px solid #cde4d3; border-radius: 10px; color: #0a7653; background: #f0faf3; font-size: .75rem; font-weight: 700; text-decoration: none; }
 .tour-resource-link:hover { background: #def4e6; }
 .tour-footer { margin: 1.4rem 0 0; color: #6d8677; text-align: center; font-size: .75rem; line-height: 1.6; }
+.text-practice-screen { min-height: 100dvh; color: #183c31; background: radial-gradient(ellipse at 82% 8%, rgba(125,222,183,.2), transparent 32%), #f2f8f4; }
+.text-practice-topbar { min-height: 84px; padding: .8rem max(5vw, calc((100vw - 1180px)/2)); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #d9e9df; background: rgba(255,255,255,.92); }
+.text-practice-content { width: min(900px, 92vw); margin: 3rem auto; padding: clamp(1.1rem, 3vw, 2.2rem); border: 1px solid #d8e9dd; border-radius: 22px; background: white; box-shadow: 0 18px 48px rgba(26,76,57,.08); }
+.text-practice-heading { margin-bottom: 1.5rem; }
+.text-practice-heading h1 { margin: .7rem 0 .35rem; font-size: clamp(1.6rem, 3vw, 2.25rem); letter-spacing: -.045em; }
+.text-practice-heading p { margin: 0; color: #668175; font-size: .88rem; line-height: 1.6; }
+.text-practice-label { display: block; margin: 1.05rem 0 .45rem; color: #395b4e; font-size: .78rem; font-weight: 800; }
+.text-practice-prompt, .text-practice-input { width: 100%; min-height: 106px; padding: .85rem 1rem; border: 1px solid #cddfd3; border-radius: 12px; color: #28483b; background: #f9fcfa; font: inherit; font-size: .95rem; line-height: 1.8; resize: vertical; }
+.text-practice-prompt:focus, .text-practice-input:focus { outline: 3px solid rgba(0,168,117,.13); border-color: #00a875; }
+.text-practice-stats { margin: .7rem 0; display: flex; gap: 1rem; color: #688176; font-size: .72rem; font-weight: 700; }
+.text-practice-target { min-height: 145px; padding: 1rem 1.1rem; border: 1px solid #dce9df; border-radius: 13px; color: #557066; background: #f5faf6; font-size: 1.08rem; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.text-practice-target .is-matched { color: #07865f; background: #dff5e9; }
+.text-practice-target .is-mismatch { color: #bb4b4b; background: #ffe9e6; }
+.text-practice-target.is-complete { border-color: #8fd6b3; background: #f0fff5; }
+.text-practice-input { min-height: 125px; color: #183c31; background: #fff; }
+.text-practice-footer { margin-top: .65rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #789085; font-size: .72rem; }
+.text-practice-complete { margin: 1rem 0 0; color: #08765b; font-size: .9rem; font-weight: 800; }
 @media (max-width: 900px) {
   .tour-main-grid { grid-template-columns: 1fr; }
   .tour-side-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .start-record .start-tour-button { margin-right: .4rem; }
 }
 @media (max-width: 650px) {
+  .district-start-actions { align-items: stretch; flex-direction: column; }
+  .text-practice-topbar { min-height: 70px; padding-inline: 4vw; }
+  .text-practice-content { margin: 1.2rem auto; padding: 1rem; }
   .start-record > span, .start-record > strong { display: none; }
   .start-tour-button { margin-right: 0; font-size: .66rem; }
   .tour-brand { font-size: .72rem; }
