@@ -11,11 +11,12 @@ interface DistrictSelectorProps {
   onStart: () => void
   onOpenTextPractice: () => void
   onOpenTours: () => void
+  onOpenAuth: (kind: 'login' | 'signup') => void
   highScore: number
   playedStations: Partial<Record<SeoulDistrict, string[]>>
 }
 
-export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, highScore, playedStations }: DistrictSelectorProps) {
+export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, onOpenAuth, highScore, playedStations }: DistrictSelectorProps) {
   const [activeTab, setActiveTab] = useState('타자 연습')
   const [dialog, setDialog] = useState<SiteDialogKind | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -87,9 +88,9 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
       <div className="start-top-actions">
         <div className="typing-account-actions">
           {userEmail && <span className="typing-account-email">{userEmail}</span>}
-          {!userEmail && <button type="button" onClick={() => setDialog('login')}>로그인</button>}
-          {!userEmail && <button type="button" onClick={() => setDialog('signup')}>회원가입</button>}
-          <button type="button" onClick={() => setDialog('logout')}>로그아웃</button>
+          {!userEmail && <button type="button" onClick={() => onOpenAuth('login')}>로그인</button>}
+          {!userEmail && <button type="button" onClick={() => onOpenAuth('signup')}>회원가입</button>}
+          {userEmail && <button type="button" onClick={() => setDialog('logout')}>로그아웃</button>}
         </div>
         <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>English city rides ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
       </div>
@@ -122,6 +123,6 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
         </div>
       </div>
     </section>
-    {dialog && <SiteDialog kind={dialog} userEmail={userEmail} onClose={() => setDialog(null)} onChangeKind={setDialog} />}
+    {dialog && <SiteDialog kind={dialog} userEmail={userEmail} onClose={() => setDialog(null)} />}
   </main>
 }

@@ -7,12 +7,19 @@ import { GameResult } from './components/GameResult'
 import { TypingInput } from './components/TypingInput'
 import { TouristGuide } from './components/TouristGuide'
 import { TextPractice } from './components/TextPractice'
+import { AuthPage, type AuthPageKind } from './components/AuthPage'
 import { createDistrictCourse, districtCourses, type SeoulDistrict } from './data/districtCourses'
 import { useTypingGame } from './hooks/useTypingGame'
 import { useBikeStations } from './hooks/useBikeStations'
 import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/game'
 
-type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour'
+type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour' | AuthPageKind
+function screenFromUrl(): AppScreen {
+  const params = new URLSearchParams(window.location.search)
+  const page = params.get('page')
+  if (page === 'login' || page === 'signup') return page
+  return ['en', 'ko'].includes(params.get('lang') ?? '') ? 'tour' : 'select'
+}
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 const PLAYED_STATIONS_KEY = 'seoul-typing-bike-played-stations-v1'
 const GAME_THEME_KEY = 'seoul-typing-bike-light-mode'
@@ -62,7 +69,12 @@ function GameScreen({ course, playedStationIds, onHome, onResult }: { course: Di
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen>(() => ['en', 'ko'].includes(new URLSearchParams(window.location.search).get('lang') ?? '') ? 'tour' : 'select')
+  const [screen, setScreen] = useState<AppScreen>(screenFromUrl)
+  useEffect(() => {
+    const handleBack = () => setScreen(screenFromUrl())
+    window.addEventListener('popstate', handleBack)
+    return () => window.removeEventListener('popstate', handleBack)
+  }, [])
   const [selected, setSelected] = useState<SeoulDistrict | null>(null)
   const [runKey, setRunKey] = useState(0)
   const [result, setResult] = useState<GameResultData | null>(null)
@@ -111,6 +123,7 @@ export default function App() {
   const goHome = () => {
     const url = new URL(window.location.href)
     url.searchParams.delete('lang')
+    url.searchParams.delete('page')
     window.history.replaceState(null, '', url)
     setScreen('select'); setResult(null); setActiveCourse(null)
   }
@@ -119,6 +132,13 @@ export default function App() {
     url.searchParams.set('lang', 'en')
     window.history.replaceState(null, '', url)
     setScreen('tour')
+  }
+  const openAuth = (kind: AuthPageKind) => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('lang')
+    url.searchParams.set('page', kind)
+    window.history.pushState(null, '', url)
+    setScreen(kind)
   }
   const openTextPractice = () => {
     if (!selected) setSelected('강남구')
@@ -133,8 +153,10 @@ export default function App() {
   if (screen === 'result' && activeCourse && result) return <GameResult district={activeCourse.district} result={result} highScore={highScore}
     totalStations={activeCourse.stations.length} leaderboard={leaderboard} currentRankingId={currentRankingId} onRetry={startGame} onHome={goHome} />
   if (screen === 'tour') return <TouristGuide onBack={goHome} />
+  if (screen === 'login' || screen === 'signup') return <AuthPage key={screen} kind={screen} onHome={goHome} onNavigate={openAuth} />
   if (screen === 'text') return <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
   return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
     onOpenTextPractice={openTextPractice}
+    onOpenAuth={openAuth}
     highScore={highScore} playedStations={playedStations} />
 }
