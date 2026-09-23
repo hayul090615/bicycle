@@ -283,11 +283,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .countdown-bike-road { position: absolute; left: 0; right: 0; bottom: 4px; height: 2px; background: linear-gradient(90deg, transparent, rgba(115,235,195,.5), transparent); }
 .countdown-label { display: block; margin-top: .2rem; color: #ffd45d; font: 800 .58rem 'DM Sans', sans-serif; letter-spacing: .22em; }
 .countdown-badge-shell { position: relative; width: 142px; height: 142px; margin: .45rem auto .4rem; display: grid; place-items: center; }
-.countdown-badge-shell::before, .countdown-badge-shell::after, .countdown-badge-shell > i { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(112, 240, 197, .25); }
-.countdown-badge-shell::before { inset: 7px; border-style: dashed; animation: countdownSpin 10s linear infinite; }
-.countdown-badge-shell::after { inset: 18px; border-color: rgba(255, 212, 93, .2); }
-.countdown-badge-shell > i { inset: -5px; border-color: transparent; border-top-color: #70f0c5; border-right-color: rgba(112,240,197,.25); transform: rotate(28deg); }
-.countdown-badge { position: relative; z-index: 1; width: 104px; height: 104px; display: grid; place-items: center; border: 1px solid rgba(155, 244, 214, .34); border-radius: 50%; color: var(--yellow); background: radial-gradient(circle at 50% 35%, #155f4e, #092f28 72%); font: 800 clamp(2.7rem, 8vw, 4.3rem) 'DM Sans', sans-serif; line-height: 1; box-shadow: 0 12px 30px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.1); animation: countdown .7s ease; }
+.countdown-ring { position: absolute; z-index: 2; left: 50%; top: 50%; width: 112px; height: 112px; transform: translate(-50%, -50%) rotate(-90deg); pointer-events: none; }
+.countdown-ring circle { fill: none; stroke: rgba(112, 240, 197, .18); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 29.333333 70.666667; transition: stroke .22s ease, filter .22s ease; }
+.countdown-ring circle.is-filled { stroke: #70f0c5; filter: drop-shadow(0 0 4px rgba(112,240,197,.6)); }
+.countdown-badge { position: relative; z-index: 1; width: 104px; height: 104px; display: grid; place-items: center; border-radius: 50%; color: var(--yellow); background: radial-gradient(circle at 50% 35%, #155f4e, #092f28 72%); font: 800 clamp(2.7rem, 8vw, 4.3rem) 'DM Sans', sans-serif; line-height: 1; box-shadow: 0 12px 30px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.1); animation: countdown .7s ease; }
 .countdown-card h2 { margin: .2rem 0 .18rem; font-size: clamp(1.25rem, 3vw, 1.65rem); letter-spacing: -.035em; }
 .countdown-card > p { margin: 0; color: #b9d9cf; font-size: .75rem; }
 .countdown-course-info { margin-top: .9rem; display: grid; grid-template-columns: .85fr 1.15fr; text-align: left; border: 1px solid rgba(157, 231, 207, .14); border-radius: 13px; background: rgba(2, 31, 26, .26); }

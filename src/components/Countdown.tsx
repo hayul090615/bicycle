@@ -7,6 +7,7 @@ interface CountdownProps {
 }
 
 export function Countdown({ value, courseTitle, stationName }: CountdownProps) {
+  const filledRingSegments = value > 0 ? 4 - value : 3
   return <div className="countdown-overlay" role="status" aria-live="assertive">
     <svg className="countdown-route-art" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
       <path className="countdown-route-shadow" d="M-40 560 C150 490 180 255 365 330 S660 485 1040 120" />
@@ -23,7 +24,10 @@ export function Countdown({ value, courseTitle, stationName }: CountdownProps) {
       </div>
       <span className="countdown-label">READY TO RIDE</span>
       <div className="countdown-badge-shell">
-        <i aria-hidden="true" />
+        <svg className="countdown-ring" viewBox="0 0 160 160" aria-hidden="true">
+          {[0, 1, 2].map((segment) => <circle key={segment} cx="80" cy="80" r="74" pathLength="100"
+            className={segment < filledRingSegments ? 'is-filled' : ''} style={{ strokeDashoffset: -segment * (100 / 3) }} />)}
+        </svg>
         <div className="countdown-badge" key={value}>{value > 0 ? value : 'GO'}</div>
       </div>
       <h2>{value > 0 ? '라이딩을 준비하세요' : '출발 준비 완료!'}</h2>
