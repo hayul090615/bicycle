@@ -90,7 +90,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .start-record { display: flex; align-items: center; gap: .65rem; }
 .start-record span { color: var(--muted); font-size: .72rem; }
 .start-record strong { color: var(--green-dark); font: 700 1.05rem 'DM Sans'; }
-.start-map-layout { width: min(1480px, 96vw); min-height: 0; margin: 0 auto; padding: .5rem 0; display: grid; grid-template-columns: minmax(300px, .82fr) minmax(470px, 1.18fr); grid-template-rows: minmax(0, 1fr); align-items: center; gap: .65rem clamp(.8rem, 1.8vw, 1.5rem); }
+.start-map-layout { width: min(1180px, 96vw); min-height: 0; margin: 0 auto; padding: .5rem 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); align-items: center; }
 .start-intro { align-self: center; }
 .start-intro h1 { margin: .75rem 0 1rem; font-size: clamp(2.4rem, 4.4vw, 4.5rem); line-height: 1.08; letter-spacing: -.065em; }
 .start-intro h1 em { color: var(--green); font-style: normal; }
@@ -414,7 +414,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .start-screen--map { position: relative; height: auto; min-height: 100dvh; overflow: visible; display: block; }
   .start-topbar { position: sticky; top: 0; z-index: 10; min-height: 58px; padding: 0 4vw; }
   .start-record span { display: none; }
-  .start-map-layout { width: 94vw; height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(500px, 68dvh) auto; align-items: stretch; gap: .8rem; padding: .8rem 0 1rem; }
+  .start-map-layout { width: 94vw; height: auto; grid-template-rows: minmax(500px, 68dvh); align-items: stretch; padding: .8rem 0 1rem; }
   .start-intro { display: grid; grid-template-columns: 1fr auto; align-items: end; }
   .start-intro .eyebrow, .start-intro > p, .start-feature-list { display: none; }
   .start-intro h1 { margin: 0; font-size: 1.7rem; }
@@ -466,9 +466,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .leaderboard > header { padding-inline: .7rem; }
 }
 
-/* 중앙 집중형 지도와 시 연습 */
-.start-map-layout { width: min(1480px, 96vw); min-height: 0; margin: 0 auto; padding: .5rem 0; display: grid; grid-template-columns: minmax(300px, .82fr) minmax(470px, 1.18fr); grid-template-rows: minmax(0, 1fr); align-items: center; gap: .65rem clamp(.8rem, 1.8vw, 1.5rem); }
-.district-map-panel { width: auto; height: min(60vh, 620px); min-height: 450px; }
+/* 중앙 집중형 시작 지도 */
+.district-map-panel { width: 100%; height: min(760px, calc(100dvh - 96px)); min-height: 450px; }
 .seoul-district-map { max-height: 680px; }
 .district-played-marker circle { fill: #08765b; stroke: #fff; stroke-width: 1; }
 .district-played-marker text { fill: #fff; stroke: none; font-size: 6px; font-weight: 900; }
@@ -484,7 +483,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .course-station-label { max-width: min(250px, 32vw); overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 
 @media (max-width: 720px) {
-  .start-map-layout { width: 94vw; height: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(500px, 68dvh) auto; align-items: stretch; gap: .8rem; padding: .8rem 0 1rem; }
   .district-map-panel { width: auto; height: auto; min-height: 500px; }
   .text-practice-panel { height: auto; min-height: 520px; }
   .game-screen .map-source { bottom: 205px; }
@@ -1032,7 +1030,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 880px) and (min-width: 721px) {
   .start-screen--map { position: relative; height: auto; min-height: 100dvh; overflow: visible; display: block; }
   .start-topbar { position: sticky; top: 0; z-index: 10; min-height: 70px; }
-  .start-map-layout { width: 92vw; height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(500px, 62vh) auto; align-items: stretch; gap: .8rem; padding: .9rem 0 1.2rem; }
+  .start-map-layout { width: 92vw; height: auto; grid-template-rows: minmax(500px, 62vh); align-items: stretch; padding: .9rem 0 1.2rem; }
   .district-map-panel, .text-practice-panel { height: auto; min-height: 500px; }
 }
 @media (max-width: 650px) {

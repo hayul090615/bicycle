@@ -1,7 +1,6 @@
 import { allBikeStations, districtCourses, SEOUL_DISTRICTS, type SeoulDistrict } from '../data/districtCourses'
 import { SeoulDistrictMap } from './SeoulDistrictMap'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
-import { TextPractice } from './TextPractice'
 import { useEffect, useState } from 'react'
 import { SiteDialog, type SiteDialogKind } from './SiteDialog'
 import { siteAuth } from '../services/siteAuth'
@@ -122,7 +121,6 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
           </> : <p>지도 위 자치구에 마우스를 올리고 선택해 주세요.</p>}
         </div>
       </div>
-      <TextPractice district={selected} onDistrictChange={onSelect} embedded />
     </section>
     {dialog && <SiteDialog kind={dialog} userEmail={userEmail} onClose={() => setDialog(null)} onChangeKind={setDialog} />}
   </main>

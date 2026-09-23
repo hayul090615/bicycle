@@ -68,7 +68,7 @@ export function SiteDialog({ kind, userEmail, onClose, onChangeKind }: {
         {message && <p className="site-dialog-message" role="status">{message}</p>}
       </> : <>
         <p className="site-dialog-copy">화면에 보이는 글감을 읽고 아래 입력칸에 그대로 입력해 보세요. 맞은 글자는 초록색으로 표시됩니다.</p>
-        <p className="site-dialog-copy">오른쪽 연습 패널에서 자치구를 바꾸고 시를 직접 고칠 수 있습니다. 맞은 글자는 초록색으로 표시됩니다.</p>
+        <p className="site-dialog-copy">상단 필사 메뉴를 누르면 자치구를 고르고 시를 직접 고치며 연습할 수 있습니다.</p>
       </>}
     </section>
   </div>
