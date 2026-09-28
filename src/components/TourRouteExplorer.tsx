@@ -1,5 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CircleMarker, MapContainer, Polygon, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { GoogleRoute3D } from './GoogleRoute3D'
@@ -7,9 +7,9 @@ import { hasGoogleMapsKey } from '../services/googleMaps3d'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
-import { getShadowPolygon } from '../utils/solarShadow'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
+const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
 
 function FocusMap({ points, selectedStop }: { points: LatLngExpression[]; selectedStop: number | null }) {
   const map = useMap()
@@ -47,12 +47,8 @@ export function TourRouteExplorer({ route, locale, shadowDate, shadowMinutes, on
     const station = getTouristStation(stop.stationId)
     return [station.lat, station.lng]
   }), [route])
-  const shadowStopIndex = selectedStop ?? 0
-  const shadowStation = getTouristStation(route.stops[shadowStopIndex].stationId)
-  const solar = getSolarPosition(shadowDate || todayInSeoul(), shadowMinutes, shadowStation.lat, shadowStation.lng)
-  const shadowPolygon = useMemo(() => getShadowPolygon(shadowStation.lat, shadowStation.lng, solar.elevation, solar.shadowAzimuth),
-    [shadowStation.lat, shadowStation.lng, solar.elevation, solar.shadowAzimuth])
-  const shadowLength = solar.elevation > 0 ? Math.min(180, 12 / Math.tan(solar.elevation * Math.PI / 180)) : null
+  const solar = getSolarPosition(shadowDate || todayInSeoul(), shadowMinutes, SEOUL_REFERENCE.lat, SEOUL_REFERENCE.lng)
+  const shadowGradientStyle = { '--shadow-gradient-angle': `${solar.shadowAzimuth}deg` } as CSSProperties
   const time = `${String(Math.floor(shadowMinutes / 60)).padStart(2, '0')}:${String(shadowMinutes % 60).padStart(2, '0')}`
   useLayoutEffect(() => {
     setSelection(null)
@@ -90,8 +86,6 @@ export function TourRouteExplorer({ route, locale, shadowDate, shadowMinutes, on
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} selectedStop={selectedStop} />
     <Polyline positions={points} pathOptions={{ color: '#08765b', weight: 4, dashArray: '8 9' }} />
-    {shadowPolygon && <Polygon positions={shadowPolygon.map(([lng, lat]) => [lat, lng] as LatLngExpression)}
-      pathOptions={{ color: '#d0bd83', weight: 1, opacity: .82, fillColor: '#28342e', fillOpacity: .45 }} />}
     {route.stops.map((stop, index) => <CircleMarker key={stop.stationId} center={points[index]} radius={selectedStop === index ? 13 : 9}
       eventHandlers={{ click: () => selectStop(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
@@ -110,17 +104,18 @@ export function TourRouteExplorer({ route, locale, shadowDate, shadowMinutes, on
         </div>
       </div>
       <div className="tour-map-stage" onMouseLeave={() => hoverStop(null)}>
-        {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowPolygon={shadowPolygon} fallback={map} />
+        {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<div className={`tour-map-shadow-gradient${solar.elevation > 0 ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" /><p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
+          <MapLibreRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} shadowVisible={solar.elevation > 0} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowPolygon={shadowPolygon} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} shadowVisible={solar.elevation > 0} fallback={map} />}
         {view === 'map' && map}
+        {view === 'map' && <div className={`tour-map-shadow-gradient${solar.elevation > 0 ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" />}
         <aside className="tour-map-shadow-control" aria-label={text('Sun and shadow on the map', '지도 위 태양과 그림자 설정')}>
           <div className="tour-map-shadow-heading">
             <span className="tour-shadow-sun-mark" aria-hidden="true">☼</span>
-            <div><span className="tour-scenery-kicker">{text('SHADOW ON MAP · 12 M OBJECT', '지도 위 그림자 · 높이 12m 기준')}</span>
+            <div><span className="tour-scenery-kicker">{text('SHADOW GRADIENT · SEOUL SUN', '태양 방향 그라데이션 · 서울 기준')}</span>
               <strong>{solar.elevation > 0
-                ? text(`${Math.round(solar.elevation)}° sun · ${Math.round(solar.shadowAzimuth)}° shadow direction`, `태양 고도 ${Math.round(solar.elevation)}° · 그림자 방향 ${Math.round(solar.shadowAzimuth)}°`)
+                ? text(`${Math.round(solar.elevation)}° sun · shade falls ${Math.round(solar.shadowAzimuth)}° away`, `태양 고도 ${Math.round(solar.elevation)}° · 그림자는 ${Math.round(solar.shadowAzimuth)}° 방향`)
                 : text('After sunset · no ground shadow', '해 진 뒤 · 지표면 그림자 없음')}</strong></div>
           </div>
           <div className="tour-map-shadow-fields">
@@ -128,9 +123,7 @@ export function TourRouteExplorer({ route, locale, shadowDate, shadowMinutes, on
             <label><span>{text('Seoul time', '서울 시각')} <b>{time} KST</b></span><input type="range" min="360" max="1200" step="30" value={shadowMinutes}
               aria-label={text('Time in Seoul', '서울 시각')} onChange={event => onShadowMinutesChange(Number(event.target.value))} /></label>
           </div>
-          <p>{shadowLength !== null
-            ? text(`Approx. ${shadowLength.toFixed(0)} m projection. Actual building and tree shade is not modeled.`, `예상 길이 약 ${shadowLength.toFixed(0)}m · 실제 건물·나무 형상은 반영하지 않습니다.`)
-            : text('A ground shadow appears during daylight.', '낮 시간에 지표면 그림자를 표시합니다.')}</p>
+          <p>{text('The map fades toward the shadow direction; actual building and tree shadows are not modeled.', '지도는 그림자 방향으로 어두워지는 시각 효과입니다. 건물·나무별 실제 그림자는 계산하지 않습니다.')}</p>
         </aside>
         {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
           <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>

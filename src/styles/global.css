@@ -1261,10 +1261,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-maplibre-3d { height: clamp(520px, 68vh, 760px); }
 .tour-maplibre-3d.tour-map-starting { display: block; padding: 0; }
 .tour-map-starting .tour-explorer-map { height: 100%; }
+.tour-map-error-fallback { position: relative; height: clamp(340px, 48vh, 480px); }
+.tour-map-error-fallback .tour-explorer-map { height: 100%; }
 .tour-map-loading-label { position: absolute; z-index: 3; top: .8rem; left: 50%; max-width: calc(100% - 1.6rem); margin: 0; padding: .5rem .7rem; transform: translateX(-50%); border: 1px solid #d5d2c7; border-radius: 5px; color: #4e594e; background: rgba(239,237,229,.94); box-shadow: 0 2px 8px rgba(20,28,21,.16); font-size: .68rem; white-space: nowrap; }
 .tour-maplibre-host { position: absolute; z-index: 1; inset: 0; }
 .tour-maplibre-fallback, .google-route-underlay { position: absolute; z-index: 0; inset: 0; }
 .tour-maplibre-fallback .tour-explorer-map, .google-route-underlay .tour-explorer-map { height: 100%; }
+.tour-map-shadow-gradient { position: absolute; z-index: 2; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(var(--shadow-gradient-angle, 180deg), rgba(225,190,119,0) 0%, rgba(225,190,119,.025) 32%, rgba(25,33,27,.07) 62%, rgba(14,20,16,.24) 100%); mix-blend-mode: multiply; transition: opacity .25s ease; }
+.tour-map-shadow-gradient.is-active { opacity: 1; }
 .tour-maplibre-3d .google-route-loading, .google-route-3d .google-route-loading { z-index: 3; }
 .tour-maplibre-host canvas { filter: brightness(.89) saturate(.78) contrast(1.02); }
 .tour-map-style-toggle { border-color: #d8d5c9; border-radius: 5px; color: #3d4a40; background: #efede5; box-shadow: 0 2px 8px rgba(24,34,26,.18); }
