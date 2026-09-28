@@ -69,11 +69,27 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
   const [routeId, setRouteId] = useState(initialRoute.id)
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
-  const categoryLabels: Record<TourCategory, [string, string]> = {
-    sightseeing: ['Sightseeing', '관광 코스'],
-    fitness: ['Workout rides', '운동 코스'],
-    night: ['Night views', '야경 코스'],
-    seasonal: ['By season', '계절별 코스'],
+  const categoryCopy: Record<TourCategory, { label: [string, string]; title: [string, string]; description: [string, string] }> = {
+    sightseeing: {
+      label: ['Find somewhere new', '새로운 서울'],
+      title: ['Find a side of Seoul you haven’t seen.', '익숙한 서울에서, 처음 만나는 장면을.'],
+      description: ['Ride between riverside stations, then dock and explore each park or neighborhood on foot.', '강변 대여소 사이를 달리고, 공원과 동네는 자전거를 반납한 뒤 걸어서 둘러보세요.'],
+    },
+    fitness: {
+      label: ['Go for a workout', '운동 코스'],
+      title: ['Let the river set your pace.', '한강을 따라, 내 페이스로 더 멀리.'],
+      description: ['Choose a shorter or longer riverside ride, set your own pace, and check return stations before setting off.', '짧거나 긴 강변 코스 중 골라 내 페이스로 달려보세요. 출발 전 반납 대여소를 확인하세요.'],
+    },
+    night: {
+      label: ['Ride after dark', '야경 코스'],
+      title: ['See the river after the city lights up.', '도시의 불빛이 켜진 뒤, 강변으로.'],
+      description: ['Choose a shorter Yeouido ride or a longer riverside stretch. Start before sunset and stay on lit paths.', '여의도 짧은 코스와 긴 강변 코스 중 골라 해 지기 전 출발하고, 조명이 있는 길을 이용하세요.'],
+    },
+    seasonal: {
+      label: ['Follow the seasons', '계절별 코스'],
+      title: ['Come back and see what changed.', '계절이 바뀌면, 풍경도 달라지니까.'],
+      description: ['Spring flowers, summer shade, autumn reeds, or a short winter ride. Bloom times and path conditions can change.', '봄꽃, 여름 그늘, 가을 갈대, 짧은 겨울 라이딩. 꽃 시기와 길 상태는 날마다 달라질 수 있어요.'],
+    },
   }
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -114,15 +130,15 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
     </header>
     <div className="tour-content">
       <section className="tour-hero">
-        <div className="tour-hero-copy"><span className="tour-eyebrow">{textFor(locale, 'A LITTLE PEDAL, A NEW PERSPECTIVE', '두 바퀴로 만나는 새로운 서울')}</span>
-          <h1>{textFor(locale, <>Your next stop:<br /><em>Seoul, by bike.</em></>, <>오늘의 목적지,<br /><em>따릉이로 서울.</em></>)}</h1>
+        <div className="tour-hero-copy"><span className="tour-eyebrow">{textFor(locale, 'FOR THE SEOUL YOU HAVEN’T MET YET', '아직 만나지 못한 서울을 향해')}</span>
+          <h1>{textFor(locale, <>One more turn.<br />A side of Seoul<br /><em>you haven’t seen yet.</em></>, <>한 번도 가보지 않은<br />서울의 다음 장면을<br /><em>따릉이로 만나보세요.</em></>)}</h1>
           <p>{textFor(locale,
-            'Riverside paths, city lights, and little detours. Find your kind of ride with Ttareungi.',
-            '한강의 바람부터 반짝이는 야경까지. 나에게 맞는 따릉이 코스로 서울을 만나보세요.')}</p>
-          <div className="tour-hero-actions"><a className="button button--primary" href="#tour-routes">{textFor(locale, 'Find your ride', '여행 코스 둘러보기')} <span aria-hidden="true">↗</span></a>
+            'Chase a longer workout, follow the city lights, or ride with the seasons. Pick a route and see where the next stop leads.',
+            '운동하듯 길게, 불빛을 따라 저녁에, 계절이 바뀌는 강변으로. 코스를 고르고 다음 경유지의 풍경을 만나보세요.')}</p>
+          <div className="tour-hero-actions"><a className="button button--primary" href="#tour-routes">{textFor(locale, 'Find your next view', '새로운 풍경 찾아보기')} <span aria-hidden="true">↗</span></a>
             <span className="tour-hero-count">{textFor(locale, `${touristRoutes.length} routes · 4 ways to explore`, `${touristRoutes.length}개 코스 · 4가지 테마`)}</span></div>
         </div>
-        <div className="tour-hero-art"><SeoulRideIllustration /><span className="tour-scene-label"><i />{textFor(locale, 'A day by the Han River', '한강을 따라 달리는 하루')}</span></div>
+        <div className="tour-hero-art"><SeoulRideIllustration /><span className="tour-scene-label"><i />{textFor(locale, 'Your next view awaits', '다음 풍경을 만나러')}</span></div>
       </section>
 
       <nav className="tour-plan-nav" aria-label={textFor(locale, 'Plan your ride', '여행 준비 순서')}>
@@ -134,17 +150,23 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
         <h2>{textFor(locale, 'Seoul bike routes', '서울 따릉이 코스')}</h2></div>
         <a href="https://english.seoul.go.kr/service/movement/seoul-public-bike/3-rent-return-bike/" target="_blank" rel="noopener noreferrer">{textFor(locale, 'How to rent Ttareungi ↗', '따릉이 대여 방법 ↗')}</a></div>
       <div className="tour-category-tabs" role="group" aria-label={textFor(locale, 'Route categories', '코스 종류')}>
-        {(Object.keys(categoryLabels) as TourCategory[]).map((key) => <button key={key} type="button" aria-pressed={category === key}
+        {(Object.keys(categoryCopy) as TourCategory[]).map((key) => <button key={key} type="button" aria-pressed={category === key}
           className={`tour-category-tab ${category === key ? 'is-selected' : ''}`} onClick={() => {
             setCategory(key)
             setRouteId(touristRoutes.find((candidate) => candidate.category === key)!.id)
-          }}>{textFor(locale, categoryLabels[key][0], categoryLabels[key][1])}</button>)}
+          }}>{textFor(locale, categoryCopy[key].label[0], categoryCopy[key].label[1])}</button>)}
       </div>
-      <div className="tour-route-tabs" role="group" aria-label={textFor(locale, 'Choose a route', '코스 선택')}>
+      <section className="tour-category-intro" aria-live="polite" aria-atomic="true">
+        <span className="tour-card-kicker">{textFor(locale, 'A DIFFERENT WAY TO SEE THE CITY', '서울을 새롭게 만나는 방법')}</span>
+        <h3>{textFor(locale, categoryCopy[category].title[0], categoryCopy[category].title[1])}</h3>
+        <p>{textFor(locale, categoryCopy[category].description[0], categoryCopy[category].description[1])}</p>
+      </section>
+      <div className={`tour-route-tabs tour-route-tabs--${category}`} role="group" aria-label={textFor(locale, 'Choose a route', '코스 선택')}>
         {categoryRoutes.map(candidate => <button key={candidate.id} type="button" aria-pressed={candidate.id === route.id}
           className={`tour-route-tab ${candidate.id === route.id ? 'is-selected' : ''}`} onClick={() => chooseRoute(candidate.id)}>
           <span>{textFor(locale, candidate.area, candidate.areaKo)}</span><strong>{textFor(locale, candidate.title, candidate.titleKo)}</strong>
           <small>{textFor(locale, candidate.distance ?? candidate.suggestedTime, candidate.distance ?? candidate.suggestedTimeKo)}</small>
+          <span className="tour-route-discovery">{textFor(locale, candidate.discovery, candidate.discoveryKo)}</span>
           <span className="tour-route-open">{textFor(locale, `${candidate.stops.length} stops · Explore route ↓`, `${candidate.stops.length}개 경유지 · 코스 살펴보기 ↓`)}</span>
         </button>)}
       </div>
