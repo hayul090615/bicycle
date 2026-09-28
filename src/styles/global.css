@@ -1336,3 +1336,41 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-scenery-preview > img { height: 112px; }
   .tour-shadow-legend { left: .55rem; bottom: .55rem; }
 }
+
+/* Put the route map and its course finder in the first viewport. */
+.tour-map-first-panel { margin-top: 1rem; }
+.tour-map-first-panel .tour-panel-heading { margin-bottom: .9rem; }
+.tour-route-finder { display: grid; gap: .65rem; margin-bottom: 1.15rem; padding: .85rem; border: 1px solid #d0cfc5; border-radius: 8px; background: #e9e8df; }
+.tour-nearby-button { width: 100%; min-height: 45px; display: flex; align-items: center; justify-content: center; gap: .5rem; padding: .65rem .8rem; border: 1px solid #3f6650; border-radius: 6px; color: #f7f4ea; background: #3e604b; font: inherit; font-size: .82rem; font-weight: 800; cursor: pointer; }
+.tour-nearby-button:hover { background: #314f3d; }
+.tour-nearby-button:disabled { cursor: wait; opacity: .72; }
+.tour-nearby-button > span { font-size: 1.2rem; line-height: 1; }
+.tour-location-result { min-height: 2.2em; margin: 0; color: #606e60; font-size: .7rem; line-height: 1.5; }
+.tour-route-finder .tour-itinerary-heading { margin: .3rem 0 0; }
+.tour-finder-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; }
+.tour-finder-categories button, .tour-finder-routes button { min-width: 0; border: 1px solid #cecec3; border-radius: 5px; color: #485a4c; background: #f5f3ec; font: inherit; cursor: pointer; }
+.tour-finder-categories button { min-height: 38px; padding: .4rem .35rem; font-size: .72rem; font-weight: 750; }
+.tour-finder-routes { max-height: 210px; display: grid; gap: .35rem; overflow-y: auto; }
+.tour-finder-routes button { width: 100%; min-height: 52px; padding: .55rem .65rem; display: grid; gap: .12rem; text-align: left; }
+.tour-finder-routes strong { overflow: hidden; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.tour-finder-routes small { color: #737b6f; font-size: .65rem; }
+.tour-finder-categories button:hover, .tour-finder-routes button:hover { border-color: #70866f; }
+.tour-finder-categories button[aria-pressed='true'], .tour-finder-routes button[aria-pressed='true'] { border-color: #527158; color: #304c39; background: #e3eadf; box-shadow: inset 3px 0 #527158; }
+.tour-user-location-marker { width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%; background: #246fe5; box-shadow: 0 0 0 5px #246fe548, 0 2px 8px #12254d88; }
+@media (max-width: 990px) {
+  .tour-route-finder { margin-bottom: 1rem; }
+  .tour-finder-categories { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tour-finder-routes { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; }
+}
+@media (max-width: 650px) {
+  .tour-map-first-panel { margin-top: .5rem; }
+  .tour-map-first-panel .tour-panel-heading { margin-bottom: .65rem; }
+  .tour-map-first-panel .tour-panel-heading h2 { font-size: 1.18rem; }
+  .tour-map-first-panel .tour-panel-heading p { font-size: .73rem; }
+  .tour-topbar { flex-wrap: wrap; gap: .4rem; }
+  .tour-header-actions { width: 100%; justify-content: flex-end; }
+  .tour-earth-preview .tour-ride-toolbar { align-items: stretch; flex-direction: column; }
+  .tour-view-switch { align-self: flex-start; max-width: 100%; flex-wrap: wrap; }
+  .tour-finder-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tour-finder-routes { grid-template-columns: minmax(0, 1fr); }
+}

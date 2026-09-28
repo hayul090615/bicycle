@@ -18,7 +18,8 @@ function screenFromUrl(): AppScreen {
   const params = new URLSearchParams(window.location.search)
   const page = params.get('page')
   if (page === 'login' || page === 'signup') return page
-  return ['en', 'ko'].includes(params.get('lang') ?? '') ? 'tour' : 'select'
+  if (page === 'typing') return 'select'
+  return 'tour'
 }
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 const PLAYED_STATIONS_KEY = 'seoul-typing-bike-played-stations-v1'
@@ -123,12 +124,14 @@ export default function App() {
   const goHome = () => {
     const url = new URL(window.location.href)
     url.searchParams.delete('lang')
-    url.searchParams.delete('page')
+    url.searchParams.delete('route')
+    url.searchParams.set('page', 'typing')
     window.history.replaceState(null, '', url)
     setScreen('select'); setResult(null); setActiveCourse(null)
   }
   const openTours = () => {
     const url = new URL(window.location.href)
+    url.searchParams.delete('page')
     url.searchParams.set('lang', 'en')
     window.history.replaceState(null, '', url)
     setScreen('tour')

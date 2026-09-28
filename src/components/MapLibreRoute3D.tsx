@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as maplibregl from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker } from 'maplibre-gl'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
+import type { LonLat } from '../services/bikeRoute'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+maplibregl.setWorkerUrl(maplibreWorkerUrl)
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
 const IMAGERY_ATTRIBUTION = 'Imagery © Esri. Sources: Esri, Vantor, Earthstar Geographics, and the GIS User Community.'
@@ -38,10 +42,12 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
+  routePath: LonLat[] | null
   locale: 'en' | 'ko'
+  userLocation: { lat: number; lng: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
@@ -52,6 +58,7 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
+  const userMarkerRef = useRef<MapLibreMarker | null>(null)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
   const updateBuildingShadowsRef = useRef<() => void>(() => {})
@@ -65,7 +72,7 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
   }), [route])
-  const boundsKey = points.map(({ lat, lng }) => `${lat},${lng}`).join('|')
+  const linePoints = useMemo(() => routePath ?? points.map(point => [point.lng, point.lat] as LonLat), [routePath, points])
   if (initialCenter.current === null) initialCenter.current = [points[0].lng, points[0].lat]
 
   useEffect(() => {
@@ -111,6 +118,8 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
       window.clearTimeout(timeout)
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      userMarkerRef.current?.remove()
+      userMarkerRef.current = null
       map.remove()
       mapRef.current = null
       setStatus('error')
@@ -154,9 +163,19 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
           paint: {
             'line-color': '#04bd83',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 17, 5] as ExpressionSpecification,
-            'line-opacity': 0.9,
-            'line-dasharray': [2, 1.5],
+            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 17, 6] as ExpressionSpecification,
+            'line-opacity': 1,
+          },
+        }
+        const routeCasing = {
+          id: 'tour-route-casing',
+          type: 'line' as const,
+          source: 'tour-route-line',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          paint: {
+            'line-color': '#f5f5ed',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 7, 17, 11] as ExpressionSpecification,
+            'line-opacity': 0.96,
           },
         }
         map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
@@ -175,10 +194,12 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
         if (buildingLayer) {
           map.addLayer(shadowFill, buildingLayer)
           map.addLayer(shadowOutline, buildingLayer)
+          map.addLayer(routeCasing, buildingLayer)
           map.addLayer(routeLayer, buildingLayer)
         } else {
           map.addLayer(shadowFill)
           map.addLayer(shadowOutline)
+          map.addLayer(routeCasing)
           map.addLayer(routeLayer)
         }
         setStatus('ready')
@@ -199,6 +220,8 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
       updateBuildingShadowsRef.current = () => {}
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      userMarkerRef.current?.remove()
+      userMarkerRef.current = null
       if (!failed) map.remove()
       mapRef.current = null
     }
@@ -209,11 +232,26 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
+    userMarkerRef.current?.remove()
+    userMarkerRef.current = null
+    if (!userLocation) return
+    const element = document.createElement('div')
+    element.className = 'tour-user-location-marker'
+    element.setAttribute('role', 'img')
+    element.setAttribute('aria-label', locale === 'ko' ? '내 위치' : 'You are here')
+    element.title = locale === 'ko' ? '내 위치' : 'You are here'
+    userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
+      .setLngLat([userLocation.lng, userLocation.lat]).addTo(map)
+  }, [locale, status, userLocation])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
     const routeSource = map.getSource('tour-route-line') as GeoJSONSource | undefined
     routeSource?.setData({
       type: 'Feature',
       properties: {},
-      geometry: { type: 'LineString', coordinates: points.map(point => [point.lng, point.lat] as [number, number]) },
+      geometry: { type: 'LineString', coordinates: linePoints },
     })
     markersRef.current.forEach(marker => marker.remove())
     markersRef.current = []
@@ -237,7 +275,7 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
         .setLngLat([points[index].lng, points[index].lat])
         .addTo(map))
     })
-  }, [locale, onHoverStop, onSelectStop, points, route, status])
+  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -251,9 +289,9 @@ export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelec
       return
     }
     const bounds = new maplibregl.LngLatBounds()
-    points.forEach(point => bounds.extend([point.lng, point.lat] as [number, number]))
+    linePoints.forEach(point => bounds.extend(point))
     map.fitBounds(bounds, { padding: { top: 66, right: 72, bottom: 66, left: 72 }, maxZoom: 14.2, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
-  }, [boundsKey, isFlatMap, points, selectedStop, status])
+  }, [isFlatMap, linePoints, points, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current

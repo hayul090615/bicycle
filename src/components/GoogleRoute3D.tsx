@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
+import type { LonLat } from '../services/bikeRoute'
 
-export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, routePath, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
+  routePath: LonLat[] | null
+  userLocation: { lat: number; lng: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
   fallback: ReactNode
 }) {
@@ -12,11 +15,13 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
   const libraryRef = useRef<Maps3DLibrary | null>(null)
   const routeLineRef = useRef<HTMLElement | null>(null)
   const markersRef = useRef<HTMLElement[]>([])
+  const userMarkerRef = useRef<HTMLElement | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const points = useMemo(() => route.stops.map(stop => {
     const { lat, lng } = getTouristStation(stop.stationId)
     return { lat, lng }
   }), [route])
+  const linePoints = useMemo(() => routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [routePath, points])
   const camera = useMemo<Camera3D>(() => {
     if (selectedStop !== null) return { center: { ...points[selectedStop], altitude: 40 }, range: 1600, tilt: 60, heading: 0 }
     const lats = points.map(point => point.lat), lngs = points.map(point => point.lng)
@@ -67,6 +72,8 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       window.removeEventListener('seoul-google-maps-error', fail)
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      userMarkerRef.current?.remove()
+      userMarkerRef.current = null
       routeLineRef.current?.remove()
       routeLineRef.current = null
       map?.remove()
@@ -82,7 +89,7 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
     map.description = locale === 'ko' ? route.titleKo : route.title
     routeLineRef.current?.remove()
     markersRef.current.forEach(marker => marker.remove())
-    routeLineRef.current = new library.Polyline3DElement({ path: points, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5 })
+    routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5 })
     map.append(routeLineRef.current)
     markersRef.current = points.map((position, index) => {
       const stop = route.stops[index]
@@ -94,7 +101,20 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       map.append(marker)
       return marker
     })
-  }, [locale, onHoverStop, onSelectStop, points, route, status])
+  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const library = libraryRef.current
+    if (!map || !library || status !== 'ready') return
+    userMarkerRef.current?.remove()
+    userMarkerRef.current = null
+    if (!userLocation) return
+    const label = locale === 'ko' ? '내 위치' : 'You are here'
+    const marker = new library.Marker3DInteractiveElement({ position: userLocation, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
+    map.append(marker)
+    userMarkerRef.current = marker
+  }, [locale, status, userLocation])
 
   useEffect(() => {
     const map = mapRef.current

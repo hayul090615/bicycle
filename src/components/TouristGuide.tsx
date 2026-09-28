@@ -58,6 +58,13 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
     })
   }
 
+  const chooseRouteFromMap = (id: string) => {
+    const nextRoute = touristRoutes.find(candidate => candidate.id === id)
+    if (!nextRoute) return
+    setCategory(nextRoute.category)
+    setRouteId(nextRoute.id)
+  }
+
   useEffect(() => {
     document.documentElement.lang = locale
     document.title = locale === 'en' ? 'Seoul Bike Journeys | Ttareungi' : '따릉이 서울 여행 코스'
@@ -81,6 +88,16 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
       </div>
     </header>
     <div className="tour-content">
+      <section className="tour-route-panel tour-map-first-panel" id="tour-detail" tabIndex={-1} aria-label={textFor(locale, `${route.title} itinerary`, `${route.titleKo} 일정`)}>
+        <div className="tour-panel-heading"><div><span className="tour-card-kicker">{textFor(locale, 'START WITH THE MAP', '지도를 보며 코스 찾기')}</span>
+          <h2>{textFor(locale, route.title, route.titleKo)}</h2><p>{textFor(locale, route.summary, route.summaryKo)}</p></div>
+          <span className="tour-duration">◷ {textFor(locale, route.suggestedTime, route.suggestedTimeKo)}</span></div>
+        <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} />
+        <div className="tour-route-source">{textFor(locale, <>Route reference: </>, <>코스 참고: </>)}
+          <a href={route.source} target="_blank" rel="noopener noreferrer">{textFor(locale, "Visit Seoul's official travel guide ↗", '서울 공식 관광 안내 ↗')}</a>.
+          {textFor(locale, ' Station locations: Seoul Open Data, June 2026 snapshot. Check live availability in the official app.', ' 대여소 위치: 서울 열린데이터광장 2026년 6월 자료. 실시간 대여 가능 여부는 공식 앱에서 확인하세요.')}</div>
+      </section>
       <section className="tour-hero">
         <div className="tour-hero-copy"><span className="tour-eyebrow">{textFor(locale, 'FOR THE SEOUL YOU HAVEN’T MET YET', '아직 만나지 못한 서울을 향해')}</span>
           <h1>{textFor(locale, <>One more turn.<br />A side of Seoul<br /><em>you haven’t seen yet.</em></>, <>한 번도 가보지 않은<br />서울의 다음 장면을<br /><em>따릉이로 만나보세요.</em></>)}</h1>
@@ -129,15 +146,6 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="tour-plan-content">
-        <section className="tour-route-panel" id="tour-detail" tabIndex={-1} aria-label={textFor(locale, `${route.title} itinerary`, `${route.titleKo} 일정`)}>
-          <div className="tour-panel-heading"><div><span className="tour-card-kicker">{textFor(locale, '02 · YOUR ROUTE', '02 · 선택한 코스')}</span>
-            <h2>{textFor(locale, route.title, route.titleKo)}</h2><p>{textFor(locale, route.summary, route.summaryKo)}</p></div>
-            <span className="tour-duration">◷ {textFor(locale, route.suggestedTime, route.suggestedTimeKo)}</span></div>
-          <TourRouteExplorer route={route} locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} />
-          <div className="tour-route-source">{textFor(locale, <>Route reference: </>, <>코스 참고: </>)}
-            <a href={route.source} target="_blank" rel="noopener noreferrer">{textFor(locale, "Visit Seoul's official travel guide ↗", '서울 공식 관광 안내 ↗')}</a>.
-            {textFor(locale, ' Station locations: Seoul Open Data, June 2026 snapshot. Check live availability in the official app.', ' 대여소 위치: 서울 열린데이터광장 2026년 6월 자료. 실시간 대여 가능 여부는 공식 앱에서 확인하세요.')}</div>
-        </section>
         <section className="tour-preflight" id="tour-checks" tabIndex={-1} aria-labelledby="tour-checks-title">
           <div className="tour-route-heading"><div><span className="tour-card-kicker">{textFor(locale, '03 · BEFORE YOU RIDE', '03 · 출발 전 확인')}</span>
             <h2 id="tour-checks-title">{textFor(locale, 'A little planning, a better ride.', '출발 전에 한 번 더 살펴보세요.')}</h2>
