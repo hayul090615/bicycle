@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import maplibregl, { type ExpressionSpecification, type Map as MapLibreMap, type Marker as MapLibreMarker } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { ExpressionSpecification, Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -7,11 +8,12 @@ const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
 const IMAGERY_ATTRIBUTION = 'Imagery © Esri. Sources: Esri, Vantor, Earthstar Geographics, and the GIS User Community.'
 const SATELLITE_SURFACES = new Set(['park', 'landuse', 'landcover', 'water', 'aeroway', 'building'])
 
-export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, fallback }: {
+export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute
   locale: 'en' | 'ko'
   selectedStop: number | null
   onSelectStop: (index: number) => void
+  onHoverStop: (index: number | null) => void
   fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -38,7 +40,7 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, fal
       pitch: 64,
       bearing: -10,
       maxPitch: 75,
-      attributionControl: true,
+      attributionControl: {},
       canvasContextAttributes: { antialias: true },
     })
     mapRef.current = map
@@ -118,6 +120,9 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, fal
           name.textContent = label
           element.append(number, name)
           element.addEventListener('click', () => onSelectStop(index))
+          element.addEventListener('mouseenter', () => onHoverStop(index))
+          element.addEventListener('focus', () => onHoverStop(index))
+          element.addEventListener('blur', () => onHoverStop(null))
           markersRef.current.push(new maplibregl.Marker({ element, anchor: 'bottom' })
             .setLngLat([points[index].lng, points[index].lat])
             .addTo(map))
@@ -138,7 +143,7 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, fal
       if (!failed) map.remove()
       mapRef.current = null
     }
-  }, [route, locale, onSelectStop, points])
+  }, [route, locale, onSelectStop, onHoverStop, points])
 
   useEffect(() => {
     const map = mapRef.current

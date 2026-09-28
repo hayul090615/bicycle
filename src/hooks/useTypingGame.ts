@@ -117,7 +117,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const updateInput = useCallback((value: string, isComposing: boolean) => {
     if (status !== 'playing' || !nextStation) return acceptedInputRef.current
     // 한글 조합 확정을 위해 누른 스페이스는 게임 입력에서 제거한다.
-    const sanitizedValue = value.replace(/\s+/gu, '')
+    const sanitizedValue = value.normalize('NFC').replace(/\s+/gu, '')
     setCompositionActive(isComposing)
     const nextInputLength = toCharacters(sanitizedValue).length
     const deletedBackward = nextInputLength < inputLengthRef.current
@@ -153,7 +153,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
 
   const commitComposition = useCallback((value: string) => {
     if (status !== 'playing' || !nextStation) return acceptedInputRef.current
-    const sanitizedValue = value.replace(/\s+/gu, '')
+    const sanitizedValue = value.normalize('NFC').replace(/\s+/gu, '')
     setCompositionActive(false)
     const target = nextStation.typingName ?? nextStation.name
     if (sanitizedValue === lastCompletedValueRef.current && sanitizedValue !== target) return acceptedInputRef.current
@@ -180,7 +180,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
 
   const submitInput = useCallback((value: string) => {
     if (status !== 'playing' || !nextStation) return
-    const sanitizedValue = value.replace(/\s+/gu, '')
+    const sanitizedValue = value.normalize('NFC').replace(/\s+/gu, '')
     const target = nextStation.typingName ?? nextStation.name
     const submitted = analyzeInput(sanitizedValue, target)
     setCompositionActive(false)

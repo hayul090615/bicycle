@@ -17,11 +17,16 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
 ) {
   const inputRef = useRef<HTMLInputElement>(null)
   const composingRef = useRef(false)
+  const compositionSettleFrameRef = useRef<number | null>(null)
+  const compositionSettlePendingRef = useRef(false)
   const [isComposing, setIsComposing] = useState(false)
   useImperativeHandle(ref, () => inputRef.current!, [])
   useEffect(() => {
-    if (!isComposing && inputRef.current && inputRef.current.value !== value) inputRef.current.value = value
+    if (!isComposing && !compositionSettlePendingRef.current && inputRef.current && inputRef.current.value !== value) inputRef.current.value = value
   }, [isComposing, target, value])
+  useEffect(() => () => {
+    if (compositionSettleFrameRef.current !== null) cancelAnimationFrame(compositionSettleFrameRef.current)
+  }, [])
   const targetLength = analysis.targetCharacters.length
   const displayCharacters = Array.from(
     { length: Math.max(targetLength, analysis.inputCharacters.length) },
@@ -31,9 +36,18 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
   const handleCompositionEnd = (event: CompositionEvent<HTMLInputElement>) => {
     composingRef.current = false
     setIsComposing(false)
-    const committedValue = event.currentTarget.value
-    const acceptedValue = onCompositionCommit(committedValue)
-    if (event.currentTarget.value !== acceptedValue) event.currentTarget.value = acceptedValue
+    compositionSettlePendingRef.current = true
+    if (compositionSettleFrameRef.current !== null) cancelAnimationFrame(compositionSettleFrameRef.current)
+    const input = event.currentTarget
+    // Some browsers emit the final input event after compositionend. Read the
+    // field after that event so a just-finished final consonant is not lost.
+    compositionSettleFrameRef.current = requestAnimationFrame(() => {
+      compositionSettlePendingRef.current = false
+      compositionSettleFrameRef.current = null
+      if (!input.isConnected) return
+      const acceptedValue = onCompositionCommit(input.value)
+      if (input.value !== acceptedValue) input.value = acceptedValue
+    })
   }
   return <section className={`typing-panel ${analysis.isWrong ? 'typing-panel--wrong' : ''}`}>
     <p className="typing-kicker">다음 대여소 이름을 입력하세요</p>
@@ -56,11 +70,18 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
       <input ref={inputRef} id="station-input" className="typing-input" defaultValue={value} disabled={disabled}
         autoComplete="off" autoCorrect="off" spellCheck={false} inputMode="text"
         onChange={(event) => {
+          if (compositionSettlePendingRef.current) return
           const composing = composingRef.current || (event.nativeEvent as InputEvent).isComposing
           const acceptedValue = onValueChange(event.target.value, composing)
           if (!composing && event.currentTarget.value !== acceptedValue) event.currentTarget.value = acceptedValue
         }}
-        onCompositionStart={() => { composingRef.current = true; setIsComposing(true) }}
+        onCompositionStart={() => {
+          if (compositionSettleFrameRef.current !== null) cancelAnimationFrame(compositionSettleFrameRef.current)
+          compositionSettleFrameRef.current = null
+          compositionSettlePendingRef.current = false
+          composingRef.current = true
+          setIsComposing(true)
+        }}
         onCompositionUpdate={(event) => onValueChange(event.currentTarget.value, true)}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={(event) => {

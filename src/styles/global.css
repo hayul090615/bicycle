@@ -1174,3 +1174,125 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .typing-main-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; gap: clamp(1rem, 5vw, 3rem); }
   .start-top-actions { grid-column: 2; grid-row: 1; justify-self: end; gap: .4rem; }
 }
+
+/* Muted, editorial palette for the journey and light game screens. */
+.game-screen--light { color: #292f2b; background: #deddd6; }
+.game-screen--light::after { background: linear-gradient(180deg, rgba(240,238,231,.42), transparent 24%, transparent 62%, rgba(194,198,187,.68)); }
+.game-screen--light > .game-header { color: #29362f; border-bottom-color: #c2c5bb; background: linear-gradient(180deg, rgba(241,239,232,.97), rgba(230,228,219,.9) 78%, transparent); }
+.game-screen--light .game-header .eyebrow, .game-screen--light .stat strong { color: #416b59; }
+.game-screen--light .game-brand-row small, .game-screen--light .stat span { color: #68736b; }
+.game-screen--light .stats-row { border-color: #c3c7bc; background: rgba(239,237,229,.95); }
+.game-screen--light .stat { border-color: #d4d3c9; }
+.game-screen--light .game-header .button--ghost { color: #354a3e; border-color: #c4c9bd; background: #eeece4; }
+.game-screen--light .leaflet-course-map .leaflet-tile-pane { filter: brightness(.84) saturate(.42) contrast(.96); }
+.game-screen--light .map-caption--overlay { color: #455b4d; border-color: #c0c8bc; background: rgba(238,236,228,.96); }
+.game-screen--light .leaflet-tooltip.route-station-name { color: #273d34; text-shadow: 0 1px 2px #f0eee7, 0 0 5px #f0eee7; }
+.game-screen--light .leaflet-tooltip.route-station-name--active { color: #80672f; }
+.game-screen--light .map-source { color: #53655a; background: rgba(238,236,228,.92); }
+.game-screen--light .hud-station-card { border-color: #59796a; background: linear-gradient(135deg, rgba(54,91,73,.98), rgba(39,65,58,.98)); }
+.game-screen--light .game-hud .typing-panel { color: #2d3731; border-color: #929d8c; background: rgba(235,233,224,.98); box-shadow: 0 14px 30px rgba(30,43,36,.17); }
+.game-screen--light .game-hud .typing-panel::before { background: linear-gradient(90deg, #526f5d, #a48a57); }
+.game-screen--light .typing-kicker, .game-screen--light .typing-romanization { color: #627067; }
+.game-screen--light .target-word span { color: #899087; border-color: #c6c8bd; }
+.game-screen--light .target-word .is-correct, .game-screen--light .target-word .is-composing { color: #365c48; border-color: #718c73; }
+.game-screen--light .typing-input { color: #283a30; border-color: #aeb8a8; background: #e7e5dc; caret-color: #80672f; }
+.game-screen--light .game-hud .typing-entry:focus-within { background: rgba(73,111,86,.045); box-shadow: inset 0 -2px #657e68; }
+.game-screen--light .game-hud .target-word .is-cursor::before { background: #8b7443; }
+.game-screen--light .typing-input:focus { background: #eeece4; }
+.game-screen--light .input-feedback { color: #68736b; }
+.game-screen--light .bike-map-halo { background: #e9e7df; }
+
+.tour-screen { color: #292f2b; background: #e7e5dd; }
+.tour-topbar { border-bottom-color: #cfcec4; background: #f0eee7; }
+.tour-brand small { color: #74786f; }
+.tour-brand img { border-radius: 8px; background: #e0e1d7; }
+.tour-language-button { border-color: #385c49; background: #385c49; }
+.tour-language-button:hover { background: #294938; }
+.tour-back { border-color: #c7c8be; color: #3f5747; background: #e9e7de; }
+.tour-back:hover { background: #ddded4; }
+.tour-hero { border-color: #2d4439; border-radius: 13px; color: #f1efe7; background: linear-gradient(116deg, #1d3029 0%, #263c33 58%, #34473a 100%); }
+.tour-hero::after { position: absolute; inset: auto -7% -56% 43%; height: 90%; border: 1px solid rgba(198,174,121,.23); border-radius: 50%; content: ''; pointer-events: none; }
+.tour-hero-art { min-height: 230px; display: grid; align-items: center; border: 1px solid rgba(211,204,179,.14); border-radius: 10px; background: radial-gradient(ellipse at 73% 24%, rgba(179,157,107,.18), transparent 34%), linear-gradient(155deg, rgba(246,241,222,.035), rgba(8,18,15,.28)); }
+.tour-hero-art .seoul-ride-illustration { opacity: .18; filter: grayscale(1) saturate(.35); }
+.tour-scene-label { border-color: rgba(224,215,188,.25); border-radius: 6px; color: #e9e3d2; background: rgba(31,48,39,.9); box-shadow: none; }
+.tour-scene-label i { background: #a89360; }
+.tour-eyebrow { color: #c1ae79; }
+.tour-hero h1 em { color: #d4bf87; }
+.tour-hero p { color: #cbcfc5; }
+.tour-hero-count { color: #b9c0b4; }
+.tour-card-kicker { color: #687a67; }
+.tour-route-heading a, .tour-route-source a, .tour-footer a, .tour-fine-print a { color: #405f48; }
+.tour-category-tab { border-color: #cfcec4; border-radius: 7px; color: #4a574b; background: #f0eee7; }
+.tour-category-tab:hover { border-color: #9a9c87; }
+.tour-category-tab.is-selected { border-color: #415d49; background: #415d49; }
+.tour-category-intro { border-left-color: #9e8a5e; border-radius: 0 5px 5px 0; background: linear-gradient(100deg, #e2e1d8, #efede6); }
+.tour-category-intro h3 { color: #303b32; }
+.tour-category-intro p, .tour-panel-heading p, .tour-info-card > p { color: #6d7469; }
+.tour-route-tab { border-color: #cfcec4; border-radius: 9px; color: #303a32; background: #f0eee7; box-shadow: 0 4px 14px rgba(31,39,32,.035); }
+.tour-route-tab:hover { border-color: #9ba08d; }
+.tour-route-tab.is-selected { border-color: #667a60; color: #f2f0e8; background: #40584a; box-shadow: inset 3px 0 #b6a16d; }
+.tour-route-tab.is-selected > span, .tour-route-tab.is-selected small, .tour-route-tab.is-selected .tour-route-discovery, .tour-route-tab.is-selected .tour-route-open { color: #d6d6c9; }
+.tour-main-grid { gap: 1.2rem; }
+.tour-plan-nav a { border-color: #cfcec4; border-radius: 8px; color: #475647; background: #f0eee7; }
+.tour-plan-nav a:hover { border-color: #8b9885; background: #e4e4da; }
+.tour-plan-nav a > span { color: #927e50; }
+.tour-earth-preview { position: relative; border-color: #c9c9bf; border-radius: 10px; background: #eeece4; }
+.tour-ride-toolbar { background: #eeece4; }
+.tour-ride-toolbar .tour-card-kicker { color: #777b70; }
+.tour-view-switch button { border-color: #c8c9bf; color: #4b574d; background: #e7e5dc; }
+.tour-view-switch button[aria-pressed='true'] { border-color: #455f4b; color: #f3f0e5; background: #455f4b; }
+.tour-map-stage { position: relative; }
+.tour-map-starting { display: grid; place-items: center; padding: 1rem; color: #545f53; font-size: .78rem; text-align: center; }
+.tour-maplibre-3d { background: #c5c5b9; }
+.tour-maplibre-host canvas { filter: brightness(.89) saturate(.78) contrast(1.02); }
+.tour-map-style-toggle { border-color: #d8d5c9; border-radius: 5px; color: #3d4a40; background: #efede5; box-shadow: 0 2px 8px rgba(24,34,26,.18); }
+.tour-map-style-toggle[aria-pressed='true'] { background: #455f4b; }
+.tour-3d-stop-marker { filter: drop-shadow(0 1px 3px #10181066); }
+.tour-3d-stop-marker b { border-radius: 5px; background: #3e604b; }
+.tour-3d-stop-marker span { border-color: #e0ddd1; border-radius: 4px; color: #343b33; background: #eeece4ed; }
+.tour-3d-stop-marker.is-selected b { color: #282f29; background: #c2ad76; }
+.tour-3d-stop-marker.is-selected span { color: #f4f0e6; background: #3e604b; }
+.tour-earth-actions { border-top: 1px solid #d4d2c7; background: #eeece4; }
+.tour-earth-actions .button { border-radius: 6px; }
+.tour-show-all { color: #53654f; }
+.tour-map-note { color: #686f65; background: #e8e6de; }
+.tour-itinerary-heading h3 { color: #303b32; }
+.tour-itinerary-heading > span { border-radius: 4px; color: #616d5f; background: #dedfd5; }
+.tour-connected-stops { gap: .48rem; }
+.tour-connected-stops button { border-color: #d0cfc5; border-radius: 7px; color: #333e35; background: #efede6; }
+.tour-connected-stops button:hover, .tour-connected-stops button[aria-pressed="true"] { border-color: #758572; background: #e3e5db; box-shadow: inset 3px 0 #8c805d; }
+.tour-stop-number { border-radius: 4px; color: #f2efe5; background: #536b55; }
+.tour-stop-detail { color: #666f64; }
+.tour-connected-stops small { color: #73776e; }
+.tour-stop-action { color: #5d7359; }
+.tour-resource-link { border-color: #cecec2; border-radius: 6px; color: #4f674f; background: #e9e8df; }
+.tour-resource-link:hover { background: #dedfd5; }
+.tour-route-panel, .tour-info-card { border-color: #d0cfc5; border-radius: 10px; background: #f0eee7; box-shadow: 0 7px 22px rgba(35,40,33,.045); }
+.tour-duration { border-radius: 5px; color: #52684f; background: #e1e2d7; }
+.tour-map-wrap, .tour-ride-preview { border-color: #d0cfc5; border-radius: 8px; background: #e5e4db; }
+.tour-map-note, .tour-fine-print, .tour-footer { color: #74776f; }
+.tour-scenery-preview { position: absolute; z-index: 1200; top: .8rem; right: .8rem; width: min(290px, calc(100% - 1.6rem)); overflow: hidden; border: 1px solid #d5d2c7; border-radius: 7px; color: #2f3931; background: #efede6; box-shadow: 0 12px 32px rgba(15,25,18,.28); }
+.tour-scenery-preview > img { display: block; width: 100%; height: 148px; object-fit: cover; background: #d8d8cd; }
+.tour-scenery-kicker { display: block; padding: .65rem 2.3rem .45rem .75rem; color: #7b704e; font: 700 .57rem 'DM Sans', sans-serif; letter-spacing: .12em; }
+.tour-scenery-close { position: absolute; top: .4rem; right: .4rem; width: 27px; height: 27px; border: 1px solid #d3d0c4; border-radius: 50%; color: #485349; background: #efede6; font-size: 1.1rem; cursor: pointer; }
+.tour-scenery-caption { padding: .6rem .75rem .7rem; display: grid; gap: .25rem; }
+.tour-scenery-caption a { overflow: hidden; color: #354d3c; font-size: .71rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.tour-scenery-caption small { color: #70746b; font-size: .57rem; line-height: 1.45; }
+.tour-scenery-placeholder { min-height: 90px; padding: 1rem .75rem; display: grid; place-items: center; color: #697168; font-size: .68rem; line-height: 1.55; text-align: center; }
+.auth-screen { background: radial-gradient(ellipse at 84% 10%, rgba(160,147,104,.14), transparent 42%), linear-gradient(165deg, #e7e5dd, #d7d8cf); }
+.auth-topbar { border-bottom-color: #cacbc1; background: rgba(239,237,229,.94); }
+.auth-card { border-color: #d0cfc5; border-radius: 12px; background: #efede6; box-shadow: 0 18px 44px rgba(30,42,33,.13); }
+.auth-icon { border-radius: 8px; background: #e0e1d7; }
+.auth-card h1 { color: #303b32; }
+.auth-form input { border-color: #cbcdc2; border-radius: 6px; background: #f3f1eb; }
+.auth-form input:focus { outline-color: rgba(79,105,79,.17); border-color: #71806a; }
+.auth-scenery .seoul-ride-illustration { opacity: .15; filter: grayscale(1) saturate(.2); }
+.site-dialog-backdrop { background: rgba(20,29,23,.62); }
+.site-dialog { border-color: #d0cfc5; border-radius: 11px; background: #efede6; }
+.site-dialog-close { border-radius: 5px; color: #4c5c4e; background: #e1e1d7; }
+
+@media (max-width: 650px) {
+  .tour-hero-art { min-height: 150px; }
+  .tour-scenery-preview { top: .55rem; right: .55rem; width: min(240px, calc(100% - 1.1rem)); }
+  .tour-scenery-preview > img { height: 112px; }
+}

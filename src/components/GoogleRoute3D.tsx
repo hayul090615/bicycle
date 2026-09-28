@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D } from '../services/googleMaps3d'
 
-export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, fallback }: {
+export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
-  onSelectStop: (index: number) => void; fallback: ReactNode
+  onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void; fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<GoogleMap3D | null>(null)
@@ -58,6 +58,8 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, fallb
         const label = `${index + 1}. ${locale === 'ko' ? stop.placeKo : stop.place}`
         const marker = new library.Marker3DInteractiveElement({ position, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
         marker.addEventListener('gmp-click', () => onSelectStop(index))
+        marker.addEventListener('pointerenter', () => onHoverStop(index))
+        marker.addEventListener('focus', () => onHoverStop(index))
         map!.append(marker)
       })
       mapRef.current = map
@@ -70,7 +72,7 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, fallb
       map?.remove()
       mapRef.current = null
     }
-  }, [locale, points, route, onSelectStop])
+  }, [locale, points, route, onSelectStop, onHoverStop])
 
   useEffect(() => {
     const map = mapRef.current

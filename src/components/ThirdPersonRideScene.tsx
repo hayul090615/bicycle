@@ -89,10 +89,10 @@ async function fetchOsmStreetContext(coords: LonLat[], signal: AbortSignal): Pro
 
 function makeBike() {
   const rider = new THREE.Group()
-  const frame = new THREE.MeshStandardMaterial({ color: '#f6a934', roughness: .55 })
-  const dark = new THREE.MeshStandardMaterial({ color: '#182c2a', roughness: .75 })
-  const shirt = new THREE.MeshStandardMaterial({ color: '#18b77d', roughness: .65 })
-  const skin = new THREE.MeshStandardMaterial({ color: '#f0bd91', roughness: .8 })
+  const frame = new THREE.MeshStandardMaterial({ color: '#a9874e', roughness: .62, metalness: .12 })
+  const dark = new THREE.MeshStandardMaterial({ color: '#28332e', roughness: .78 })
+  const shirt = new THREE.MeshStandardMaterial({ color: '#49695b', roughness: .72 })
+  const skin = new THREE.MeshStandardMaterial({ color: '#c5a589', roughness: .84 })
   const wheelGeometry = new THREE.TorusGeometry(.48, .055, 10, 28)
   for (const z of [-.56, .68]) {
     const wheel = new THREE.Mesh(wheelGeometry, dark)
@@ -192,9 +192,9 @@ function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THRE
 function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, centerLat: number, scale: number, ridePoints: THREE.Vector3[]) {
   const buildings = new THREE.Group(), green = new THREE.Group(), water = new THREE.Group(), roads = new THREE.Group()
   const buildingMats = ['#d5c6ad', '#b8c8c4', '#d9d0bf', '#abbeb8'].map((color) => new THREE.MeshStandardMaterial({ color, roughness: .92, side: THREE.DoubleSide }))
-  const greenMat = new THREE.MeshStandardMaterial({ color: '#68a86d', roughness: 1, side: THREE.DoubleSide })
-  const waterMat = new THREE.MeshStandardMaterial({ color: '#3499bb', roughness: .28, metalness: .04, side: THREE.DoubleSide })
-  const roadMat = new THREE.MeshStandardMaterial({ color: '#84918e', roughness: 1, side: THREE.DoubleSide })
+  const greenMat = new THREE.MeshStandardMaterial({ color: '#617b65', roughness: 1, side: THREE.DoubleSide })
+  const waterMat = new THREE.MeshStandardMaterial({ color: '#426c74', roughness: .38, metalness: .02, side: THREE.DoubleSide })
+  const roadMat = new THREE.MeshStandardMaterial({ color: '#727a75', roughness: 1, side: THREE.DoubleSide })
   for (const element of data.elements) {
     if (element.type !== 'way' || !element.geometry || element.geometry.length < 2) continue
     const tags = element.tags ?? {}
@@ -276,17 +276,17 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.25
+    renderer.toneMappingExposure = .9
     element.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color('#a9d8e4')
-    scene.fog = new THREE.Fog('#cde7d5', 55, 150)
+    scene.background = new THREE.Color('#aab8b6')
+    scene.fog = new THREE.Fog('#bdc7ba', 55, 150)
     const camera = new THREE.PerspectiveCamera(62, element.clientWidth / element.clientHeight, .1, 180)
-    const ambient = new THREE.HemisphereLight('#e6fbff', '#517356', 2.1); scene.add(ambient)
-    const sun = new THREE.DirectionalLight('#fff0d1', 3); sun.position.set(-16, 28, -10); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); scene.add(sun)
+    const ambient = new THREE.HemisphereLight('#d8dfd8', '#49594a', 1.05); scene.add(ambient)
+    const sun = new THREE.DirectionalLight('#e8dec4', 1.45); sun.position.set(-16, 28, -10); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); scene.add(sun)
 
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(30000, 30000), new THREE.MeshStandardMaterial({ color: '#78ae78', roughness: 1 }))
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(30000, 30000), new THREE.MeshStandardMaterial({ color: '#647963', roughness: 1 }))
     ground.rotation.x = -Math.PI / 2; ground.position.y = -.1; ground.receiveShadow = true; scene.add(ground)
 
     const rideCoords = bikeRoute?.geometry ?? stopCoordinates
@@ -305,14 +305,14 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
 
     const environment = new THREE.Group(); scene.add(environment)
     const waterGroup = new THREE.Group(); environment.add(waterGroup)
-    const hanMaterial = new THREE.MeshStandardMaterial({ color: '#278eb5', roughness: .25, metalness: .08, side: THREE.DoubleSide })
+    const hanMaterial = new THREE.MeshStandardMaterial({ color: '#3e747d', roughness: .4, metalness: .02, side: THREE.DoubleSide })
     for (const polygon of hanRiverPolygons) {
       const mesh = polygonMesh(polygon as LonLat[][], centerX, centerY, scale, hanMaterial)
       if (mesh) waterGroup.add(mesh)
     }
-    addRibbon(environment, trackPoints, 5.2, new THREE.MeshStandardMaterial({ color: '#c7b995', roughness: 1, side: THREE.DoubleSide }), -.01)
-    addRibbon(environment, trackPoints, 3.4, new THREE.MeshStandardMaterial({ color: '#46565a', roughness: .95, side: THREE.DoubleSide }), .03)
-    const dashMaterial = new THREE.MeshStandardMaterial({ color: '#f2e8ae', emissive: '#544d31', emissiveIntensity: .25 })
+    addRibbon(environment, trackPoints, 5.2, new THREE.MeshStandardMaterial({ color: '#aaa38f', roughness: 1, side: THREE.DoubleSide }), -.01)
+    addRibbon(environment, trackPoints, 3.4, new THREE.MeshStandardMaterial({ color: '#454d4a', roughness: .98, side: THREE.DoubleSide }), .03)
+    const dashMaterial = new THREE.MeshStandardMaterial({ color: '#c9bd91', emissive: '#554b31', emissiveIntensity: .07 })
     for (let i = 0; i < 70; i += 1) {
       const at = curve.getPointAt(i / 70)
       const next = curve.getPointAt(Math.min(1, i / 70 + .003))
@@ -320,7 +320,7 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
       dash.position.set(at.x, .055, at.z); dash.lookAt(next.x, .055, next.z); environment.add(dash)
     }
 
-    const markerMaterial = new THREE.MeshStandardMaterial({ color: '#f5b13b', emissive: '#7a4d11', emissiveIntensity: .3 })
+    const markerMaterial = new THREE.MeshStandardMaterial({ color: '#a98b53', emissive: '#584722', emissiveIntensity: .08 })
     stopPoints.forEach((point, index) => {
       const beacon = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 2.1, 8), markerMaterial)
       beacon.position.set(point.x, 1.1, point.z); scene.add(beacon)
