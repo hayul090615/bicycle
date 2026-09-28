@@ -212,7 +212,8 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
   </>
 
   return <div className="tour-maplibre-3d">
-    <div className="tour-maplibre-host" ref={host} role="region" aria-label={locale === 'ko' ? `${route.titleKo} 위성 3D 지도` : `${route.title} 3D aerial map`} />
+    {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
+    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={locale === 'ko' ? `${route.titleKo} 위성 3D 지도` : `${route.title} 3D aerial map`} />
     <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
       {locale === 'ko' ? '위성 사진' : 'Satellite'}
     </button>

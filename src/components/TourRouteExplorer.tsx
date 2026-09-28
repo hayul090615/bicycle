@@ -110,7 +110,7 @@ export function TourRouteExplorer({ route, locale, shadowDate, shadowMinutes, on
         </div>
       </div>
       <div className="tour-map-stage" onMouseLeave={() => hoverStop(null)}>
-        {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</div>}>
+        {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
           <MapLibreRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowPolygon={shadowPolygon} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowPolygon={shadowPolygon} fallback={map} />}

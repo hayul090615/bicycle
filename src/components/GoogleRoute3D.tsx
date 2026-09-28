@@ -132,7 +132,8 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
     {fallback}
   </>
   return <div className="google-route-3d">
-    <div ref={host} className="google-route-host" />
+    {status === 'loading' && <div className="google-route-underlay">{fallback}</div>}
+    <div ref={host} className="google-route-host" style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} />
     {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? 'Google 3D 지도를 불러오는 중…' : 'Loading Google 3D imagery…'}</p>}
   </div>
 }
