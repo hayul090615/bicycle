@@ -1220,6 +1220,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-hero h1 em { color: #168164; }
 .tour-hero p { color: #5d7366; }
 .tour-hero-count { color: #62786a; }
+.tour-hero-route-link { color: #486750; font-weight: 750; text-decoration: none; }
+.tour-hero-route-link:hover { text-decoration: underline; }
 .tour-card-kicker { color: #687a67; }
 .tour-route-heading a, .tour-route-source a, .tour-footer a, .tour-fine-print a { color: #405f48; }
 .tour-category-tab { border-color: #cfcec4; border-radius: 7px; color: #4a574b; background: #f0eee7; }

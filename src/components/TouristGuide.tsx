@@ -135,7 +135,8 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
           <p>{textFor(locale,
             'Chase a longer workout, follow the city lights, or ride with the seasons. Pick a route and see where the next stop leads.',
             '운동하듯 길게, 불빛을 따라 저녁에, 계절이 바뀌는 강변으로. 코스를 고르고 다음 경유지의 풍경을 만나보세요.')}</p>
-          <div className="tour-hero-actions"><a className="button button--primary" href="#tour-routes">{textFor(locale, 'Find your next view', '새로운 풍경 찾아보기')} <span aria-hidden="true">↗</span></a>
+          <div className="tour-hero-actions"><a className="button button--primary" href="#tour-detail">{textFor(locale, 'Open the 3D city view', '3D 지도 바로 보기')} <span aria-hidden="true">↗</span></a>
+            <a className="tour-hero-route-link" href="#tour-routes">{textFor(locale, 'Browse routes ↓', '코스 둘러보기 ↓')}</a>
             <span className="tour-hero-count">{textFor(locale, `${touristRoutes.length} routes · 4 ways to explore`, `${touristRoutes.length}개 코스 · 4가지 테마`)}</span></div>
         </div>
         <div className="tour-hero-art"><SeoulRideIllustration /><span className="tour-scene-label"><i />{textFor(locale, 'Your next view awaits', '다음 풍경을 만나러')}</span></div>
@@ -143,7 +144,7 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
 
       <nav className="tour-plan-nav" aria-label={textFor(locale, 'Plan your ride', '여행 준비 순서')}>
         <a href="#tour-routes"><span>01</span>{textFor(locale, 'Choose a route', '코스 고르기')}</a>
-        <a href="#tour-detail"><span>02</span>{textFor(locale, 'Explore the stops', '지도·경유지 확인')}</a>
+        <a href="#tour-detail"><span>02</span>{textFor(locale, 'Open the 3D map', '3D 지도 보기')}</a>
         <a href="#tour-checks"><span>03</span>{textFor(locale, 'Before you ride', '출발 전 확인')}</a>
       </nav>
       <div className="tour-route-heading" id="tour-routes" tabIndex={-1}><div><span className="tour-card-kicker">{textFor(locale, 'CHOOSE A JOURNEY', '원하는 코스를 선택하세요')}</span>
