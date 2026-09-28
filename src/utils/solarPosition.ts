@@ -31,3 +31,15 @@ export function todayInSeoul() {
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
   return `${value('year')}-${value('month')}-${value('day')}`
 }
+
+export function nowInSeoul() {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date())
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '00'
+  return {
+    date: `${value('year')}-${value('month')}-${value('day')}`,
+    minutes: Number(value('hour')) * 60 + Number(value('minute')),
+  }
+}

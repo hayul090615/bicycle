@@ -1,35 +1,66 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl'
+import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker } from 'maplibre-gl'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
-import { getShadowDirectionPoint } from '../utils/solarShadow'
+import { castBuildingShadow } from '../utils/buildingShadow'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
 const IMAGERY_ATTRIBUTION = 'Imagery © Esri. Sources: Esri, Vantor, Earthstar Geographics, and the GIS User Community.'
 const SATELLITE_SURFACES = new Set(['park', 'landuse', 'landcover', 'water', 'aeroway', 'building'])
+const EMPTY_SHADOWS: GeoJSON.FeatureCollection<GeoJSON.Polygon> = { type: 'FeatureCollection', features: [] }
 
-export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, shadowVisible, fallback }: {
+function getFeatureRings(feature: MapGeoJSONFeature): number[][][] {
+  if (feature.geometry.type === 'Polygon') return [feature.geometry.coordinates[0] as number[][]]
+  if (feature.geometry.type === 'MultiPolygon') return feature.geometry.coordinates.map(polygon => polygon[0] as number[][])
+  return []
+}
+
+function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number, shadowAzimuth: number): GeoJSON.FeatureCollection<GeoJSON.Polygon> {
+  const output: GeoJSON.Feature<GeoJSON.Polygon>[] = []
+  const seen = new Set<string>()
+  for (const feature of features) {
+    const properties = feature.properties ?? {}
+    const levels = Number(properties['building:levels'] ?? properties.levels)
+    const rawHeight = Number(properties.render_height ?? properties.height ?? (Number.isFinite(levels) ? levels * 3 : 8))
+    const height = Number.isFinite(rawHeight) && rawHeight > 0 ? Math.min(rawHeight, 120) : 8
+    for (const ring of getFeatureRings(feature)) {
+      const footprint = ring as [number, number][]
+      const first = footprint[0]
+      if (!first || footprint.length < 4) continue
+      const key = `${String(feature.id ?? '')}:${first[0].toFixed(5)}:${first[1].toFixed(5)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const shadow = castBuildingShadow(footprint, height, sunElevation, shadowAzimuth)
+      if (shadow) output.push({ type: 'Feature', properties: { buildingKey: key }, geometry: { type: 'Polygon', coordinates: [shadow] } })
+    }
+  }
+  return { type: 'FeatureCollection', features: output }
+}
+
+export function MapLibreRoute3D({ viewMode, route, locale, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+  viewMode: 'city' | 'map'
   route: TouristRoute
   locale: 'en' | 'ko'
   selectedStop: number | null
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
   shadowAzimuth: number
-  shadowVisible: boolean
+  sunElevation: number
   fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
-  const shadowGradient = useRef<HTMLDivElement>(null)
   const shadowAzimuthRef = useRef(shadowAzimuth)
-  const updateShadowGradientRef = useRef<() => void>(() => {})
+  const sunElevationRef = useRef(sunElevation)
+  const updateBuildingShadowsRef = useRef<() => void>(() => {})
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [satellite, setSatellite] = useState(true)
-  const shadowGradientStyle = { '--shadow-gradient-angle': `${shadowAzimuth}deg` } as CSSProperties
+  const [satellite, setSatellite] = useState(() => viewMode === 'city')
   shadowAzimuthRef.current = shadowAzimuth
+  sunElevationRef.current = sunElevation
   const initialCenter = useRef<maplibregl.LngLatLike | null>(null)
+  const isFlatMap = viewMode === 'map'
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
@@ -42,30 +73,38 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
     let disposed = false
     let failed = false
     let timeout = 0
+    let shadowUpdateTimeout = 0
+    let lastShadowSignature = ''
     const map = new maplibregl.Map({
       container: host.current,
       style: STYLE_URL,
       center: initialCenter.current ?? [points[0].lng, points[0].lat],
       zoom: 14,
-      pitch: 64,
-      bearing: -10,
+      pitch: isFlatMap ? 0 : 64,
+      bearing: isFlatMap ? 0 : -10,
       maxPitch: 75,
       attributionControl: {},
       canvasContextAttributes: { antialias: true },
     })
     mapRef.current = map
-    const updateShadowGradient = () => {
-      if (!shadowGradient.current) return
-      const center = map.getCenter()
-      const shadowPoint = getShadowDirectionPoint(center.lat, center.lng, shadowAzimuthRef.current)
-      const originPixel = map.project(center)
-      const shadowPixel = map.project(shadowPoint)
-      const angle = (Math.atan2(shadowPixel.x - originPixel.x, originPixel.y - shadowPixel.y) * 180 / Math.PI + 360) % 360
-      shadowGradient.current.style.setProperty('--shadow-gradient-angle', `${angle}deg`)
+    const updateBuildingShadows = () => {
+      if (!map.isStyleLoaded() || !map.getLayer('building-3d')) return
+      const source = map.getSource('tour-building-shadows') as GeoJSONSource | undefined
+      if (!source) return
+      const features = sunElevationRef.current > 0
+        ? map.queryRenderedFeatures({ layers: ['building-3d'] })
+        : []
+      const data = makeBuildingShadows(features, sunElevationRef.current, shadowAzimuthRef.current)
+      const shadowFootprints = data.features.map(feature => String(feature.properties?.buildingKey ?? '')).join(';')
+      const signature = `${sunElevationRef.current.toFixed(2)}:${shadowAzimuthRef.current.toFixed(1)}:${shadowFootprints}`
+      if (signature === lastShadowSignature) return
+      lastShadowSignature = signature
+      source.setData(data)
     }
-    updateShadowGradientRef.current = updateShadowGradient
-    map.on('move', updateShadowGradient)
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
+    updateBuildingShadowsRef.current = updateBuildingShadows
+    map.on('idle', updateBuildingShadows)
+    map.on('moveend', updateBuildingShadows)
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: !isFlatMap }), 'top-right')
     const fail = () => {
       if (disposed || failed) return
       failed = true
@@ -94,14 +133,16 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
           id: 'tour-imagery',
           type: 'raster',
           source: 'tour-imagery',
-          layout: { visibility: 'visible' },
+          layout: { visibility: isFlatMap ? 'none' : 'visible' },
           paint: { 'raster-opacity': 1, 'raster-fade-duration': 250 },
         }, 'park')
         const layers = map.getStyle().layers
-        for (const layer of layers) {
-          const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined
-          if (layer.id === 'background' || layer.id === 'natural_earth' || (layer.type === 'fill' && SATELLITE_SURFACES.has(sourceLayer ?? ''))) {
-            map.setLayoutProperty(layer.id, 'visibility', 'none')
+        if (!isFlatMap) {
+          for (const layer of layers) {
+            const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined
+            if (layer.id === 'background' || layer.id === 'natural_earth' || (layer.type === 'fill' && SATELLITE_SURFACES.has(sourceLayer ?? ''))) {
+              map.setLayoutProperty(layer.id, 'visibility', 'none')
+            }
           }
         }
         map.addSource('tour-route-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -118,10 +159,30 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
             'line-dasharray': [2, 1.5],
           },
         }
-        if (buildingLayer) map.addLayer(routeLayer, buildingLayer)
-        else map.addLayer(routeLayer)
-        updateShadowGradient()
+        map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
+        const shadowFill = {
+          id: 'tour-building-shadow-fill',
+          type: 'fill' as const,
+          source: 'tour-building-shadows',
+          paint: { 'fill-color': '#24362f', 'fill-opacity': 0.36, 'fill-antialias': true },
+        }
+        const shadowOutline = {
+          id: 'tour-building-shadow-outline',
+          type: 'line' as const,
+          source: 'tour-building-shadows',
+          paint: { 'line-color': '#162820', 'line-width': 1.15, 'line-opacity': 0.78 },
+        }
+        if (buildingLayer) {
+          map.addLayer(shadowFill, buildingLayer)
+          map.addLayer(shadowOutline, buildingLayer)
+          map.addLayer(routeLayer, buildingLayer)
+        } else {
+          map.addLayer(shadowFill)
+          map.addLayer(shadowOutline)
+          map.addLayer(routeLayer)
+        }
         setStatus('ready')
+        shadowUpdateTimeout = window.setTimeout(updateBuildingShadows, 350)
       } catch {
         fail()
       }
@@ -132,8 +193,10 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
     return () => {
       disposed = true
       window.clearTimeout(timeout)
-      map.off('move', updateShadowGradient)
-      updateShadowGradientRef.current = () => {}
+      window.clearTimeout(shadowUpdateTimeout)
+      map.off('idle', updateBuildingShadows)
+      map.off('moveend', updateBuildingShadows)
+      updateBuildingShadowsRef.current = () => {}
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
       if (!failed) map.remove()
@@ -141,9 +204,7 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
     }
   }, [])
 
-  useEffect(() => {
-    updateShadowGradientRef.current()
-  }, [shadowAzimuth, status])
+  useEffect(() => { updateBuildingShadowsRef.current() }, [shadowAzimuth, sunElevation, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -186,13 +247,13 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
     })
     if (selectedStop !== null) {
       const point = points[selectedStop]
-      map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: 67, bearing: -18, duration: 1100, essential: false })
+      map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: isFlatMap ? 0 : 67, bearing: isFlatMap ? 0 : -18, duration: 1100, essential: false })
       return
     }
     const bounds = new maplibregl.LngLatBounds()
     points.forEach(point => bounds.extend([point.lng, point.lat] as [number, number]))
-    map.fitBounds(bounds, { padding: { top: 66, right: 72, bottom: 66, left: 72 }, maxZoom: 14.2, pitch: 58, bearing: -8, duration: 480 })
-  }, [boundsKey, points, selectedStop, status])
+    map.fitBounds(bounds, { padding: { top: 66, right: 72, bottom: 66, left: 72 }, maxZoom: 14.2, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
+  }, [boundsKey, isFlatMap, points, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -210,16 +271,15 @@ export function MapLibreRoute3D({ route, locale, selectedStop, onSelectStop, onH
     <p className="tour-earth-notice" role="status">{locale === 'ko'
       ? '3D 지도 타일을 불러오지 못해 기본 코스 지도를 표시합니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
       : 'The 3D map could not load, so the basic route map is shown. Check your connection and try again.'}</p>
-    <div className="tour-map-error-fallback">{fallback}<div className={`tour-map-shadow-gradient${shadowVisible ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" /></div>
+    <div className="tour-map-error-fallback">{fallback}</div>
   </>
 
-  return <div className="tour-maplibre-3d">
-    {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}<div className={`tour-map-shadow-gradient${shadowVisible ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" /></div>}
-    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={locale === 'ko' ? `${route.titleKo} 위성 3D 지도` : `${route.title} 3D aerial map`} />
-    <div ref={shadowGradient} className={`tour-map-shadow-gradient${shadowVisible ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" />
-    <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
+  return <div className={`tour-maplibre-3d${isFlatMap ? ' tour-maplibre-2d' : ''}`}>
+    {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
+    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={locale === 'ko' ? `${route.titleKo} ${isFlatMap ? '2D 지도' : '위성 3D 지도'}` : `${route.title} ${isFlatMap ? '2D map' : '3D aerial map'}`} />
+    {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
       {locale === 'ko' ? '위성 사진' : 'Satellite'}
-    </button>
+    </button>}
     {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? '도시 3D 지도를 불러오는 중…' : 'Loading the 3D city map…'}</p>}
   </div>
 }

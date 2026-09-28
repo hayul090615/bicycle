@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
 
-export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, shadowVisible, fallback }: {
+export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
-  shadowAzimuth: number; shadowVisible: boolean; fallback: ReactNode
+  fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<GoogleMap3D | null>(null)
   const libraryRef = useRef<Maps3DLibrary | null>(null)
   const routeLineRef = useRef<HTMLElement | null>(null)
   const markersRef = useRef<HTMLElement[]>([])
-  const shadowGradient = useRef<HTMLDivElement>(null)
-  const shadowAzimuthRef = useRef(shadowAzimuth)
-  const updateShadowGradientRef = useRef<() => void>(() => {})
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const points = useMemo(() => route.stops.map(stop => {
     const { lat, lng } = getTouristStation(stop.stationId)
@@ -29,8 +26,6 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
   }, [points, selectedStop])
   const cameraRef = useRef(camera)
   cameraRef.current = camera
-  const shadowGradientStyle = { '--shadow-gradient-angle': `${shadowAzimuth}deg` } as CSSProperties
-  shadowAzimuthRef.current = shadowAzimuth
 
   useEffect(() => {
     let disposed = false
@@ -56,15 +51,8 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       map.style.height = '100%'
       map.style.display = 'block'
       map.addEventListener('gmp-error', fail)
-      const updateShadowGradient = () => {
-        const angle = (shadowAzimuthRef.current - map!.heading + 360) % 360
-        shadowGradient.current?.style.setProperty('--shadow-gradient-angle', `${angle}deg`)
-      }
-      updateShadowGradientRef.current = updateShadowGradient
-      map.addEventListener('gmp-headingchange', updateShadowGradient)
       map.addEventListener('gmp-steadychange', event => {
         if (!disposed && !failed && (event as Event & { isSteady: boolean }).isSteady) {
-          updateShadowGradient()
           window.clearTimeout(timeout)
           setStatus('ready')
         }
@@ -77,8 +65,6 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       disposed = true
       window.clearTimeout(timeout)
       window.removeEventListener('seoul-google-maps-error', fail)
-      if (map) map.removeEventListener('gmp-headingchange', updateShadowGradientRef.current)
-      updateShadowGradientRef.current = () => {}
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
       routeLineRef.current?.remove()
@@ -88,10 +74,6 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       libraryRef.current = null
     }
   }, [])
-
-  useEffect(() => {
-    updateShadowGradientRef.current()
-  }, [shadowAzimuth, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -127,9 +109,8 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
     {fallback}
   </>
   return <div className="google-route-3d">
-    {status === 'loading' && <div className="google-route-underlay">{fallback}<div className={`tour-map-shadow-gradient${shadowVisible ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" /></div>}
+    {status === 'loading' && <div className="google-route-underlay">{fallback}</div>}
     <div ref={host} className="google-route-host" style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} />
-    <div ref={shadowGradient} className={`tour-map-shadow-gradient${shadowVisible ? ' is-active' : ''}`} style={shadowGradientStyle} aria-hidden="true" />
     {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? 'Google 3D 지도를 불러오는 중…' : 'Loading Google 3D imagery…'}</p>}
   </div>
 }

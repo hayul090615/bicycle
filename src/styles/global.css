@@ -913,6 +913,28 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-route-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-bottom: 1rem; }
 .tour-route-tabs--fitness, .tour-route-tabs--night { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tour-route-tabs--seasonal { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tour-route-tabs--seasonal .tour-route-tab { min-height: 260px; padding: .75rem; gap: .36rem; overflow: hidden; border-radius: 12px; }
+.tour-route-tabs--seasonal .tour-season-art { position: relative; height: 118px; margin: -.75rem -.75rem .25rem; overflow: hidden; border-radius: 11px 11px 2px 2px; isolation: isolate; }
+.tour-route-tabs--seasonal .tour-season-art::before { position: absolute; z-index: -1; right: -9%; bottom: 15px; left: -9%; height: 47%; border-radius: 50% 50% 0 0 / 75% 75% 0 0; background: var(--season-hill); content: ''; }
+.tour-route-tabs--seasonal .tour-season-art::after { position: absolute; z-index: -1; right: -8%; bottom: -17px; left: -8%; height: 37px; transform: rotate(-4deg); border-radius: 50%; background: var(--season-water); content: ''; }
+.tour-season-art--spring { --season-hill: #8dc98e; --season-water: #6dc8bc; background: linear-gradient(165deg, #9cdded, #f4d9df 70%, #ecc7bc); }
+.tour-season-art--summer { --season-hill: #247859; --season-water: #55b9a7; background: linear-gradient(165deg, #70c8dc, #b6e5cd 72%, #b7d690); }
+.tour-season-art--autumn { --season-hill: #b95d36; --season-water: #d69b54; background: linear-gradient(165deg, #f4bd77, #f4d6a3 72%, #d6a55f); }
+.tour-season-art--winter { --season-hill: #b7d0d8; --season-water: #8ab8ca; background: linear-gradient(165deg, #6eb5cf, #c7e0e5 72%, #dae8e5); }
+.tour-route-tabs--seasonal .tour-season-sun { position: absolute; top: 15px; right: 18px; width: 27px; height: 27px; border-radius: 50%; background: #fff2bd; box-shadow: 0 0 22px #fff6cf9c; }
+.tour-route-tabs--seasonal .tour-season-tree { position: absolute; z-index: 1; bottom: 19px; width: 9px; height: 37px; background: #77513c; }
+.tour-route-tabs--seasonal .tour-season-tree--one { left: 28%; }
+.tour-route-tabs--seasonal .tour-season-tree--two { left: 66%; bottom: 24px; transform: scale(.78); transform-origin: bottom; }
+.tour-route-tabs--seasonal .tour-season-tree::before { position: absolute; top: -24px; left: -14px; width: 37px; height: 34px; background: var(--season-leaves); clip-path: polygon(29% 0, 71% 0, 71% 14%, 86% 14%, 86% 29%, 100% 29%, 100% 72%, 81% 72%, 81% 86%, 64% 86%, 64% 100%, 36% 100%, 36% 86%, 19% 86%, 19% 72%, 0 72%, 0 29%, 14% 29%, 14% 14%, 29% 14%); content: ''; }
+.tour-season-art--spring { --season-leaves: #df92ad; }
+.tour-season-art--summer { --season-leaves: #2f8761; }
+.tour-season-art--autumn { --season-leaves: #dc793f; }
+.tour-season-art--winter { --season-leaves: #e8f5f3; }
+.tour-route-tabs--seasonal .tour-season-art--winter .tour-season-tree::before { top: -27px; left: -11px; width: 30px; height: 43px; border-radius: 0; clip-path: polygon(50% 0, 100% 43%, 76% 43%, 100% 77%, 68% 77%, 90% 100%, 10% 100%, 32% 77%, 0 77%, 24% 43%, 0 43%); }
+.tour-route-tabs--seasonal .tour-season-art > b { position: absolute; top: .55rem; left: .62rem; color: #fff; font: 800 .62rem 'DM Sans', sans-serif; letter-spacing: .14em; text-shadow: 0 1px 4px #173a3a88; text-transform: uppercase; }
+.tour-route-tabs--seasonal .tour-route-tab > span:not(.tour-season-art) { color: #547261; }
+.tour-route-tabs--seasonal .tour-route-tab.is-selected { border-color: #536d57; box-shadow: 0 0 0 2px #536d5738, 0 8px 20px #193c2b12; background: #fff; }
+.tour-route-tabs--seasonal .tour-route-tab.is-selected .tour-season-art { box-shadow: inset 0 0 0 2px #fff8; }
 .tour-route-tab { min-height: 100px; padding: 1rem 1.1rem; display: grid; gap: .25rem; text-align: left; border: 1px solid #d6e7db; border-radius: 15px; color: #1b4037; background: #fff; cursor: pointer; box-shadow: 0 7px 24px rgba(17,68,50,.035); }
 .tour-route-tab:hover { border-color: #80cda6; }
 .tour-route-tab.is-selected { border-color: #0fa46e; background: #e8f8ed; box-shadow: inset 0 0 0 1px #0fa46e; }
@@ -1155,6 +1177,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-route-heading h2 { font-size: 1.35rem; }
   .tour-route-heading a { max-width: 135px; text-align: right; font-size: .69rem; }
   .tour-route-tabs { grid-template-columns: 1fr; gap: .45rem; }
+  .tour-route-tabs--seasonal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tour-category-intro { grid-template-columns: minmax(0, 1fr); gap: .15rem; padding: .8rem .9rem; }
   .tour-category-intro > span { grid-column: auto; }
   .tour-category-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
@@ -1243,22 +1266,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-view-switch button { border-color: #c8c9bf; color: #4b574d; background: #e7e5dc; }
 .tour-view-switch button[aria-pressed='true'] { border-color: #455f4b; color: #f3f0e5; background: #455f4b; }
 .tour-map-stage { position: relative; }
-.tour-map-shadow-control { position: absolute; z-index: 1100; left: .8rem; bottom: .8rem; width: min(410px, calc(100% - 1.6rem)); padding: .85rem .95rem; border: 1px solid #d5d2c7; border-radius: 8px; color: #343d35; background: rgba(239,237,229,.96); box-shadow: 0 8px 24px rgba(19,28,21,.24); backdrop-filter: blur(10px); }
-.tour-map-shadow-heading { display: flex; align-items: center; gap: .65rem; }
-.tour-shadow-sun-mark { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid #c7b77e; border-radius: 50%; color: #79683e; background: #e4dcc1; font-size: 1rem; }
-.tour-map-shadow-heading > div { min-width: 0; }
-.tour-map-shadow-heading .tour-scenery-kicker { padding: 0 0 .18rem; font-size: .53rem; }
-.tour-map-shadow-heading strong { display: block; color: #3f4d41; font-size: .68rem; line-height: 1.45; }
-.tour-map-shadow-fields { display: grid; grid-template-columns: .8fr 1.2fr; gap: .7rem; margin-top: .7rem; }
-.tour-map-shadow-fields label { min-width: 0; display: grid; align-content: center; gap: .25rem; color: #626b60; font-size: .61rem; font-weight: 750; }
-.tour-map-shadow-fields label > span { display: flex; align-items: center; justify-content: space-between; gap: .3rem; white-space: nowrap; }
-.tour-map-shadow-fields label b { color: #4d644d; font-size: .6rem; }
-.tour-map-shadow-fields input[type='date'] { width: 100%; min-width: 0; padding: .4rem .45rem; border: 1px solid #c9c9bd; border-radius: 5px; color: #3f4c41; background: #f7f5ed; font: inherit; font-size: .67rem; }
-.tour-map-shadow-fields input[type='range'] { width: 100%; margin: .25rem 0; accent-color: #677852; }
-.tour-map-shadow-control > p { margin: .55rem 0 0; padding-top: .45rem; border-top: 1px solid #d7d5ca; color: #70746b; font-size: .58rem; line-height: 1.5; }
+.tour-shadow-legend { position: absolute; z-index: 1100; left: .75rem; bottom: .75rem; display: flex; align-items: center; gap: .45rem; padding: .42rem .58rem; border: 1px solid #d5d2c7; border-radius: 6px; color: #343d35; background: rgba(239,237,229,.95); box-shadow: 0 2px 8px rgba(19,28,21,.2); font-size: .65rem; font-weight: 750; pointer-events: none; }
+.tour-shadow-legend > span { width: 13px; height: 13px; border: 1px solid #162820; border-radius: 2px; background: rgba(36,54,47,.8); }
 .tour-map-starting { display: grid; place-items: center; padding: 1rem; color: #545f53; font-size: .78rem; text-align: center; }
 .tour-maplibre-3d { background: #c5c5b9; }
 .tour-maplibre-3d { height: clamp(520px, 68vh, 760px); }
+.tour-maplibre-2d { height: clamp(340px, 48vh, 480px); }
 .tour-maplibre-3d.tour-map-starting { display: block; padding: 0; }
 .tour-map-starting .tour-explorer-map { height: 100%; }
 .tour-map-error-fallback { position: relative; height: clamp(340px, 48vh, 480px); }
@@ -1267,8 +1280,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-maplibre-host { position: absolute; z-index: 1; inset: 0; }
 .tour-maplibre-fallback, .google-route-underlay { position: absolute; z-index: 0; inset: 0; }
 .tour-maplibre-fallback .tour-explorer-map, .google-route-underlay .tour-explorer-map { height: 100%; }
-.tour-map-shadow-gradient { position: absolute; z-index: 2; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(var(--shadow-gradient-angle, 180deg), rgba(225,190,119,0) 0%, rgba(225,190,119,.025) 32%, rgba(25,33,27,.07) 62%, rgba(14,20,16,.24) 100%); mix-blend-mode: multiply; transition: opacity .25s ease; }
-.tour-map-shadow-gradient.is-active { opacity: 1; }
 .tour-maplibre-3d .google-route-loading, .google-route-3d .google-route-loading { z-index: 3; }
 .tour-maplibre-host canvas { filter: brightness(.89) saturate(.78) contrast(1.02); }
 .tour-map-style-toggle { border-color: #d8d5c9; border-radius: 5px; color: #3d4a40; background: #efede5; box-shadow: 0 2px 8px rgba(24,34,26,.18); }
@@ -1320,10 +1331,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 650px) {
   .tour-hero-art { min-height: 0; display: block; border: 0; border-radius: 0; background: transparent; }
   .tour-maplibre-3d { height: clamp(430px, 62vh, 620px); }
+  .tour-maplibre-2d { height: clamp(340px, 48vh, 460px); }
   .tour-scenery-preview { top: .55rem; right: .55rem; width: min(240px, calc(100% - 1.1rem)); }
   .tour-scenery-preview > img { height: 112px; }
-  .tour-map-shadow-control { left: .55rem; bottom: .55rem; width: min(360px, calc(100% - 1.1rem)); padding: .68rem .72rem; }
-  .tour-map-shadow-fields { gap: .5rem; }
-  .tour-map-shadow-heading strong { font-size: .62rem; }
-  .tour-map-shadow-control > p { font-size: .54rem; }
+  .tour-shadow-legend { left: .55rem; bottom: .55rem; }
 }

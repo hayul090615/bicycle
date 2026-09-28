@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTouristStation, touristRoutes, type TourCategory, type TouristRoute } from '../data/touristRoutes'
-import { todayInSeoul } from '../utils/solarPosition'
+import { nowInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { PublicCctvMap } from './PublicCctvMap'
 import { SeoulRideIllustration } from './SeoulRideIllustration'
@@ -11,13 +11,16 @@ const textFor = <T,>(locale: Locale, english: T, korean: T): T => locale === 'en
 
 export function TouristGuide({ onBack }: { onBack: () => void }) {
   const [locale, setLocale] = useState<Locale>(() => new URLSearchParams(window.location.search).get('lang') === 'ko' ? 'ko' : 'en')
-  const [shadowDate, setShadowDate] = useState(todayInSeoul)
-  const [shadowMinutes, setShadowMinutes] = useState(15 * 60)
+  const [seoulClock, setSeoulClock] = useState(nowInSeoul)
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
   const [category, setCategory] = useState<TourCategory>(initialRoute.category)
   const [routeId, setRouteId] = useState(initialRoute.id)
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
+  useEffect(() => {
+    const timer = window.setInterval(() => setSeoulClock(nowInSeoul()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
   const categoryCopy: Record<TourCategory, { label: [string, string]; title: [string, string]; description: [string, string] }> = {
     sightseeing: {
       label: ['Find somewhere new', '새로운 서울'],
@@ -114,6 +117,10 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
       <div className={`tour-route-tabs tour-route-tabs--${category}`} role="group" aria-label={textFor(locale, 'Choose a route', '코스 선택')}>
         {categoryRoutes.map(candidate => <button key={candidate.id} type="button" aria-pressed={candidate.id === route.id}
           className={`tour-route-tab ${candidate.id === route.id ? 'is-selected' : ''}`} onClick={() => chooseRoute(candidate.id)}>
+          {category === 'seasonal' && candidate.season && <span className={`tour-season-art tour-season-art--${candidate.season}`} aria-hidden="true">
+            <i className="tour-season-sun" /><i className="tour-season-tree tour-season-tree--one" /><i className="tour-season-tree tour-season-tree--two" />
+            <b>{candidate.season}</b>
+          </span>}
           <span>{textFor(locale, candidate.area, candidate.areaKo)}</span><strong>{textFor(locale, candidate.title, candidate.titleKo)}</strong>
           <small>{textFor(locale, candidate.distance ?? candidate.suggestedTime, candidate.distance ?? candidate.suggestedTimeKo)}</small>
           <span className="tour-route-discovery">{textFor(locale, candidate.discovery, candidate.discoveryKo)}</span>
@@ -126,8 +133,7 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
           <div className="tour-panel-heading"><div><span className="tour-card-kicker">{textFor(locale, '02 · YOUR ROUTE', '02 · 선택한 코스')}</span>
             <h2>{textFor(locale, route.title, route.titleKo)}</h2><p>{textFor(locale, route.summary, route.summaryKo)}</p></div>
             <span className="tour-duration">◷ {textFor(locale, route.suggestedTime, route.suggestedTimeKo)}</span></div>
-          <TourRouteExplorer route={route} locale={locale} shadowDate={shadowDate} shadowMinutes={shadowMinutes}
-            onShadowDateChange={setShadowDate} onShadowMinutesChange={setShadowMinutes} />
+          <TourRouteExplorer route={route} locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} />
           <div className="tour-route-source">{textFor(locale, <>Route reference: </>, <>코스 참고: </>)}
             <a href={route.source} target="_blank" rel="noopener noreferrer">{textFor(locale, "Visit Seoul's official travel guide ↗", '서울 공식 관광 안내 ↗')}</a>.
             {textFor(locale, ' Station locations: Seoul Open Data, June 2026 snapshot. Check live availability in the official app.', ' 대여소 위치: 서울 열린데이터광장 2026년 6월 자료. 실시간 대여 가능 여부는 공식 앱에서 확인하세요.')}</div>
