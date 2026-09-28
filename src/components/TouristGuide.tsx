@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTouristStation, touristRoutes, type TourCategory, type TouristRoute } from '../data/touristRoutes'
-import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
+import { todayInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { PublicCctvMap } from './PublicCctvMap'
 import { SeoulRideIllustration } from './SeoulRideIllustration'
@@ -9,61 +9,10 @@ import { TourRouteExplorer } from './TourRouteExplorer'
 type Locale = 'en' | 'ko'
 const textFor = <T,>(locale: Locale, english: T, korean: T): T => locale === 'en' ? english : korean
 
-function ShadowPreview({ route, locale }: { route: TouristRoute; locale: Locale }) {
-  const [date, setDate] = useState(todayInSeoul)
-  const [minutes, setMinutes] = useState(15 * 60)
-  const firstStation = getTouristStation(route.stops[0].stationId)
-  const solar = getSolarPosition(date || todayInSeoul(), minutes, firstStation.lat, firstStation.lng)
-  const daylight = solar.elevation > 0
-  const shadowRadius = daylight ? Math.min(62, 18 + Math.min(solar.shadowLength ?? 0, 8) * 6) : 0
-  const point = (bearing: number, distance: number) => ({
-    x: 90 + Math.sin(bearing * Math.PI / 180) * distance,
-    y: 90 - Math.cos(bearing * Math.PI / 180) * distance,
-  })
-  const sun = point(solar.azimuth, 61)
-  const shadow = point(solar.shadowAzimuth, shadowRadius)
-  const time = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
-
-  return <section className="tour-info-card tour-shadow-card" aria-labelledby="tour-shadow-title">
-    <div className="tour-card-kicker">{textFor(locale, 'PLAN FOR DAYLIGHT', '햇빛·그늘 미리보기')}</div>
-    <h2 id="tour-shadow-title">{textFor(locale, 'Sun & shadow preview', '시간별 태양과 그림자')}</h2>
-    <p>{textFor(locale, 'Choose a date and local time in Seoul. See where a vertical object would cast a shadow.', '서울 날짜와 시간을 선택하면 태양 방향과 수직 물체의 그림자를 보여줍니다.')}</p>
-    <div className="tour-shadow-controls">
-      <label>{textFor(locale, 'Date in Seoul', '서울 날짜')}<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
-      <label>{textFor(locale, 'Local time', '현지 시각')} <strong>{time} KST</strong><input type="range" min="360" max="1200" step="30" value={minutes}
-        onChange={(event) => setMinutes(Number(event.target.value))} /></label>
-    </div>
-    <div className="tour-shadow-result">
-      <svg viewBox="0 0 180 180" className="tour-sun-dial" role="img" aria-label={daylight
-        ? textFor(locale, `Sun elevation ${Math.round(solar.elevation)} degrees; shadow points ${Math.round(solar.shadowAzimuth)} degrees from north`, `태양 고도 ${Math.round(solar.elevation)}도, 그림자는 북쪽 기준 ${Math.round(solar.shadowAzimuth)}도 방향`)
-        : textFor(locale, 'Sun below the horizon', '해가 지평선 아래에 있습니다')}>
-        <circle cx="90" cy="90" r="72" className="tour-dial-base" />
-        <text x="90" y="12" textAnchor="middle">N</text><text x="168" y="94" textAnchor="middle">E</text>
-        <text x="90" y="176" textAnchor="middle">S</text><text x="12" y="94" textAnchor="middle">W</text>
-        {daylight && <>
-          <line x1="90" y1="90" x2={shadow.x} y2={shadow.y} className="tour-shadow-line" />
-          <circle cx={sun.x} cy={sun.y} r="12" className="tour-sun-dot" />
-        </>}
-        <circle cx="90" cy="90" r="7" className="tour-dial-center" />
-      </svg>
-      <div className="tour-sun-numbers" aria-live="polite">
-        <strong>{daylight ? textFor(locale, `${Math.round(solar.elevation)}° sun elevation`, `태양 고도 ${Math.round(solar.elevation)}°`) : textFor(locale, 'After dark', '해 진 뒤')}</strong>
-        <span>{daylight
-          ? textFor(locale, `${(solar.shadowLength ?? 0) > 10 ? 'Over 10' : (solar.shadowLength ?? 0).toFixed(1)} m shadow from a 1 m post`, `높이 1m 물체의 그림자 ${(solar.shadowLength ?? 0) > 10 ? '10m 초과' : `${(solar.shadowLength ?? 0).toFixed(1)}m`}`)
-          : textFor(locale, 'No direct sunlight or cast shadow', '직사광과 그림자가 없습니다')}</span>
-        <small>{daylight
-          ? textFor(locale, `Shadow points ${Math.round(solar.shadowAzimuth)}° clockwise from north.`, `그림자 방향: 북쪽에서 시계 방향 ${Math.round(solar.shadowAzimuth)}°`)
-          : textFor(locale, 'Use lights if riding after dark.', '야간 주행 시 자전거 조명을 켜세요.')}</small>
-      </div>
-    </div>
-    <p className="tour-fine-print">{textFor(locale,
-      <>This is a sun-position estimate, not a street-shade map. Buildings, trees and weather are not included. Calculation: <a href="https://gml.noaa.gov/grad/solcalc/solareqns.PDF" target="_blank" rel="noopener noreferrer">NOAA solar equations</a>.</>,
-      <>태양 위치로 계산한 추정치이며 실제 도로 그늘은 아닙니다. 건물·나무·날씨는 반영하지 않습니다. 계산식: <a href="https://gml.noaa.gov/grad/solcalc/solareqns.PDF" target="_blank" rel="noopener noreferrer">NOAA 태양 계산식</a>.</>)}</p>
-  </section>
-}
-
 export function TouristGuide({ onBack }: { onBack: () => void }) {
   const [locale, setLocale] = useState<Locale>(() => new URLSearchParams(window.location.search).get('lang') === 'ko' ? 'ko' : 'en')
+  const [shadowDate, setShadowDate] = useState(todayInSeoul)
+  const [shadowMinutes, setShadowMinutes] = useState(15 * 60)
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
   const [category, setCategory] = useState<TourCategory>(initialRoute.category)
   const [routeId, setRouteId] = useState(initialRoute.id)
@@ -177,7 +126,8 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
           <div className="tour-panel-heading"><div><span className="tour-card-kicker">{textFor(locale, '02 · YOUR ROUTE', '02 · 선택한 코스')}</span>
             <h2>{textFor(locale, route.title, route.titleKo)}</h2><p>{textFor(locale, route.summary, route.summaryKo)}</p></div>
             <span className="tour-duration">◷ {textFor(locale, route.suggestedTime, route.suggestedTimeKo)}</span></div>
-          <TourRouteExplorer key={route.id} route={route} locale={locale} />
+          <TourRouteExplorer route={route} locale={locale} shadowDate={shadowDate} shadowMinutes={shadowMinutes}
+            onShadowDateChange={setShadowDate} onShadowMinutesChange={setShadowMinutes} />
           <div className="tour-route-source">{textFor(locale, <>Route reference: </>, <>코스 참고: </>)}
             <a href={route.source} target="_blank" rel="noopener noreferrer">{textFor(locale, "Visit Seoul's official travel guide ↗", '서울 공식 관광 안내 ↗')}</a>.
             {textFor(locale, ' Station locations: Seoul Open Data, June 2026 snapshot. Check live availability in the official app.', ' 대여소 위치: 서울 열린데이터광장 2026년 6월 자료. 실시간 대여 가능 여부는 공식 앱에서 확인하세요.')}</div>
@@ -187,7 +137,6 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
             <h2 id="tour-checks-title">{textFor(locale, 'A little planning, a better ride.', '출발 전에 한 번 더 살펴보세요.')}</h2>
             <p className="tour-checks-route" aria-live="polite">{textFor(locale, route.title, route.titleKo)} · {textFor(locale, 'Daylight and cameras near the route start', '코스 출발점 기준 햇빛·주변 CCTV')}</p></div></div>
           <div className="tour-preflight-grid">
-          <ShadowPreview route={route} locale={locale} />
           <PublicCctvMap route={route} locale={locale} />
           <section className="tour-info-card tour-safety-card" aria-labelledby="tour-safety-title">
             <div className="tour-card-kicker">{textFor(locale, 'RIDE INFORMED', '안전하게 달리기')}</div>

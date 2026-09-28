@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
-import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D } from '../services/googleMaps3d'
+import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePolygon3D, type Maps3DLibrary } from '../services/googleMaps3d'
+import type { ShadowCoordinate } from '../utils/solarShadow'
 
-export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHoverStop, shadowPolygon, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
-  onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void; fallback: ReactNode
+  onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
+  shadowPolygon: ShadowCoordinate[] | null; fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<GoogleMap3D | null>(null)
+  const libraryRef = useRef<Maps3DLibrary | null>(null)
+  const routeLineRef = useRef<HTMLElement | null>(null)
+  const markersRef = useRef<HTMLElement[]>([])
+  const shadowRef = useRef<GooglePolygon3D | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const points = useMemo(() => route.stops.map(stop => {
     const { lat, lng } = getTouristStation(stop.stationId)
@@ -27,6 +33,7 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
     let disposed = false
     let failed = false
     let map: GoogleMap3D | undefined
+    let timeout = 0
     setStatus('loading')
     const fail = () => {
       if (disposed) return
@@ -34,9 +41,10 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       window.clearTimeout(timeout)
       map?.remove()
       mapRef.current = null
+      libraryRef.current = null
       setStatus('error')
     }
-    const timeout = window.setTimeout(fail, 30000)
+    timeout = window.setTimeout(fail, 30000)
     window.addEventListener('seoul-google-maps-error', fail)
     void loadGoogleMaps3D().then(library => {
       if (disposed || failed || !host.current) return
@@ -51,17 +59,7 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
           setStatus('ready')
         }
       })
-      const line = new library.Polyline3DElement({ path: points, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5 })
-      map.append(line)
-      points.forEach((position, index) => {
-        const stop = route.stops[index]
-        const label = `${index + 1}. ${locale === 'ko' ? stop.placeKo : stop.place}`
-        const marker = new library.Marker3DInteractiveElement({ position, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
-        marker.addEventListener('gmp-click', () => onSelectStop(index))
-        marker.addEventListener('pointerenter', () => onHoverStop(index))
-        marker.addEventListener('focus', () => onHoverStop(index))
-        map!.append(marker)
-      })
+      libraryRef.current = library
       mapRef.current = map
       host.current.replaceChildren(map)
     }).catch(fail)
@@ -69,17 +67,64 @@ export function GoogleRoute3D({ route, locale, selectedStop, onSelectStop, onHov
       disposed = true
       window.clearTimeout(timeout)
       window.removeEventListener('seoul-google-maps-error', fail)
+      markersRef.current.forEach(marker => marker.remove())
+      markersRef.current = []
+      routeLineRef.current?.remove()
+      routeLineRef.current = null
+      shadowRef.current?.remove()
+      shadowRef.current = null
       map?.remove()
       mapRef.current = null
+      libraryRef.current = null
     }
-  }, [locale, points, route, onSelectStop, onHoverStop])
+  }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const library = libraryRef.current
+    if (!map || !library || status !== 'ready') return
+    map.description = locale === 'ko' ? route.titleKo : route.title
+    routeLineRef.current?.remove()
+    markersRef.current.forEach(marker => marker.remove())
+    routeLineRef.current = new library.Polyline3DElement({ path: points, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5 })
+    map.append(routeLineRef.current)
+    markersRef.current = points.map((position, index) => {
+      const stop = route.stops[index]
+      const label = `${index + 1}. ${locale === 'ko' ? stop.placeKo : stop.place}`
+      const marker = new library.Marker3DInteractiveElement({ position, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
+      marker.addEventListener('gmp-click', () => onSelectStop(index))
+      marker.addEventListener('pointerenter', () => onHoverStop(index))
+      marker.addEventListener('focus', () => onHoverStop(index))
+      map.append(marker)
+      return marker
+    })
+  }, [locale, onHoverStop, onSelectStop, points, route, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const library = libraryRef.current
+    if (!map || !library || status !== 'ready') return
+    shadowRef.current?.remove()
+    shadowRef.current = null
+    if (shadowPolygon) {
+      shadowRef.current = new library.Polygon3DElement({
+        path: shadowPolygon.map(([lng, lat]) => ({ lat, lng })),
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+        fillColor: 'rgba(40, 52, 46, 0.4)',
+        strokeColor: '#d0bd83',
+        strokeWidth: 1,
+        extruded: false,
+      })
+      map.append(shadowRef.current)
+    }
+  }, [shadowPolygon, status])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
     map.stopCameraAnimation()
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) Object.assign(map, camera)
-    else map.flyCameraTo({ endCamera: camera, durationMillis: 1200 })
+    else map.flyCameraTo({ endCamera: camera, durationMillis: 650 })
   }, [camera, status])
 
   if (status === 'error') return <>
