@@ -928,7 +928,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-plan-content { display: grid; gap: 2rem; }
 .tour-route-tab .tour-route-open { margin-top: .35rem; color: #08765b; font-size: .66rem; font-weight: 750; letter-spacing: 0; text-transform: none; }
 #tour-detail, #tour-checks, .tour-earth-preview { scroll-margin-top: 1rem; }
-.tour-explorer-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 1.25rem; align-items: start; }
+.tour-explorer-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(250px, .8fr); gap: 1.25rem; align-items: start; }
 .tour-earth-preview { min-width: 0; overflow: hidden; border: 1px solid #d8e6dc; border-radius: 15px; background: #f7faf7; }
 .tour-explorer-map, .google-route-3d, .tour-maplibre-3d { width: 100%; height: clamp(340px, 48vh, 480px); }
 .tour-maplibre-3d { position: relative; overflow: hidden; background: #dfe8e3; }
@@ -1210,16 +1210,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-language-button:hover { background: #294938; }
 .tour-back { border-color: #c7c8be; color: #3f5747; background: #e9e7de; }
 .tour-back:hover { background: #ddded4; }
-.tour-hero { border-color: #2d4439; border-radius: 13px; color: #f1efe7; background: linear-gradient(116deg, #1d3029 0%, #263c33 58%, #34473a 100%); }
-.tour-hero::after { position: absolute; inset: auto -7% -56% 43%; height: 90%; border: 1px solid rgba(198,174,121,.23); border-radius: 50%; content: ''; pointer-events: none; }
-.tour-hero-art { min-height: 230px; display: grid; align-items: center; border: 1px solid rgba(211,204,179,.14); border-radius: 10px; background: radial-gradient(ellipse at 73% 24%, rgba(179,157,107,.18), transparent 34%), linear-gradient(155deg, rgba(246,241,222,.035), rgba(8,18,15,.28)); }
-.tour-hero-art .seoul-ride-illustration { opacity: .18; filter: grayscale(1) saturate(.35); }
-.tour-scene-label { border-color: rgba(224,215,188,.25); border-radius: 6px; color: #e9e3d2; background: rgba(31,48,39,.9); box-shadow: none; }
-.tour-scene-label i { background: #a89360; }
-.tour-eyebrow { color: #c1ae79; }
-.tour-hero h1 em { color: #d4bf87; }
-.tour-hero p { color: #cbcfc5; }
-.tour-hero-count { color: #b9c0b4; }
+.tour-hero { border-color: #d7e5d6; border-radius: 26px; color: #183f36; background: radial-gradient(ellipse at 78% 22%, #fff3d4, transparent 52%), linear-gradient(110deg, #f7faf1, #e8f2e6); }
+.tour-hero::after { content: none; }
+.tour-hero-art { min-height: 0; display: block; border: 0; border-radius: 0; background: transparent; }
+.tour-hero-art .seoul-ride-illustration { opacity: 1; filter: none; }
+.tour-scene-label { border-color: #fff; border-radius: 30px; color: #315c4e; background: #fffffff0; box-shadow: 0 5px 20px #234c3810; }
+.tour-scene-label i { background: #15926b; }
+.tour-eyebrow { color: #36765b; }
+.tour-hero h1 em { color: #168164; }
+.tour-hero p { color: #5d7366; }
+.tour-hero-count { color: #62786a; }
 .tour-card-kicker { color: #687a67; }
 .tour-route-heading a, .tour-route-source a, .tour-footer a, .tour-fine-print a { color: #405f48; }
 .tour-category-tab { border-color: #cfcec4; border-radius: 7px; color: #4a574b; background: #f0eee7; }
@@ -1244,6 +1244,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map-stage { position: relative; }
 .tour-map-starting { display: grid; place-items: center; padding: 1rem; color: #545f53; font-size: .78rem; text-align: center; }
 .tour-maplibre-3d { background: #c5c5b9; }
+.tour-maplibre-3d { height: clamp(520px, 68vh, 760px); }
 .tour-maplibre-host canvas { filter: brightness(.89) saturate(.78) contrast(1.02); }
 .tour-map-style-toggle { border-color: #d8d5c9; border-radius: 5px; color: #3d4a40; background: #efede5; box-shadow: 0 2px 8px rgba(24,34,26,.18); }
 .tour-map-style-toggle[aria-pressed='true'] { background: #455f4b; }
@@ -1292,7 +1293,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .site-dialog-close { border-radius: 5px; color: #4c5c4e; background: #e1e1d7; }
 
 @media (max-width: 650px) {
-  .tour-hero-art { min-height: 150px; }
+  .tour-hero-art { min-height: 0; display: block; border: 0; border-radius: 0; background: transparent; }
+  .tour-maplibre-3d { height: clamp(430px, 62vh, 620px); }
   .tour-scenery-preview { top: .55rem; right: .55rem; width: min(240px, calc(100% - 1.1rem)); }
   .tour-scenery-preview > img { height: 112px; }
 }
