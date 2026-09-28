@@ -930,7 +930,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 #tour-detail, #tour-checks, .tour-earth-preview { scroll-margin-top: 1rem; }
 .tour-explorer-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 1.25rem; align-items: start; }
 .tour-earth-preview { min-width: 0; overflow: hidden; border: 1px solid #d8e6dc; border-radius: 15px; background: #f7faf7; }
-.tour-explorer-map, .google-route-3d { width: 100%; height: clamp(340px, 48vh, 480px); }
+.tour-explorer-map, .google-route-3d, .tour-maplibre-3d { width: 100%; height: clamp(340px, 48vh, 480px); }
+.tour-maplibre-3d { position: relative; overflow: hidden; background: #dfe8e3; }
+.tour-maplibre-host { width: 100%; height: 100%; }
+.tour-map-style-toggle { position: absolute; z-index: 2; top: .75rem; left: .75rem; padding: .55rem .72rem; border: 1px solid #fff; border-radius: 8px; color: #17463a; background: #fffffff2; box-shadow: 0 2px 10px #102b2026; font-size: .7rem; font-weight: 800; cursor: pointer; }
+.tour-map-style-toggle[aria-pressed='true'] { color: #fff; background: #08765b; }
+.tour-map-style-toggle:hover { background: #e7f8ed; }
+.tour-map-style-toggle[aria-pressed='true']:hover { color: #fff; background: #096449; }
+.tour-maplibre-3d .google-route-loading { left: 50%; right: auto; transform: translateX(-50%); white-space: nowrap; }
+.tour-3d-stop-marker { display: flex; align-items: center; gap: .35rem; padding: 0; border: 0; background: transparent; cursor: pointer; filter: drop-shadow(0 2px 4px #10281e55); }
+.tour-3d-stop-marker b { width: 25px; height: 25px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #078962; font: 800 .72rem 'DM Sans', sans-serif; }
+.tour-3d-stop-marker span { max-width: 180px; overflow: hidden; padding: .28rem .48rem; border: 1px solid #fff; border-radius: 7px; color: #163e33; background: #fffffff0; font-size: .67rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.tour-3d-stop-marker.is-selected b { color: #1b4536; background: #ffd263; }
+.tour-3d-stop-marker.is-selected span { color: #fff; background: #08765b; }
 .google-route-3d { position: relative; background: #e9f0eb; }
 .google-route-host { width: 100%; height: 100%; }
 .google-route-loading { position: absolute; top: 1rem; left: 1rem; right: 1rem; margin: 0; padding: .7rem; border-radius: 8px; background: #ffffffe8; color: #365c48; font-size: .8rem; pointer-events: none; }

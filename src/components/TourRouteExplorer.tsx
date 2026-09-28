@@ -3,6 +3,7 @@ import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from
 import { latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { GoogleRoute3D } from './GoogleRoute3D'
+import { MapLibreRoute3D } from './MapLibreRoute3D'
 import { hasGoogleMapsKey } from '../services/googleMaps3d'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 
@@ -17,7 +18,7 @@ function FocusMap({ points, selectedStop }: { points: LatLngExpression[]; select
 
 export function TourRouteExplorer({ route, locale }: { route: TouristRoute; locale: 'en' | 'ko' }) {
   const [selectedStop, setSelectedStop] = useState<number | null>(null)
-  const [view, setView] = useState<'earth' | 'map'>('earth')
+  const [view, setView] = useState<'city' | 'google' | 'map'>('city')
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
   const points = useMemo<LatLngExpression[]>(() => route.stops.map(stop => {
@@ -40,20 +41,20 @@ export function TourRouteExplorer({ route, locale }: { route: TouristRoute; loca
         <div><span className="tour-card-kicker">{text('EXPLORE YOUR STOPS', '경유지를 눌러 둘러보세요')}</span>
           <strong aria-live="polite">{selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
         <div className="tour-view-switch" role="group" aria-label={text('Map view', '지도 보기')}>
-          <button type="button" aria-pressed={view === 'earth'} onClick={() => setView('earth')}>Google 3D</button>
+          <button type="button" aria-pressed={view === 'city'} onClick={() => setView('city')}>{text('3D aerial', '위성 3D')}</button>
+          {hasGoogleMapsKey && <button type="button" aria-pressed={view === 'google'} onClick={() => setView('google')}>Google 3D</button>}
           <button type="button" aria-pressed={view === 'map'} onClick={() => setView('map')}>{text('2D map', '2D 지도')}</button>
         </div>
       </div>
-      {view === 'earth' && !hasGoogleMapsKey && <p className="tour-earth-notice" role="status">{text('In-page 3D is not connected yet. This is the route map. Open Google Earth below to explore the selected stop.', '사이트 내 3D 연결 전이라 코스 지도를 표시합니다. 아래 Google Earth 버튼으로 선택한 경유지를 둘러보세요.')}</p>}
-      {view === 'earth' && hasGoogleMapsKey
-        ? <GoogleRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={setSelectedStop} fallback={map} />
-        : map}
+      {view === 'city' && <MapLibreRoute3D key={route.id} route={route} locale={locale} selectedStop={selectedStop} onSelectStop={setSelectedStop} fallback={map} />}
+      {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} locale={locale} selectedStop={selectedStop} onSelectStop={setSelectedStop} fallback={map} />}
+      {view === 'map' && map}
       <div className="tour-earth-actions">
         <a className="button button--primary" href={googleEarthUrl(route, selectedStop ?? 0)} target="_blank" rel="noopener noreferrer">{text('Open in Google Earth ↗', 'Google Earth에서 보기 ↗')}</a>
         <button type="button" className="button button--ghost" onClick={() => downloadEarthRoute(route, locale)}>{text('Download route for Earth', 'Earth용 코스 받기')}</button>
         <button type="button" className="tour-show-all" onClick={() => setSelectedStop(null)}>{text('Show all stops', '전체 경유지 보기')}</button>
       </div>
-      <p className="tour-map-note">{text('Google Earth opens in a new tab at the selected stop. Import the downloaded KML to see all stops. 3D building coverage varies by location.', 'Google Earth는 선택한 경유지 위치에서 새 탭으로 열립니다. 내려받은 KML을 가져오면 전체 경유지를 볼 수 있습니다. 3D 건물은 지역별 제공 범위에 따라 다릅니다.')}</p>
+      <p className="tour-map-note">{text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
       <p className="tour-map-note">{text('Lines connect stops only; they are not cycling directions. Check local cycling paths before riding.', '연결선은 경유지 순서를 보여주며 실제 자전거 길안내가 아닙니다. 출발 전에 자전거도로를 확인하세요.')}</p>
     </section>
     <aside className="tour-itinerary" aria-label={text('Route stops', '코스 경유지')}>
