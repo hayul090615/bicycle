@@ -35,18 +35,22 @@ export function loadPublicCctvBundle() {
   return bundleRequest
 }
 
-function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const radians = Math.PI / 180
-  const latitude = (b.lat - a.lat) * radians
-  const longitude = (b.lng - a.lng) * radians
-  const arc = Math.sin(latitude / 2) ** 2 + Math.cos(a.lat * radians) * Math.cos(b.lat * radians) * Math.sin(longitude / 2) ** 2
-  return 6371000 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc))
-}
-
-export function getNearbyPublicCameras(cameras: PublicCamera[], center: { lat: number; lng: number }, radiusMeters = 5000, limit = 40) {
-  return cameras
-    .map(camera => ({ camera, distance: distanceMeters(center, camera) }))
-    .filter(item => item.distance <= radiusMeters)
-    .sort((first, second) => first.distance - second.distance)
-    .slice(0, limit)
+export function clusterPublicCameras(cameras: PublicCamera[], center: { lat: number; lng: number }, radiusMeters: number, cellMeters: number) {
+  const latitudeCell = Math.max(0.0002, cellMeters / 111_320)
+  const longitudeCell = Math.max(0.0002, cellMeters / (111_320 * Math.cos(center.lat * Math.PI / 180)))
+  const latitudeRadius = radiusMeters / 111_320
+  const longitudeRadius = radiusMeters / (111_320 * Math.cos(center.lat * Math.PI / 180))
+  const groups = new Map<string, PublicCamera[]>()
+  for (const camera of cameras) {
+    if (Math.abs(camera.lat - center.lat) > latitudeRadius || Math.abs(camera.lng - center.lng) > longitudeRadius) continue
+    const key = `${Math.floor(camera.lat / latitudeCell)}:${Math.floor(camera.lng / longitudeCell)}`
+    const group = groups.get(key)
+    if (group) group.push(camera)
+    else groups.set(key, [camera])
+  }
+  return [...groups.values()].map(group => ({
+    lat: group.reduce((sum, camera) => sum + camera.lat, 0) / group.length,
+    lng: group.reduce((sum, camera) => sum + camera.lng, 0) / group.length,
+    cameras: group,
+  }))
 }
