@@ -4,9 +4,10 @@ import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary }
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 
-export function GoogleRoute3D({ route, routePath, cctvCameras, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
+  accessPath: LonLat[] | null
   cctvCameras: PublicCamera[]
   rotationRequest: { direction: 'left' | 'right'; serial: number } | null
   userLocation: { lat: number; lng: number } | null
@@ -17,6 +18,7 @@ export function GoogleRoute3D({ route, routePath, cctvCameras, rotationRequest, 
   const mapRef = useRef<GoogleMap3D | null>(null)
   const libraryRef = useRef<Maps3DLibrary | null>(null)
   const routeLineRef = useRef<HTMLElement | null>(null)
+  const accessLineRef = useRef<HTMLElement | null>(null)
   const markersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
@@ -29,11 +31,12 @@ export function GoogleRoute3D({ route, routePath, cctvCameras, rotationRequest, 
   const linePoints = useMemo(() => routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [routePath, points])
   const camera = useMemo<Camera3D>(() => {
     if (selectedStop !== null) return { center: { ...points[selectedStop], altitude: 40 }, range: 1600, tilt: 60, heading: 0 }
-    const lats = points.map(point => point.lat), lngs = points.map(point => point.lng)
+    const frame = accessPath && accessPath.length >= 2 ? [...points, ...accessPath.map(([lng, lat]) => ({ lat, lng }))] : points
+    const lats = frame.map(point => point.lat), lngs = frame.map(point => point.lng)
     const south = Math.min(...lats), north = Math.max(...lats), west = Math.min(...lngs), east = Math.max(...lngs)
     const span = Math.max((north - south) * 111000, (east - west) * 88000)
     return { center: { lat: (south + north) / 2, lng: (west + east) / 2, altitude: 40 }, range: Math.max(2500, span * 3), tilt: 50, heading: 0 }
-  }, [points, selectedStop])
+  }, [accessPath, points, selectedStop])
   const cameraRef = useRef(camera)
   cameraRef.current = camera
   const rotatedCameraRef = useRef(camera)
@@ -83,6 +86,7 @@ export function GoogleRoute3D({ route, routePath, cctvCameras, rotationRequest, 
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
       routeLineRef.current?.remove()
+      accessLineRef.current?.remove()
       routeLineRef.current = null
       map?.remove()
       mapRef.current = null
@@ -110,6 +114,17 @@ export function GoogleRoute3D({ route, routePath, cctvCameras, rotationRequest, 
       return marker
     })
   }, [linePoints, locale, onHoverStop, onSelectStop, points, route, status])
+
+  useEffect(() => {
+    const map = mapRef.current, library = libraryRef.current
+    if (!map || !library || status !== 'ready') return
+    accessLineRef.current?.remove()
+    accessLineRef.current = null
+    if (!accessPath || accessPath.length < 2) return
+    accessLineRef.current = new library.Polyline3DElement({ path: accessPath.map(([lng, lat]) => ({ lat, lng })),
+      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#2479db', strokeWidth: 7 })
+    map.append(accessLineRef.current)
+  }, [accessPath, status])
 
   useEffect(() => {
     const map = mapRef.current
