@@ -4,11 +4,46 @@ export type RouteCondition =
   | { kind: 'signal'; id: string; lat: number; lng: number }
   | { kind: 'uphill' | 'downhill'; id: string; lat: number; lng: number; grade: number }
 
+export type RouteRestaurant = {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  kind: 'restaurant' | 'cafe' | 'quick'
+  cuisine?: string
+}
+
 type Sample = { point: LonLat; distance: number }
-type OSMResponse = { elements?: Array<{ id: number; lat?: number; lon?: number; tags?: Record<string, string> }> }
+type OSMResponse = { elements?: Array<{ id: number; type?: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }> }
 const METERS_PER_DEGREE_LAT = 111_000
 const signalCache = new Map<string, RouteCondition[]>()
 const gradeCache = new Map<string, RouteCondition[]>()
+const restaurantCache = new Map<string, RouteRestaurant[]>()
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+]
+
+async function queryOverpass(query: string, signal: AbortSignal): Promise<OSMResponse> {
+  let response: Response | undefined
+  let requestError: unknown
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST', signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', Accept: 'application/json' },
+        body: `data=${encodeURIComponent(query)}`,
+      })
+      if (response.ok) break
+      response = undefined
+    } catch (error) {
+      requestError = error
+      if (signal.aborted) throw error
+    }
+  }
+  if (!response?.ok) throw requestError ?? new Error('OpenStreetMap data unavailable')
+  return response.json() as Promise<OSMResponse>
+}
 
 function segmentLength([lng1, lat1]: LonLat, [lng2, lat2]: LonLat) {
   const lat = (lat1 + lat2) * Math.PI / 360
@@ -76,28 +111,7 @@ export async function fetchRouteSignals(path: LonLat[], signal: AbortSignal): Pr
   if (samples.length < 2) return []
   const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
   const query = `[out:json][timeout:7];(node["highway"="traffic_signals"](around:45,${pairs});node["crossing"="traffic_signals"](around:45,${pairs}););out body;`
-  const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-  ]
-  let response: Response | undefined
-  let requestError: unknown
-  for (const endpoint of endpoints) {
-    try {
-      response = await fetch(endpoint, {
-        method: 'POST', signal,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', Accept: 'application/json' },
-        body: `data=${encodeURIComponent(query)}`,
-      })
-      if (response.ok) break
-      response = undefined
-    } catch (error) {
-      requestError = error
-      if (signal.aborted) throw error
-    }
-  }
-  if (!response?.ok) throw requestError ?? new Error('OpenStreetMap signal data unavailable')
-  const data = await response.json() as OSMResponse
+  const data = await queryOverpass(query, signal)
   const elements = (data.elements ?? []).filter(item => Number.isFinite(item.lat) && Number.isFinite(item.lon))
   const found = elements.map(item => {
     const point: LonLat = [item.lon!, item.lat!]
@@ -113,6 +127,42 @@ export async function fetchRouteSignals(path: LonLat[], signal: AbortSignal): Pr
   }
   signalCache.set(key, unique)
   return unique
+}
+
+export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal): Promise<RouteRestaurant[]> {
+  const key = cacheKey(path)
+  const cached = restaurantCache.get(key)
+  if (cached) return cached
+  const samples = routeSamples(path, 700, 24)
+  if (samples.length < 2) return []
+  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
+  const query = `[out:json][timeout:8];nwr(around:450,${pairs})["amenity"~"^(restaurant|cafe|fast_food|food_court)$"]["name"];out center tags 60;`
+  const data = await queryOverpass(query, signal)
+  const candidates = (data.elements ?? []).flatMap(item => {
+    const tags = item.tags ?? {}
+    const lat = item.lat ?? item.center?.lat
+    const lng = item.lon ?? item.center?.lon
+    const name = tags.name?.trim()
+    const amenity = tags.amenity
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name || !amenity) return []
+    const point: LonLat = [lng!, lat!]
+    const routePosition = distanceAlongRoute(point, path)
+    if (routePosition.gap > 480) return []
+    const kind: RouteRestaurant['kind'] = amenity === 'cafe' ? 'cafe' : amenity === 'fast_food' ? 'quick' : 'restaurant'
+    return [{
+      restaurant: { id: `${item.type ?? 'place'}-${item.id}`, name, lat: lat!, lng: lng!, kind, cuisine: tags.cuisine },
+      point,
+      along: routePosition.along,
+    }]
+  }).sort((a, b) => a.along - b.along)
+  const results: RouteRestaurant[] = []
+  for (const candidate of candidates) {
+    if (results.some(item => segmentLength([item.lng, item.lat], candidate.point) < 35)) continue
+    results.push(candidate.restaurant)
+    if (results.length >= 40) break
+  }
+  restaurantCache.set(key, results)
+  return results
 }
 
 export async function fetchRouteGrades(path: LonLat[], signal: AbortSignal): Promise<RouteCondition[]> {
