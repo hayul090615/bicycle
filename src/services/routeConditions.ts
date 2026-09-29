@@ -1,0 +1,153 @@
+import type { LonLat } from './bikeRoute'
+
+export type RouteCondition =
+  | { kind: 'signal'; id: string; lat: number; lng: number }
+  | { kind: 'uphill' | 'downhill'; id: string; lat: number; lng: number; grade: number }
+
+type Sample = { point: LonLat; distance: number }
+type OSMResponse = { elements?: Array<{ id: number; lat?: number; lon?: number; tags?: Record<string, string> }> }
+const METERS_PER_DEGREE_LAT = 111_000
+const signalCache = new Map<string, RouteCondition[]>()
+const gradeCache = new Map<string, RouteCondition[]>()
+
+function segmentLength([lng1, lat1]: LonLat, [lng2, lat2]: LonLat) {
+  const lat = (lat1 + lat2) * Math.PI / 360
+  const dx = (lng2 - lng1) * METERS_PER_DEGREE_LAT * Math.cos(lat)
+  const dy = (lat2 - lat1) * METERS_PER_DEGREE_LAT
+  return Math.hypot(dx, dy)
+}
+
+function routeSamples(path: LonLat[], spacingMeters: number, maximum = 64): Sample[] {
+  if (path.length < 2) return []
+  const cumulative = [0]
+  for (let index = 1; index < path.length; index++) cumulative.push(cumulative[index - 1] + segmentLength(path[index - 1], path[index]))
+  const total = cumulative[cumulative.length - 1]
+  if (total <= 0) return []
+  const count = Math.max(2, Math.min(maximum, Math.ceil(total / spacingMeters) + 1))
+  const result: Sample[] = []
+  let index = 1
+  for (let sample = 0; sample < count; sample++) {
+    const distance = total * sample / (count - 1)
+    while (index < cumulative.length - 1 && cumulative[index] < distance) index++
+    const startDistance = cumulative[index - 1]
+    const fraction = (distance - startDistance) / Math.max(1, cumulative[index] - startDistance)
+    result.push({ point: [
+      path[index - 1][0] + (path[index][0] - path[index - 1][0]) * fraction,
+      path[index - 1][1] + (path[index][1] - path[index - 1][1]) * fraction,
+    ], distance })
+  }
+  return result
+}
+
+function cacheKey(path: LonLat[]) {
+  const samples = routeSamples(path, 500, 32)
+  return samples.map(({ point }) => `${point[0].toFixed(4)},${point[1].toFixed(4)}`).join(';')
+}
+
+function metersToSegment(point: LonLat, start: LonLat, end: LonLat) {
+  const referenceLat = (point[1] + start[1] + end[1]) / 3 * Math.PI / 180
+  const xScale = METERS_PER_DEGREE_LAT * Math.cos(referenceLat)
+  const px = point[0] * xScale, py = point[1] * METERS_PER_DEGREE_LAT
+  const ax = start[0] * xScale, ay = start[1] * METERS_PER_DEGREE_LAT
+  const bx = end[0] * xScale, by = end[1] * METERS_PER_DEGREE_LAT
+  const dx = bx - ax, dy = by - ay
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / Math.max(1, dx * dx + dy * dy)))
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+}
+
+function distanceAlongRoute(point: LonLat, path: LonLat[]) {
+  let bestDistance = Infinity
+  let cumulative = 0
+  let bestAlong = 0
+  for (let index = 1; index < path.length; index++) {
+    const length = segmentLength(path[index - 1], path[index])
+    const gap = metersToSegment(point, path[index - 1], path[index])
+    if (gap < bestDistance) { bestDistance = gap; bestAlong = cumulative + length / 2 }
+    cumulative += length
+  }
+  return { gap: bestDistance, along: bestAlong }
+}
+
+export async function fetchRouteSignals(path: LonLat[], signal: AbortSignal): Promise<RouteCondition[]> {
+  const key = cacheKey(path)
+  const cached = signalCache.get(key)
+  if (cached) return cached
+  const samples = routeSamples(path, 350, 46)
+  if (samples.length < 2) return []
+  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
+  const query = `[out:json][timeout:7];(node["highway"="traffic_signals"](around:45,${pairs});node["crossing"="traffic_signals"](around:45,${pairs}););out body;`
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+  ]
+  let response: Response | undefined
+  let requestError: unknown
+  for (const endpoint of endpoints) {
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST', signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', Accept: 'application/json' },
+        body: `data=${encodeURIComponent(query)}`,
+      })
+      if (response.ok) break
+      response = undefined
+    } catch (error) {
+      requestError = error
+      if (signal.aborted) throw error
+    }
+  }
+  if (!response?.ok) throw requestError ?? new Error('OpenStreetMap signal data unavailable')
+  const data = await response.json() as OSMResponse
+  const elements = (data.elements ?? []).filter(item => Number.isFinite(item.lat) && Number.isFinite(item.lon))
+  const found = elements.map(item => {
+    const point: LonLat = [item.lon!, item.lat!]
+    return { item, point, ...distanceAlongRoute(point, path) }
+  }).filter(item => item.gap <= 55).sort((a, b) => a.along - b.along)
+  const unique: RouteCondition[] = []
+  let previous: LonLat | null = null
+  for (const { item, point } of found) {
+    if (previous && segmentLength(previous, point) < 70) continue
+    unique.push({ kind: 'signal', id: `signal-${item.id}`, lng: point[0], lat: point[1] })
+    previous = point
+    if (unique.length >= 18) break
+  }
+  signalCache.set(key, unique)
+  return unique
+}
+
+export async function fetchRouteGrades(path: LonLat[], signal: AbortSignal): Promise<RouteCondition[]> {
+  const key = cacheKey(path)
+  const cached = gradeCache.get(key)
+  if (cached) return cached
+  const samples = routeSamples(path, 160, 90)
+  if (samples.length < 5) return []
+  const latitude = samples.map(({ point: [, lat] }) => lat.toFixed(5)).join(',')
+  const longitude = samples.map(({ point: [lng] }) => lng.toFixed(5)).join(',')
+  const url = `https://api.open-meteo.com/v1/elevation?latitude=${latitude}&longitude=${longitude}`
+  const response = await fetch(url, { signal })
+  if (!response.ok) throw new Error(`elevation request ${response.status}`)
+  const data = await response.json() as { elevation?: number[] }
+  const elevations = data.elevation
+  if (!elevations || elevations.length !== samples.length) throw new Error('elevation data unavailable')
+  const candidates: Array<Extract<RouteCondition, { kind: 'uphill' | 'downhill' }> & { along: number }> = []
+  for (let index = 0; index + 4 < samples.length; index++) {
+    const span = samples[index + 4].distance - samples[index].distance
+    if (span < 350) continue
+    const grade = (elevations[index + 4] - elevations[index]) / span * 100
+    if (Math.abs(grade) < 2.8) continue
+    const [lng, lat] = samples[index + 2].point
+    candidates.push({ kind: grade > 0 ? 'uphill' : 'downhill', id: `grade-${index}`, lat, lng, grade: Math.round(Math.abs(grade) * 10) / 10, along: samples[index + 2].distance })
+  }
+  const selected: RouteCondition[] = []
+  const selectedDistances: number[] = []
+  for (const candidate of candidates.sort((a, b) => b.grade - a.grade)) {
+    if (selectedDistances.some(distance => Math.abs(candidate.along - distance) < 700)) continue
+    const { along: _along, ...condition } = candidate
+    selected.push(condition)
+    selectedDistances.push(candidate.along)
+    if (selected.length >= 10) break
+  }
+  selected.sort((a, b) => distanceAlongRoute([a.lng, a.lat], path).along - distanceAlongRoute([b.lng, b.lat], path).along)
+  gradeCache.set(key, selected)
+  return selected
+}
