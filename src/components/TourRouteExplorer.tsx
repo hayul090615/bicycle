@@ -42,6 +42,16 @@ function distanceLabel(meters: number) {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
 }
 
+// A relaxed public-bike pace; sightseeing breaks and traffic signals are excluded.
+function bikeMinutes(meters: number) {
+  return Math.max(1, Math.ceil(meters / 200)) // 12 km/h = 200 m/min
+}
+
+function pathDistance(points: LonLat[]) {
+  return points.slice(1).reduce((total, [lng, lat], index) => total + distanceMeters(
+    { lng: points[index][0], lat: points[index][1] }, { lng, lat }), 0)
+}
+
 function seasonForToday(): TourSeason {
   const month = Number(todayInSeoul().slice(5, 7))
   if (month >= 3 && month <= 5) return 'spring'
@@ -121,7 +131,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
   const [nearestResult, setNearestResult] = useState<{ routeId: string; distance: number } | null>(null)
-  const [routeGeometry, setRouteGeometry] = useState<{ routeId: string; points: LonLat[] } | null>(null)
+  const [routeGeometry, setRouteGeometry] = useState<{ routeId: string; points: LonLat[]; distanceMeters: number } | null>(null)
   const [approachRoute, setApproachRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [showCctv, setShowCctv] = useState(true)
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
@@ -139,6 +149,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const approachKey = locationLat === null || locationLng === null ? null : `${route.id}:${destinationIndex}:${locationLng}:${locationLat}`
   const activeApproachRoute = approachRoute?.key === approachKey ? approachRoute : null
   const approachPath = activeApproachRoute?.points ?? null
+  const approachDistance = activeApproachRoute?.distanceMeters ?? (userLocation
+    ? distanceMeters(userLocation, { lat: destinationStation.lat, lng: destinationStation.lng }) * 1.3 : null)
   const selectStop = useCallback((index: number | null) => {
     setSelection(index === null ? null : { routeId: route.id, index })
   }, [route.id])
@@ -150,6 +162,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return [station.lat, station.lng]
   }), [route])
   const routedPath = routeGeometry?.routeId === route.id ? routeGeometry.points : null
+  const routeDistance = routeGeometry?.routeId === route.id
+    ? routeGeometry.distanceMeters
+    : route.distance && Number.isFinite(Number.parseFloat(route.distance))
+      ? Number.parseFloat(route.distance) * 1000
+      : pathDistance(route.stops.map(stop => {
+        const station = getTouristStation(stop.stationId)
+        return [station.lng, station.lat] as LonLat
+      })) * 1.3
+  const routeDistanceEstimated = routeGeometry?.routeId !== route.id
   const linePoints = useMemo<LatLngExpression[]>(() => routedPath
     ? routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)
     : points, [routedPath, points])
@@ -227,7 +248,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 12000)
     void fetchBikeRoute(route, controller.signal)
-      .then(result => { if (!controller.signal.aborted) setRouteGeometry({ routeId: route.id, points: result.geometry }) })
+      .then(result => { if (!controller.signal.aborted) setRouteGeometry({ routeId: route.id, points: result.geometry, distanceMeters: result.distanceMeters ?? pathDistance(result.geometry) }) })
       .catch(() => { if (!controller.signal.aborted) setRouteGeometry(null) })
       .finally(() => window.clearTimeout(timeout))
     return () => { window.clearTimeout(timeout); controller.abort() }
@@ -351,10 +372,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {userLocation && <div className="tour-journey-legend" role="status">
           <span className="tour-journey-legend-route"><i aria-hidden="true" />{text('Your location → destination', '내 위치 → 목적지')}</span>
           <strong>{text(destinationStop.place, destinationStop.placeKo)}</strong>
-          <small>{activeApproachRoute?.loading ? text('Finding a bike route…', '자전거 경로를 찾는 중…')
-            : activeApproachRoute?.estimated ? text('Straight connection shown until a road route is available', '도로 경로를 찾지 못해 직선으로 연결해요')
-              : activeApproachRoute?.distanceMeters ? text(`${distanceLabel(activeApproachRoute.distanceMeters)} by bike route`, `자전거 경로 ${distanceLabel(activeApproachRoute.distanceMeters)}`)
-                : text('Bike route shown in blue', '파란색으로 이동 경로를 표시해요')}</small>
+          {approachDistance !== null && <b>{activeApproachRoute?.estimated ? '≈ ' : ''}{distanceLabel(approachDistance)} · {text(`about ${bikeMinutes(approachDistance)} min by Ttareungi`, `따릉이 약 ${bikeMinutes(approachDistance)}분`)}</b>}
+          <small>{activeApproachRoute?.loading ? text('Calculating the bicycle route…', '자전거 경로를 계산하는 중…')
+            : activeApproachRoute?.estimated ? text('Estimated from straight-line distance; blue dashed line is not a road route.', '직선거리로 추정한 시간입니다. 파란 점선은 실제 도로 경로가 아닙니다.')
+              : text('At 12 km/h, excluding stops and traffic lights.', '시속 12km 기준 · 정차와 신호 대기 제외')}</small>
         </div>}
         {view !== 'kakao' && <div className="tour-map-rotate-controls" role="group" aria-label={text('Rotate the map', '지도 회전')}>
           <button type="button" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>
@@ -398,6 +419,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <h1>{text(route.title, route.titleKo)}</h1>
         <p>{text(route.summary, route.summaryKo)}</p>
         <div><span>◷ {text(route.suggestedTime, route.suggestedTimeKo)}</span><span>{route.stops.length} {text('stops', '곳 경유')}</span></div>
+        <div className="tour-bike-time" role="status"><strong>{routeDistanceEstimated ? '≈ ' : ''}{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by Ttareungi`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</strong><small>{text('At 12 km/h · riding only, without sightseeing stops', '시속 12km 기준 · 관광·신호 대기 제외')}{routeDistanceEstimated ? text(' · distance estimate', ' · 거리 추정치') : ''}</small></div>
       </div>
       <div className="tour-route-finder">
         <label className="tour-map-search">
