@@ -1643,3 +1643,27 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-connected-stops { grid-template-columns: minmax(0, 1fr); }
   .tour-map-stage::after { border-width: 4px; }
 }
+
+/* Kakao Maps is the Korean-language 2D base map; keep route overlays above its tiles. */
+.kakao-route-map { position: relative; width: 100%; height: clamp(600px, calc(100vh - 190px), 900px); overflow: hidden; background: #e7ece8; }
+.kakao-route-host { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; }
+.kakao-route-underlay, .kakao-route-fallback { position: absolute; z-index: 0; inset: 0; }
+.kakao-route-underlay .tour-explorer-map, .kakao-route-fallback .tour-explorer-map { height: 100%; }
+.kakao-route-map .google-route-loading { z-index: 3; left: 50%; right: auto; transform: translateX(-50%); white-space: nowrap; }
+.kakao-route-map--error .tour-earth-notice { position: absolute; z-index: 3; top: .6rem; right: .6rem; left: auto; width: min(390px, calc(100% - 1.2rem)); padding: .5rem .65rem; border: 1px solid #d7ddcf; border-radius: 5px; background: #f4f5eeef; box-shadow: 0 2px 8px #1a281c26; font-size: .66rem; }
+.kakao-route-map--error .kakao-route-fallback { height: 100%; }
+.kakao-cctv-marker { cursor: pointer; }
+.kakao-user-marker { position: relative; }
+.tour-cctv-popup--kakao { position: relative; max-width: 265px; padding-right: 1.25rem; }
+.tour-cctv-popup-close { position: absolute; top: -.4rem; right: -.35rem; border: 0; color: #4c5d50; background: transparent; font-size: 1rem; cursor: pointer; }
+.tour-map-stage > .kakao-route-map { position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; }
+
+@media (max-width: 900px) {
+  .kakao-route-map { height: clamp(520px, 72vh, 740px); }
+}
+@media (max-width: 650px) {
+  .kakao-route-map { height: clamp(500px, 70vh, 700px); }
+  .tour-ride-toolbar--kakao { align-items: stretch; flex-direction: column; }
+  .tour-view-switch--kakao { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tour-view-switch--kakao button { min-width: 0; padding-right: .2rem; padding-left: .2rem; font-size: .59rem; white-space: nowrap; }
+}

@@ -200,6 +200,13 @@ seoul-typing-bike-high-score
 - **Earth용 코스 받기**는 모든 경유지와 연결선을 담은 KML 파일입니다. Google Earth에 파일을 가져와 사용하세요. 연결선은 실제 자전거 길안내가 아닙니다.
 - 기본 **위성 3D** 화면은 MapLibre GL, OpenFreeMap/OpenStreetMap의 건물 높이 자료, Esri 항공·위성 사진을 겹쳐 표시합니다. 건물 모양은 실제 촬영 3D 모델이 아니며, 지역별 건물 높이 자료 범위에 따라 달라집니다. 지도 안에서 일반 지도로 바꿀 수 있습니다.
 - 선택 사항인 **Google 3D**는 Google Maps JavaScript API를 사용하며, Google Earth 웹 앱을 iframe으로 넣은 것이 아닙니다.
+- **카카오 지도**는 2D 기본 지도로 선택할 수 있으며, 한국어 장소 지도 위에 코스·경유지·공공 CCTV를 표시합니다. 건물 그림자와 3D 건물은 위성 3D 보기에서 확인하세요.
+
+카카오 지도를 활성화하려면:
+
+1. 카카오디벨로퍼스에서 앱을 만들고 **카카오맵 사용 설정**을 켭니다.
+2. 앱의 **플랫폼 키 → JavaScript 키 → JavaScript SDK 도메인**에 `https://hayul090615.github.io`와 로컬 개발용 `http://localhost:5173`을 등록합니다.
+3. JavaScript 키를 GitHub 저장소 시크릿 `VITE_KAKAO_MAP_KEY`에 등록합니다. 로컬 개발에서는 `.env.local`에 같은 변수 이름을 사용하세요. 브라우저용 키는 페이지 번들에서 확인될 수 있으므로 사용할 도메인을 제한하세요.
 
 사이트 안에서 Google 3D 선택지를 활성화하려면:
 

@@ -4,6 +4,8 @@ import { latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { GoogleRoute3D } from './GoogleRoute3D'
 import { hasGoogleMapsKey } from '../services/googleMaps3d'
+import { KakaoRouteMap } from './KakaoRouteMap'
+import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
@@ -108,7 +110,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [hover, setHover] = useState<{ routeId: string; index: number } | null>(null)
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
-  const [view, setView] = useState<'city' | 'google' | 'map'>('map')
+  const [view, setView] = useState<'city' | 'google' | 'kakao' | 'map'>(() => hasKakaoMapsKey ? 'kakao' : 'map')
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
@@ -139,7 +141,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     : points, [routedPath, points])
   const cctvCenter = useMemo(() => userLocation ?? getTouristStation(route.stops[0].stationId), [route, userLocation])
   const cctvData = usePublicCctvData(cctvCenter)
-  const cctvCameras = showCctv ? cctvData.nearby.map(item => item.camera) : []
+  const cctvCameras = useMemo(() => showCctv ? cctvData.nearby.map(item => item.camera) : [], [cctvData.nearby, showCctv])
   const solar = getSolarPosition(shadowDate || todayInSeoul(), shadowMinutes, SEOUL_REFERENCE.lat, SEOUL_REFERENCE.lng)
   const activeSeason = seasonOptions.find(item => item.id === displaySeason) ?? seasonOptions[0]
   const seasonGuide = seasonGuides[displaySeason]
@@ -259,12 +261,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
 
   return <div className="tour-explorer-grid">
     <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
-      <div className="tour-ride-toolbar">
+      <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('EXPLORE YOUR STOPS', '경유지를 눌러 둘러보세요')}</span>
           <strong aria-live="polite">{selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
-        <div className="tour-view-switch" role="group" aria-label={text('Map view', '지도 보기')}>
+        <div className={`tour-view-switch${hasKakaoMapsKey ? ' tour-view-switch--kakao' : ''}`} role="group" aria-label={text('Map view', '지도 보기')}>
           <button type="button" aria-pressed={view === 'city'} onClick={() => setView('city')}>{text('3D aerial', '위성 3D')}</button>
           {hasGoogleMapsKey && <button type="button" aria-pressed={view === 'google'} onClick={() => setView('google')}>Google 3D</button>}
+          {hasKakaoMapsKey && <button type="button" aria-pressed={view === 'kakao'} onClick={() => setView('kakao')}>{text('Kakao map', '카카오 지도')}</button>}
           <button type="button" aria-pressed={view === 'map'} onClick={() => setView('map')}>{text('2D map', '2D 지도')}</button>
         </div>
       </div>
@@ -273,6 +276,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} cctvCameras={cctvCameras} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} cctvCameras={cctvCameras} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
         {view === 'map' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
@@ -284,13 +288,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </div>
           <div className="tour-map-overlay-meta">
             <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
-            {view !== 'google' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
+            {view !== 'google' && view !== 'kakao' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
           </div>
         </div>
-        <div className="tour-map-rotate-controls" role="group" aria-label={text('Rotate the map', '지도 회전')}>
+        {view !== 'kakao' && <div className="tour-map-rotate-controls" role="group" aria-label={text('Rotate the map', '지도 회전')}>
           <button type="button" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>
           <button type="button" onClick={() => rotateMap('right')} aria-label={text('Rotate map to the right', '지도를 오른쪽으로 회전')}>→</button>
-        </div>
+        </div>}
         {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
           <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>
           <span className="tour-scenery-kicker">{text('A VIEW NEAR THIS STOP', '경유지 주변 풍경')}</span>
@@ -310,7 +314,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <details className="tour-map-details">
         <summary>{text('Map and route information', '지도 및 코스 안내')}</summary>
         <div>
-          <p className="tour-map-note">{view === 'map'
+          <p className="tour-map-note">{view === 'kakao'
+            ? text('Kakao street map · route line, stops and public camera locations. Building shadows are not modeled in this view; switch to 3D aerial for estimated shadows.', '카카오 도로 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 이 보기에는 건물 그림자가 없으며, 그림자는 위성 3D 보기에서 확인할 수 있어요.')
+            : view === 'map'
             ? text('Street map view · route line, stops and public camera locations. Use the center-side arrows to rotate the map.', '일반 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 지도 양쪽 중앙 화살표로 화면을 회전할 수 있어요.')
             : view === 'google'
               ? text('Explore this route in Google 3D. Building detail varies by area; Google Earth can open the selected stop or the downloaded KML can show the full route.', 'Google 3D로 코스를 살펴보세요. 지역별 건물 표현은 다를 수 있으며 Google Earth에서 선택한 경유지를 열거나 KML로 전체 코스를 볼 수 있습니다.')
