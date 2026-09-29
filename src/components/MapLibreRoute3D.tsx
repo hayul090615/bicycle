@@ -6,6 +6,8 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
+import type { RouteCondition } from '../services/routeConditions'
+import riderSpriteUrl from '../assets/map-riders.png'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl)
@@ -67,13 +69,14 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, season, cctvCameras, showCctv, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, season, routeConditions, cctvCameras, showCctv, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
   season: TourSeason
+  routeConditions: RouteCondition[]
   cctvCameras: PublicCamera[]
   showCctv: boolean
   rotationRequest: { direction: 'left' | 'right'; serial: number } | null
@@ -90,6 +93,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
   const peopleMarkersRef = useRef<MapLibreMarker[]>([])
+  const conditionMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
   const userMarkerRef = useRef<MapLibreMarker | null>(null)
   const shadowAzimuthRef = useRef(shadowAzimuth)
@@ -151,6 +155,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       window.clearTimeout(timeout)
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      peopleMarkersRef.current.forEach(marker => marker.remove())
+      peopleMarkersRef.current = []
+      conditionMarkersRef.current.forEach(marker => marker.remove())
+      conditionMarkersRef.current = []
       cctvMarkersRef.current.forEach(marker => marker.remove())
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
@@ -241,9 +249,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           map.addLayer(shadowOutline, buildingLayer)
           map.addLayer(routeCasing, buildingLayer)
           map.addLayer(routeLayer, buildingLayer)
-          map.addLayer(accessCasing)
-          map.addLayer(accessLine)
-          map.addLayer(accessDashed)
+          map.addLayer(accessCasing, buildingLayer)
+          map.addLayer(accessLine, buildingLayer)
+          map.addLayer(accessDashed, buildingLayer)
         } else {
           map.addLayer(shadowFill)
           map.addLayer(shadowOutline)
@@ -275,6 +283,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       cctvMarkersRef.current = []
       peopleMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
+      conditionMarkersRef.current.forEach(marker => marker.remove())
+      conditionMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
       if (!failed) map.remove()
@@ -307,27 +317,78 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready' || isFlatMap) return
+    if (!map || status !== 'ready') return
     peopleMarkersRef.current.forEach(marker => marker.remove())
-    peopleMarkersRef.current = samplePath(linePoints, 13).map(([lng, lat], index) => {
-      const element = document.createElement('span')
-      element.className = `tour-map-person tour-map-person--${index % 3}`
-      element.setAttribute('aria-hidden', 'true')
-      const marker = new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
-      return marker
+    conditionMarkersRef.current.forEach(marker => marker.remove())
+    peopleMarkersRef.current = []
+    conditionMarkersRef.current = []
+    if (!isFlatMap && routePath && routePath.length >= 2) {
+      const routeLength = routePath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
+        (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
+      const riderCount = Math.max(2, Math.min(7, Math.floor(routeLength / 1800)))
+      peopleMarkersRef.current = samplePath(routePath, riderCount).map(([lng, lat], index) => {
+        const element = document.createElement('span')
+        element.className = `tour-map-person tour-map-person--${index % 3}`
+        element.style.backgroundImage = `url("${riderSpriteUrl}")`
+        element.setAttribute('role', 'img')
+        element.setAttribute('aria-label', locale === 'ko' ? 'AI로 만든 따릉이 이용자 이미지' : 'AI-generated illustrative rider')
+        element.title = locale === 'ko' ? 'AI 생성 이미지 · 실제 이용자 아님' : 'AI generated · illustrative, not a live person'
+        return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
+      })
+    }
+    conditionMarkersRef.current = routeConditions.map(condition => {
+      const element = document.createElement('div')
+      element.className = `tour-road-event tour-road-event--${condition.kind}`
+      const label = condition.kind === 'signal'
+        ? locale === 'ko' ? '지도에 기록된 교통 신호등' : 'Mapped traffic signal'
+        : `${condition.kind === 'uphill' ? (locale === 'ko' ? '오르막' : 'Uphill') : (locale === 'ko' ? '내리막' : 'Downhill')} ${condition.grade}%`
+      element.setAttribute('role', 'img')
+      element.setAttribute('aria-label', label)
+      element.title = label
+      element.textContent = condition.kind === 'signal' ? '' : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
+      return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([condition.lng, condition.lat]).addTo(map)
     })
+    let frame = 0
     const updateVisibility = () => {
-      const visible = map.getZoom() >= 16.2
-      peopleMarkersRef.current.forEach(marker => { marker.getElement().style.display = visible ? '' : 'none' })
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        const zoom = map.getZoom()
+        const hasBuildings = !isFlatMap && Boolean(map.getLayer('building-3d'))
+        const isBlocked = (marker: MapLibreMarker) => {
+          if (!hasBuildings) return false
+          const pixel = map.project(marker.getLngLat())
+          return map.queryRenderedFeatures(pixel, { layers: ['building-3d'] }).length > 0
+        }
+        peopleMarkersRef.current.forEach(marker => {
+          const visible = zoom >= 16.9 && !isBlocked(marker)
+          const scale = Math.max(24, Math.min(50, 24 + (zoom - 16.9) * 15))
+          marker.getElement().style.width = `${scale}px`
+          marker.getElement().style.height = `${scale * 1.85}px`
+          marker.getElement().style.display = visible ? '' : 'none'
+        })
+        conditionMarkersRef.current.forEach(marker => {
+          marker.getElement().style.display = zoom >= 14.5 && !isBlocked(marker) ? '' : 'none'
+        })
+        markersRef.current.forEach(marker => {
+          marker.getElement().style.display = isBlocked(marker) ? 'none' : ''
+        })
+      })
     }
     map.on('zoom', updateVisibility)
+    map.on('move', updateVisibility)
+    map.on('idle', updateVisibility)
     updateVisibility()
     return () => {
+      window.cancelAnimationFrame(frame)
       map.off('zoom', updateVisibility)
+      map.off('move', updateVisibility)
+      map.off('idle', updateVisibility)
       peopleMarkersRef.current.forEach(marker => marker.remove())
+      conditionMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
+      conditionMarkersRef.current = []
     }
-  }, [isFlatMap, linePoints, status])
+  }, [isFlatMap, linePoints, locale, routeConditions, routePath, status])
 
   useEffect(() => {
     const map = mapRef.current
