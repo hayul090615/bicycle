@@ -4,11 +4,11 @@ import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary }
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 
-export function GoogleRoute3D({ route, routePath, cctvCameras, panRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, routePath, cctvCameras, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   cctvCameras: PublicCamera[]
-  panRequest: { direction: 'left' | 'right'; serial: number } | null
+  rotationRequest: { direction: 'left' | 'right'; serial: number } | null
   userLocation: { lat: number; lng: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
   fallback: ReactNode
@@ -36,7 +36,7 @@ export function GoogleRoute3D({ route, routePath, cctvCameras, panRequest, local
   }, [points, selectedStop])
   const cameraRef = useRef(camera)
   cameraRef.current = camera
-  const pannedCameraRef = useRef(camera)
+  const rotatedCameraRef = useRef(camera)
 
   useEffect(() => {
     let disposed = false
@@ -149,28 +149,25 @@ export function GoogleRoute3D({ route, routePath, cctvCameras, panRequest, local
     const map = mapRef.current
     if (!map || status !== 'ready') return
     map.stopCameraAnimation()
-    pannedCameraRef.current = camera
+    rotatedCameraRef.current = camera
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) Object.assign(map, camera)
     else map.flyCameraTo({ endCamera: camera, durationMillis: 650 })
   }, [camera, status])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready' || !panRequest) return
-    const current = pannedCameraRef.current
-    const width = host.current?.clientWidth || 900
-    const metersPerLongitude = 111320 * Math.max(.2, Math.cos(current.center.lat * Math.PI / 180))
-    const shiftMeters = current.range * Math.min(.32, Math.max(.18, 260 / width))
-    const direction = panRequest.direction === 'left' ? -1 : 1
+    if (!map || status !== 'ready' || !rotationRequest) return
+    const current = rotatedCameraRef.current
+    const turn = rotationRequest.direction === 'left' ? -32 : 32
     const endCamera: Camera3D = {
       ...current,
-      center: { ...current.center, lng: current.center.lng + direction * shiftMeters / metersPerLongitude },
+      heading: ((current.heading + turn) % 360 + 360) % 360,
     }
-    pannedCameraRef.current = endCamera
+    rotatedCameraRef.current = endCamera
     map.stopCameraAnimation()
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) Object.assign(map, endCamera)
     else map.flyCameraTo({ endCamera, durationMillis: 420 })
-  }, [panRequest, status])
+  }, [rotationRequest, status])
 
   if (status === 'error') return <>
     <p className="tour-earth-notice" role="status">{locale === 'ko' ? 'Google 3D 화면을 불러오지 못해 코스 지도를 표시합니다. 아래 버튼으로 Google Earth에서 볼 수 있습니다.' : 'Google 3D could not load. Showing the route map; you can still open this location in Google Earth below.'}</p>

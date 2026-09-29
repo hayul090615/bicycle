@@ -43,13 +43,13 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showCctv, panRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showCctv, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
   cctvCameras: PublicCamera[]
   showCctv: boolean
-  panRequest: { direction: 'left' | 'right'; serial: number } | null
+  rotationRequest: { direction: 'left' | 'right'; serial: number } | null
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
   selectedStop: number | null
@@ -344,9 +344,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready' || !panRequest) return
-    map.panBy([panRequest.direction === 'left' ? 260 : -260, 0], { duration: 420 })
-  }, [panRequest, status])
+    if (!map || status !== 'ready' || !rotationRequest) return
+    const turn = rotationRequest.direction === 'left' ? -32 : 32
+    const bearing = ((map.getBearing() + turn) % 360 + 360) % 360
+    map.rotateTo(bearing, { duration: 420 })
+  }, [rotationRequest, status])
 
   useEffect(() => {
     const map = mapRef.current
