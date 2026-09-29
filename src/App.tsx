@@ -27,17 +27,12 @@ const GAME_THEME_KEY = 'seoul-typing-bike-light-mode'
 const LEADERBOARD_KEY = 'seoul-typing-bike-leaderboard-v1'
 type PlayedStations = Partial<Record<SeoulDistrict, string[]>>
 
-function GameScreen({ course, playedStationIds, onHome, onResult }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void }) {
+function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onToggleTheme }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void; lightMode: boolean; onToggleTheme: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const game = useTypingGame(course, onResult)
   const stationData = useBikeStations(course.district as SeoulDistrict)
-  const [lightMode, setLightMode] = useState(() => localStorage.getItem(GAME_THEME_KEY) === 'true')
   const overallProgress = ((game.stationIndex + game.segmentProgress) / (course.stations.length - 1)) * 100
   const upcomingStation = course.stations[game.stationIndex + 2]
-  const toggleTheme = () => setLightMode((current) => {
-    localStorage.setItem(GAME_THEME_KEY, String(!current))
-    return !current
-  })
   useEffect(() => { if (game.status === 'playing') inputRef.current?.focus() }, [game.status, game.stationIndex])
   const focusGame = (event: MouseEvent<HTMLElement>) => {
     if (game.status === 'playing' && !(event.target as HTMLElement).closest('button, input')) inputRef.current?.focus()
@@ -48,7 +43,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult }: { course: Di
       dataStatus={stationData.status} lightMode={lightMode} allDistrictStations={stationData.stations} playedStationIds={playedStationIds} />
     <GameHeader district={course.district} elapsedSeconds={game.elapsedSeconds} score={game.score} accuracy={game.accuracy}
       combo={game.combo} onPause={game.togglePause} onHome={onHome} paused={game.status === 'paused'}
-      progress={overallProgress} lightMode={lightMode} onToggleTheme={toggleTheme} />
+      progress={overallProgress} lightMode={lightMode} onToggleTheme={onToggleTheme} />
     <div className="game-hud">
       <div className="station-strip">
         <div className="hud-station-card hud-station-card--current">
@@ -71,6 +66,11 @@ function GameScreen({ course, playedStationIds, onHome, onResult }: { course: Di
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>(screenFromUrl)
+  const [lightMode, setLightMode] = useState(() => localStorage.getItem(GAME_THEME_KEY) !== 'false')
+  const toggleTheme = useCallback(() => setLightMode(current => {
+    localStorage.setItem(GAME_THEME_KEY, String(!current))
+    return !current
+  }), [])
   useEffect(() => {
     const handleBack = () => setScreen(screenFromUrl())
     window.addEventListener('popstate', handleBack)
@@ -152,10 +152,10 @@ export default function App() {
     setActiveCourse(createDistrictCourse(selected, playedStations[selected] ?? []))
     setRunKey((value) => value + 1); setResult(null); setCurrentRankingId(null); setScreen('game')
   }
-  if (screen === 'game' && activeCourse) return <GameScreen key={runKey} course={activeCourse} playedStationIds={selected ? (playedStations[selected] ?? []) : []} onHome={goHome} onResult={handleResult} />
+  if (screen === 'game' && activeCourse) return <GameScreen key={runKey} course={activeCourse} playedStationIds={selected ? (playedStations[selected] ?? []) : []} onHome={goHome} onResult={handleResult} lightMode={lightMode} onToggleTheme={toggleTheme} />
   if (screen === 'result' && activeCourse && result) return <GameResult district={activeCourse.district} result={result} highScore={highScore}
     totalStations={activeCourse.stations.length} leaderboard={leaderboard} currentRankingId={currentRankingId} onRetry={startGame} onHome={goHome} />
-  if (screen === 'tour') return <TouristGuide onBack={goHome} />
+  if (screen === 'tour') return <TouristGuide onBack={goHome} darkMode={!lightMode} onToggleTheme={toggleTheme} />
   if (screen === 'login' || screen === 'signup') return <AuthPage key={screen} kind={screen} onHome={goHome} onNavigate={openAuth} />
   if (screen === 'text') return <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
   return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
