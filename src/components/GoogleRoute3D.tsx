@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
-import type { PublicCamera } from '../services/publicCctv'
-import type { RouteCondition } from '../services/routeConditions'
+import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
+import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import riderSpriteUrl from '../assets/map-riders.png'
 
 function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
@@ -53,12 +53,19 @@ function loadRiderImageSources(): Promise<string[]> {
   return riderImageSourcesPromise
 }
 
-export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, cctvCameras, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   routeConditions: RouteCondition[]
+  restaurants: RouteRestaurant[]
+  showCourse: boolean
+  showRestaurants: boolean
+  showRoadInfo: boolean
+  showRiders: boolean
+  showCctv: boolean
   cctvCameras: PublicCamera[]
+  locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right'; serial: number } | null
   userLocation: { lat: number; lng: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
@@ -72,8 +79,10 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
   const markersRef = useRef<HTMLElement[]>([])
   const peopleMarkersRef = useRef<HTMLElement[]>([])
   const conditionMarkersRef = useRef<HTMLElement[]>([])
+  const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
+  const lastLocationFocusRequestRef = useRef(0)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [selectedCamera, setSelectedCamera] = useState<PublicCamera | null>(null)
   const points = useMemo(() => route.stops.map(stop => {
@@ -137,6 +146,8 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
       peopleMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
+      restaurantMarkersRef.current.forEach(marker => marker.remove())
+      restaurantMarkersRef.current = []
       cctvMarkersRef.current.forEach(marker => marker.remove())
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
@@ -157,9 +168,11 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
     map.description = locale === 'ko' ? route.titleKo : route.title
     routeLineRef.current?.remove()
     markersRef.current.forEach(marker => marker.remove())
-    routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5, drawsOccludedSegments: false })
-    map.append(routeLineRef.current)
-    markersRef.current = points.map((position, index) => {
+    if (showCourse) {
+      routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5, drawsOccludedSegments: false })
+      map.append(routeLineRef.current)
+    }
+    markersRef.current = showCourse ? points.map((position, index) => {
       const stop = route.stops[index]
       const label = `${index + 1}. ${locale === 'ko' ? stop.placeKo : stop.place}`
       const marker = new library.Marker3DInteractiveElement({ position, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
@@ -168,11 +181,11 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
       marker.addEventListener('focus', () => onHoverStop(index))
       map.append(marker)
       return marker
-    })
+    }) : []
     peopleMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
     let cancelled = false
-    if (routePath && routePath.length >= 2) {
+    if (showRiders && routePath && routePath.length >= 2) {
       const distance = routePath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
         (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
       const count = Math.max(2, Math.min(7, Math.floor(distance / 1800)))
@@ -202,7 +215,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
       }).catch(() => { /* Keep the route usable if the illustrative image cannot load. */ })
     }
     return () => { cancelled = true }
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, routePath, status])
+  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, routePath, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -220,7 +233,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
     const library = libraryRef.current
     if (!map || !library || status !== 'ready') return
     conditionMarkersRef.current.forEach(marker => marker.remove())
-    conditionMarkersRef.current = routeConditions.map(condition => {
+    conditionMarkersRef.current = showRoadInfo ? routeConditions.map(condition => {
       const signal = condition.kind === 'signal'
       const label = signal ? '🚦' : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
       const title = signal
@@ -232,23 +245,43 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
       })
       map.append(marker)
       return marker
-    })
+    }) : []
     return () => {
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
     }
-  }, [locale, routeConditions, status])
+  }, [locale, routeConditions, showRoadInfo, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const library = libraryRef.current
+    if (!map || !library || status !== 'ready') return
+    restaurantMarkersRef.current.forEach(marker => marker.remove())
+    restaurantMarkersRef.current = []
+    if (!showRestaurants) return
+    restaurantMarkersRef.current = restaurants.map(place => {
+      const kindLabel = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
+      const marker = new library.Marker3DInteractiveElement({
+        position: { lat: place.lat, lng: place.lng },
+        label: place.kind === 'cafe' ? '☕' : '식', title: `${place.name} · ${kindLabel}`,
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
+      })
+      map.append(marker)
+      return marker
+    })
+    return () => { restaurantMarkersRef.current.forEach(marker => marker.remove()); restaurantMarkersRef.current = [] }
+  }, [locale, restaurants, showRestaurants, status])
 
   useEffect(() => {
     const map = mapRef.current, library = libraryRef.current
     if (!map || !library || status !== 'ready') return
     accessLineRef.current?.remove()
     accessLineRef.current = null
-    if (!accessPath || accessPath.length < 2) return
+    if (!showCourse || !accessPath || accessPath.length < 2) return
     accessLineRef.current = new library.Polyline3DElement({ path: accessPath.map(([lng, lat]) => ({ lat, lng })),
       altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#2479db', strokeWidth: 7, drawsOccludedSegments: false })
     map.append(accessLineRef.current)
-  }, [accessPath, status])
+  }, [accessPath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -267,22 +300,51 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
     const map = mapRef.current
     const library = libraryRef.current
     if (!map || !library || status !== 'ready') return
-    cctvMarkersRef.current.forEach(marker => marker.remove())
-    cctvMarkersRef.current = []
     setSelectedCamera(null)
-    cctvCameras.forEach(camera => {
-      const title = `${camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')} · ${camera.name}`
-      const marker = new library.Marker3DInteractiveElement({
-        position: { lat: camera.lat, lng: camera.lng },
-        label: 'CCTV',
-        title,
-        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+    const renderCameras = () => {
+      cctvMarkersRef.current.forEach(marker => marker.remove())
+      cctvMarkersRef.current = []
+      if (!showCctv) return
+      const center = { lat: map.center.lat, lng: map.center.lng }
+      const clusters = clusterPublicCameras(cctvCameras, center, Math.min(70_000, map.range * .68), Math.max(120, map.range / 34))
+      clusters.forEach(cluster => {
+        if (cluster.cameras.length > 1) {
+          const marker = new library.Marker3DInteractiveElement({
+            position: { lat: cluster.lat, lng: cluster.lng },
+            label: `${cluster.cameras.length} CCTV`,
+            title: locale === 'ko' ? `${cluster.cameras.length}개 CCTV · 확대해서 보기` : `${cluster.cameras.length} public cameras · zoom in`,
+            altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
+          })
+          marker.addEventListener('gmp-click', () => {
+            map.stopCameraAnimation()
+            const nextCamera: Camera3D = { center: { lat: cluster.lat, lng: cluster.lng, altitude: 40 }, range: Math.max(900, map.range * .38), tilt: 62, heading: map.heading }
+            map.flyCameraTo({ endCamera: nextCamera, durationMillis: 500 })
+          })
+          map.append(marker)
+          cctvMarkersRef.current.push(marker)
+          return
+        }
+        const camera = cluster.cameras[0]
+        const marker = new library.Marker3DInteractiveElement({
+          position: { lat: camera.lat, lng: camera.lng },
+          label: 'CCTV', title: `${camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')} · ${camera.name}`,
+          altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+        })
+        marker.addEventListener('gmp-click', () => setSelectedCamera(camera))
+        map.append(marker)
+        cctvMarkersRef.current.push(marker)
       })
-      marker.addEventListener('gmp-click', () => setSelectedCamera(camera))
-      map.append(marker)
-      cctvMarkersRef.current.push(marker)
-    })
-  }, [cctvCameras, locale, status])
+    }
+    renderCameras()
+    map.addEventListener('gmp-rangechange', renderCameras)
+    map.addEventListener('gmp-centerchange', renderCameras)
+    return () => {
+      map.removeEventListener('gmp-rangechange', renderCameras)
+      map.removeEventListener('gmp-centerchange', renderCameras)
+      cctvMarkersRef.current.forEach(marker => marker.remove())
+      cctvMarkersRef.current = []
+    }
+  }, [cctvCameras, locale, showCctv, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -292,6 +354,15 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, c
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) Object.assign(map, camera)
     else map.flyCameraTo({ endCamera: camera, durationMillis: 650 })
   }, [camera, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready' || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    lastLocationFocusRequestRef.current = locationFocusRequest
+    const focusCamera: Camera3D = { center: { ...userLocation, altitude: 40 }, range: 1_400, tilt: 60, heading: map.heading }
+    map.stopCameraAnimation()
+    map.flyCameraTo({ endCamera: focusCamera, durationMillis: 600 })
+  }, [locationFocusRequest, status, userLocation])
 
   useEffect(() => {
     const map = mapRef.current
