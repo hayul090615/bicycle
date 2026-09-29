@@ -3,6 +3,7 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoOverlay } from '../services/kakaoMaps'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
+import type { RouteCondition } from '../services/routeConditions'
 
 function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
   const popup = document.createElement('div')
@@ -34,11 +35,12 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, cctvCameras, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, routeConditions, cctvCameras, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
+  routeConditions: RouteCondition[]
   cctvCameras: PublicCamera[]
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
@@ -52,6 +54,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, c
   const apiRef = useRef<KakaoMapsApi | null>(null)
   const routeOverlaysRef = useRef<KakaoOverlay[]>([])
   const accessOverlaysRef = useRef<KakaoOverlay[]>([])
+  const conditionOverlaysRef = useRef<KakaoOverlay[]>([])
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
@@ -98,11 +101,13 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, c
       resizeObserver?.disconnect()
       routeOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       routeOverlaysRef.current = []
       accessOverlaysRef.current = []
+      conditionOverlaysRef.current = []
       cctvOverlaysRef.current = []
       userOverlayRef.current = null
       activePopupRef.current = null
@@ -185,6 +190,37 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, c
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 10, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 6, strokeColor: '#2479db', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
   }, [accessEstimated, accessPath, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    conditionOverlaysRef.current = routeConditions.map(condition => {
+      const signal = condition.kind === 'signal'
+      const label = signal
+        ? locale === 'ko' ? '지도에 기록된 신호등 · 실시간 아님' : 'Mapped signal · not live'
+        : `${condition.kind === 'uphill' ? (locale === 'ko' ? '오르막' : 'Uphill') : (locale === 'ko' ? '내리막' : 'Downhill')} ${condition.grade}%`
+      const marker = document.createElement('div')
+      marker.className = `tour-road-event tour-road-event--${condition.kind} kakao-road-event`
+      marker.setAttribute('role', 'img')
+      marker.setAttribute('aria-label', label)
+      marker.title = label
+      if (condition.kind !== 'signal') marker.textContent = `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
+      return new api.CustomOverlay({
+        map,
+        position: new api.LatLng(condition.lat, condition.lng),
+        content: marker,
+        xAnchor: .5,
+        yAnchor: .5,
+        zIndex: 6,
+      })
+    })
+    return () => {
+      conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      conditionOverlaysRef.current = []
+    }
+  }, [locale, routeConditions, status])
 
   useEffect(() => {
     const map = mapRef.current
