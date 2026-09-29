@@ -13,14 +13,23 @@ export interface KakaoBounds {
   extend(position: KakaoLatLng): void
 }
 
+export interface KakaoVisibleBounds {
+  getSouthWest(): KakaoLatLng
+  getNorthEast(): KakaoLatLng
+}
+
 export interface KakaoMap {
   setCenter(position: KakaoLatLng): void
   setLevel(level: number, options?: { animate?: boolean }): void
+  getBounds(): KakaoVisibleBounds
+  getLevel(): number
   addControl(control: unknown, position: string): void
   relayout(): void
 }
 
 export interface KakaoMapsApi {
+  addListener(target: object, eventName: string, handler: () => void): void
+  removeListener(target: object, eventName: string, handler: () => void): void
   load(callback: () => void): void
   Map: new (container: HTMLElement, options: {
     center: KakaoLatLng
