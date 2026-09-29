@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getNearbyPublicCameras, loadPublicCctvBundle, type CameraBundle } from '../services/publicCctv'
+import { useEffect, useState } from 'react'
+import { loadPublicCctvBundle, type CameraBundle, type PublicCamera } from '../services/publicCctv'
 
-export function usePublicCctvData(center: { lat: number; lng: number }) {
+const EMPTY_CAMERAS: PublicCamera[] = []
+
+export function usePublicCctvData() {
   const [bundle, setBundle] = useState<CameraBundle | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -15,6 +17,7 @@ export function usePublicCctvData(center: { lat: number; lng: number }) {
     return () => { active = false }
   }, [])
 
-  const nearby = useMemo(() => bundle ? getNearbyPublicCameras(bundle.cameras, center) : [], [bundle, center])
-  return { nearby, loading, error, count: bundle?.count ?? 0, latestRecordDate: bundle?.latestRecordDate ?? '' }
+  // The map layers cluster the complete Seoul dataset instead of clipping it to
+  // a small radius around the route or the rider.
+  return { cameras: bundle?.cameras ?? EMPTY_CAMERAS, loading, error, count: bundle?.count ?? 0, latestRecordDate: bundle?.latestRecordDate ?? '' }
 }
