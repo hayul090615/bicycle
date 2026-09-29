@@ -1,4 +1,5 @@
-https://hayul090615.github.io/bicycle/
+현재 공개 사이트: https://seoul-ttareungi-typing.vercel.app/
+GitHub Pages 주소: https://hayul090615.github.io/bicycle/
 
 # 서울 타자 라이딩
 
