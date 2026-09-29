@@ -11,6 +11,7 @@ import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
 import { fetchBikePath, fetchBikeRoute, type LonLat } from '../services/bikeRoute'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
+import { fetchRouteGrades, fetchRouteSignals, type RouteCondition } from '../services/routeConditions'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
@@ -132,6 +133,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
   const [nearestResult, setNearestResult] = useState<{ routeId: string; distance: number } | null>(null)
   const [routeGeometry, setRouteGeometry] = useState<{ routeId: string; points: LonLat[]; distanceMeters: number } | null>(null)
+  const [roadConditions, setRoadConditions] = useState<{
+    routeId: string; signals: RouteCondition[]; grades: RouteCondition[]
+    signalsStatus: 'idle' | 'loading' | 'ready' | 'unavailable'
+    gradesStatus: 'idle' | 'loading' | 'ready' | 'unavailable'
+  }>({ routeId: '', signals: [], grades: [], signalsStatus: 'idle', gradesStatus: 'idle' })
   const [approachRoute, setApproachRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [showCctv, setShowCctv] = useState(true)
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
@@ -162,6 +168,16 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return [station.lat, station.lng]
   }), [route])
   const routedPath = routeGeometry?.routeId === route.id ? routeGeometry.points : null
+  const activeRoadConditions = roadConditions.routeId === route.id ? roadConditions : null
+  const routeSignals = activeRoadConditions?.signals ?? []
+  const routeGrades = activeRoadConditions?.grades ?? []
+  const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
+  const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
+    : activeRoadConditions?.signalsStatus === 'ready' ? String(routeSignals.length) : '—'
+  const uphillCountLabel = !routedPath || activeRoadConditions?.gradesStatus === 'loading' ? '…'
+    : activeRoadConditions?.gradesStatus === 'ready' ? String(routeGrades.filter(item => item.kind === 'uphill').length) : '—'
+  const downhillCountLabel = !routedPath || activeRoadConditions?.gradesStatus === 'loading' ? '…'
+    : activeRoadConditions?.gradesStatus === 'ready' ? String(routeGrades.filter(item => item.kind === 'downhill').length) : '—'
   const routeDistance = routeGeometry?.routeId === route.id
     ? routeGeometry.distanceMeters
     : route.distance && Number.isFinite(Number.parseFloat(route.distance))
@@ -254,6 +270,35 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return () => { window.clearTimeout(timeout); controller.abort() }
   }, [route])
   useEffect(() => {
+    if (!routedPath || routedPath.length < 2) {
+      setRoadConditions({ routeId: route.id, signals: [], grades: [], signalsStatus: 'idle', gradesStatus: 'idle' })
+      return
+    }
+    const signalsController = new AbortController()
+    const gradesController = new AbortController()
+    const signalsTimeout = window.setTimeout(() => signalsController.abort(), 11000)
+    const gradesTimeout = window.setTimeout(() => gradesController.abort(), 9000)
+    let active = true
+    setRoadConditions({ routeId: route.id, signals: [], grades: [], signalsStatus: 'loading', gradesStatus: 'loading' })
+    void fetchRouteSignals(routedPath, signalsController.signal).then(signals => {
+      if (active) setRoadConditions(current => current.routeId === route.id ? { ...current, signals, signalsStatus: 'ready' } : current)
+    }).catch(() => {
+      if (active) setRoadConditions(current => current.routeId === route.id ? { ...current, signalsStatus: 'unavailable' } : current)
+    }).finally(() => window.clearTimeout(signalsTimeout))
+    void fetchRouteGrades(routedPath, gradesController.signal).then(grades => {
+      if (active) setRoadConditions(current => current.routeId === route.id ? { ...current, grades, gradesStatus: 'ready' } : current)
+    }).catch(() => {
+      if (active) setRoadConditions(current => current.routeId === route.id ? { ...current, gradesStatus: 'unavailable' } : current)
+    }).finally(() => window.clearTimeout(gradesTimeout))
+    return () => {
+      active = false
+      window.clearTimeout(signalsTimeout)
+      window.clearTimeout(gradesTimeout)
+      signalsController.abort()
+      gradesController.abort()
+    }
+  }, [route.id, routedPath])
+  useEffect(() => {
     if (approachKey === null || locationLng === null || locationLat === null) {
       setApproachRoute(null)
       return
@@ -318,6 +363,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#246fe5', fillOpacity: 1 }}>
       <Tooltip direction="top">{text('You are here', '내 위치')}</Tooltip>
     </CircleMarker>}
+    {routeConditions.map(condition => <CircleMarker key={condition.id} center={[condition.lat, condition.lng]}
+      radius={condition.kind === 'signal' ? 7 : 9} pathOptions={{ color: '#fff', weight: 2,
+        fillColor: condition.kind === 'signal' ? '#e3aa45' : condition.kind === 'uphill' ? '#c85c43' : '#428cba', fillOpacity: 1 }}>
+      <Tooltip direction="top" permanent>{condition.kind === 'signal' ? text('Signal', '신호등') : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`}</Tooltip>
+    </CircleMarker>)}
     {cctvCameras.map(camera => <CircleMarker key={`cctv-${camera.id}`} center={[camera.lat, camera.lng]} radius={7}
       pathOptions={{ color: '#fff', weight: 2, fillColor: '#7654ba', fillOpacity: .98 }}>
       <Popup>
@@ -348,12 +398,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </div>
       <div className={`tour-map-stage tour-weather-${displaySeason}`} data-season={displaySeason} onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} routeConditions={routeConditions} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} cctvCameras={cctvCameras} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} cctvCameras={cctvCameras} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} routeConditions={routeConditions} cctvCameras={cctvCameras} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} routeConditions={routeConditions} cctvCameras={cctvCameras} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
         {view === 'map' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} routeConditions={routeConditions} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <div className="tour-season-atmosphere" aria-hidden="true" />
         <div className="tour-season-controls">
@@ -452,6 +502,36 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <a className="tour-cctv-source" href="https://www.data.go.kr/data/15013094/standard.do" target="_blank" rel="noopener noreferrer">
           {text('Source: National Public CCTV Standard Data ↗', '출처: 전국 공공 CCTV 표준데이터 ↗')}
         </a>
+        <section className="tour-road-conditions" aria-live="polite" aria-label={text('Route terrain and traffic signals', '코스 경사와 신호등')}>
+          <div className="tour-road-conditions-heading"><strong>{text('Along this route', '이 코스의 도로 정보')}</strong><span>{text('MAP DATA', '지도 자료')}</span></div>
+          <div className="tour-road-conditions-grid">
+            <div className="tour-road-condition-card tour-road-condition-card--signal">
+              <span aria-hidden="true">🚦</span>
+              <div><small>{text('Signals', '신호등')}</small><strong>{signalCountLabel}</strong></div>
+            </div>
+            <div className="tour-road-condition-card tour-road-condition-card--uphill">
+              <span aria-hidden="true">↗</span>
+              <div><small>{text('Uphill', '오르막')}</small><strong>{uphillCountLabel}</strong></div>
+            </div>
+            <div className="tour-road-condition-card tour-road-condition-card--downhill">
+              <span aria-hidden="true">↘</span>
+              <div><small>{text('Downhill', '내리막')}</small><strong>{downhillCountLabel}</strong></div>
+            </div>
+          </div>
+          <p className="tour-road-conditions-note">
+            {!routedPath
+              ? text('Waiting for the bicycle route before checking signals and elevation.', '자전거 경로를 불러온 뒤 신호등과 고도 자료를 확인합니다.')
+              : activeRoadConditions?.signalsStatus === 'loading' || activeRoadConditions?.gradesStatus === 'loading'
+              ? text('Checking mapped crossings and elevation…', '지도 신호등과 고도 자료를 확인하고 있어요…')
+              : activeRoadConditions?.signalsStatus === 'unavailable' || activeRoadConditions?.gradesStatus === 'unavailable'
+                ? text('Some road data could not be reached. Markers appear only when source data is available.', '일부 도로 자료를 불러오지 못했어요. 자료를 받을 수 있을 때만 지도에 표시합니다.')
+                : text('Signals are map records, not live light states. Grade estimates use terrain elevation and may miss short slopes.', '신호등은 지도 기록이며 실시간 신호 상태가 아닙니다. 경사는 지형 고도 추정치라 짧은 언덕은 빠질 수 있어요.')}
+          </p>
+          <div className="tour-road-conditions-sources">
+            <a href="https://wiki.openstreetmap.org/wiki/Traffic_light" target="_blank" rel="noopener noreferrer">{text('Signal map data ↗', '신호등 지도 자료 ↗')}</a>
+            <a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener noreferrer">{text('Elevation source ↗', '고도 자료 출처 ↗')}</a>
+          </div>
+        </section>
         <div className="tour-itinerary-heading"><h3>{text('Browse routes', '코스 구경하기')}</h3><span>{routes.length}{text(' routes', '개 코스')}</span></div>
         <div className="tour-finder-categories" role="group" aria-label={text('Route categories', '코스 종류')}>
           {(Object.keys(categoryNames) as TourCategory[]).map(key => <button key={key} type="button" aria-pressed={category === key}
