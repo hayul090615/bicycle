@@ -1391,11 +1391,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @keyframes tour-season-breeze { to { background-position: 0 180px, 230px 0; } }
 @keyframes tour-season-snow { to { background-position: 22px 170px, -16px 170px; } }
 .tour-season-controls { position: absolute; z-index: 1201; top: .8rem; left: .8rem; display: grid; justify-items: start; gap: .32rem; pointer-events: none; }
-.tour-season-picker { display: flex; align-items: center; gap: .18rem; padding: .22rem; border: 1px solid #d6d2c8; border-radius: 7px; background: #f0eee6f2; box-shadow: 0 2px 8px #14251c2a; pointer-events: auto; }
+.tour-season-picker { display: flex; align-items: center; gap: .18rem; padding: .22rem; border: 1px solid #cfd8d1; border-radius: 7px; background: #f7f9f7f5; box-shadow: 0 2px 8px #14251c2a; pointer-events: auto; }
 .tour-season-picker button { min-height: 32px; padding: .35rem .55rem; border: 0; border-radius: 4px; color: #515b4f; background: transparent; font: 750 .64rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
 .tour-season-picker button:hover { background: #deded3; }
 .tour-season-picker button[aria-pressed='true'] { color: #f7f4ea; background: #435b49; }
-.tour-season-weather { max-width: min(330px, calc(100vw - 3rem)); padding: .33rem .52rem; border: 1px solid #d6d2c8; border-radius: 4px; color: #434c43; background: #f0eee6eb; box-shadow: 0 2px 7px #14251c20; font-size: .64rem; font-weight: 700; }
+.tour-map-overlay-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; pointer-events: none; }
+.tour-season-weather { max-width: min(330px, calc(100vw - 3rem)); padding: .32rem .48rem; border: 1px solid #cfd8d1; border-radius: 4px; color: #435147; background: #f7f9f7ed; box-shadow: 0 2px 7px #14251c20; font-size: .62rem; font-weight: 700; }
+.tour-shadow-status { display: inline-flex; align-items: center; gap: .32rem; padding: .32rem .43rem; border: 1px solid #d2d9d3; border-radius: 4px; color: #445148; background: #f7f9f7e8; font-size: .6rem; font-weight: 700; white-space: nowrap; }
+.tour-shadow-status i { width: 11px; height: 11px; border: 1px solid #162820; border-radius: 2px; background: #455b4bba; }
 .tour-maplibre-3d .tour-map-style-toggle { top: 4.55rem; left: .8rem; }
 .tour-cctv-toggle { width: 100%; min-height: 43px; display: flex; align-items: center; gap: .45rem; padding: .55rem .62rem; border: 1px solid #cbc9bd; border-radius: 5px; color: #39493d; background: #f0eee6; font: inherit; font-size: .71rem; text-align: left; cursor: pointer; }
 .tour-cctv-toggle[aria-pressed='true'] { border-color: #8e7c55; background: #e7e3d7; }
@@ -1438,7 +1441,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 
 /* Center-edge arrows turn the map camera instead of shifting the route. */
-.tour-map-rotate-controls { inset: 50% .85rem auto; transform: translateY(-50%); justify-content: space-between; overflow: visible; border: 0; background: transparent; box-shadow: none; pointer-events: none; }
+.tour-map-rotate-controls { position: absolute; z-index: 1202; inset: 50% .85rem auto; display: flex; align-items: center; transform: translateY(-50%); justify-content: space-between; overflow: visible; border: 0; background: transparent; box-shadow: none; pointer-events: none; }
 .tour-map-rotate-controls button { width: 48px; height: 56px; border: 1px solid #d1cec3; border-radius: 6px; color: #394b3e; background: #efede6ee; box-shadow: 0 3px 12px #13241c38; font-size: 1.7rem; pointer-events: auto; }
 .tour-map-rotate-controls button + button { border-left: 1px solid #d1cec3; }
 .tour-map-rotate-controls button:hover, .tour-map-rotate-controls button:focus-visible { color: #fff; background: #435b49; }

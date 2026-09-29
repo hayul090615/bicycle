@@ -108,7 +108,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [hover, setHover] = useState<{ routeId: string; index: number } | null>(null)
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
-  const [view, setView] = useState<'city' | 'google' | 'map'>('city')
+  const [view, setView] = useState<'city' | 'google' | 'map'>('map')
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
@@ -278,13 +278,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
               aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
           </div>
-          <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
+          <div className="tour-map-overlay-meta">
+            <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
+            {view !== 'google' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
+          </div>
         </div>
         <div className="tour-map-rotate-controls" role="group" aria-label={text('Rotate the map', '지도 회전')}>
           <button type="button" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>
           <button type="button" onClick={() => rotateMap('right')} aria-label={text('Rotate map to the right', '지도를 오른쪽으로 회전')}>→</button>
         </div>
-        {view !== 'google' && <div className="tour-shadow-legend" aria-label={text('Building shadow areas', '건물 그림자 영역')}><span />{text('Building shadows', '건물 그림자')}</div>}
         {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
           <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>
           <span className="tour-scenery-kicker">{text('A VIEW NEAR THIS STOP', '경유지 주변 풍경')}</span>
@@ -301,7 +303,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button type="button" className="button button--ghost" onClick={() => downloadEarthRoute(route, locale)}>{text('Download route for Earth', 'Earth용 코스 받기')}</button>
         <button type="button" className="tour-show-all" onClick={() => selectStop(null)}>{text('Show all stops', '전체 경유지 보기')}</button>
       </div>
-      <p className="tour-map-note">{text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
+      <p className="tour-map-note">{view === 'map'
+        ? text('Street map view · route line, stops and public camera locations. Use the center-side arrows to rotate the map.', '일반 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 지도 양쪽 중앙 화살표로 화면을 회전할 수 있어요.')
+        : view === 'google'
+          ? text('Explore this route in Google 3D. Building detail varies by area; Google Earth can open the selected stop or the downloaded KML can show the full route.', 'Google 3D로 코스를 살펴보세요. 지역별 건물 표현은 다를 수 있으며 Google Earth에서 선택한 경유지를 열거나 KML로 전체 코스를 볼 수 있습니다.')
+          : text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
       <p className="tour-map-note">{routedPath
         ? text('The line is a suggested bicycle route between stops. Check signs and path conditions before riding.', '표시된 선은 경유지 사이의 추천 자전거 경로입니다. 출발 전에 표지와 길 상태를 확인하세요.')
         : text('The line connects stops while bicycle routing loads or is unavailable. It is not turn-by-turn directions.', '자전거 경로를 불러오는 동안 또는 불러올 수 없을 때는 경유지를 선으로 연결합니다. 이 선은 길안내가 아닙니다.')}</p>
