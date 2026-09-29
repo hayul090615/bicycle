@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="초록색 따릉이 자전거">
+  <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#0bd18a"/><stop offset="1" stop-color="#008f68"/></linearGradient></defs>
+  <circle cx="27" cy="80" r="21" fill="white" stroke="#123f38" stroke-width="6"/>
+  <circle cx="91" cy="80" r="21" fill="white" stroke="#123f38" stroke-width="6"/>
+  <path d="M27 80 47 48l18 32H27l14-24h42L91 80M60 39h22l7-12" fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M41 43h17M82 27h12" stroke="#123f38" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="65" cy="80" r="6" fill="#ffce4b" stroke="#123f38" stroke-width="3"/>
+</svg>
