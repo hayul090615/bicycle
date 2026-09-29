@@ -34,9 +34,11 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, cctvCameras, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, cctvCameras, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
+  accessPath: LonLat[] | null
+  accessEstimated: boolean
   cctvCameras: PublicCamera[]
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
@@ -49,6 +51,7 @@ export function KakaoRouteMap({ route, routePath, cctvCameras, locale, userLocat
   const mapRef = useRef<KakaoMap | null>(null)
   const apiRef = useRef<KakaoMapsApi | null>(null)
   const routeOverlaysRef = useRef<KakaoOverlay[]>([])
+  const accessOverlaysRef = useRef<KakaoOverlay[]>([])
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
@@ -94,10 +97,12 @@ export function KakaoRouteMap({ route, routePath, cctvCameras, locale, userLocat
       window.clearTimeout(timeout)
       resizeObserver?.disconnect()
       routeOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       routeOverlaysRef.current = []
+      accessOverlaysRef.current = []
       cctvOverlaysRef.current = []
       userOverlayRef.current = null
       activePopupRef.current = null
@@ -148,7 +153,14 @@ export function KakaoRouteMap({ route, routePath, cctvCameras, locale, userLocat
       }))
     })
 
-    if (selectedStop !== null && points[selectedStop]) {
+    if (accessPath && accessPath.length >= 2) {
+      const framed = selectedStop === null ? [...linePoints, ...accessPath.map(([lng, lat]) => ({ lng, lat }))] : accessPath.map(([lng, lat]) => ({ lng, lat }))
+      const south = Math.min(...framed.map(point => point.lat)), north = Math.max(...framed.map(point => point.lat))
+      const west = Math.min(...framed.map(point => point.lng)), east = Math.max(...framed.map(point => point.lng))
+      const spanKm = Math.max((north - south) * 111, (east - west) * 88)
+      map.setLevel(spanKm > 25 ? 9 : spanKm > 16 ? 8 : spanKm > 10 ? 7 : spanKm > 5 ? 6 : 5, { animate: false })
+      map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
+    } else if (selectedStop !== null && points[selectedStop]) {
       map.setLevel(4, { animate: true })
       map.setCenter(new api.LatLng(points[selectedStop].lat, points[selectedStop].lng))
     } else {
@@ -161,7 +173,18 @@ export function KakaoRouteMap({ route, routePath, cctvCameras, locale, userLocat
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, selectedStop, status])
+  }, [accessPath, linePoints, locale, onHoverStop, onSelectStop, points, route, selectedStop, status])
+
+  useEffect(() => {
+    const map = mapRef.current, api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    accessOverlaysRef.current = []
+    if (!accessPath || accessPath.length < 2) return
+    const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 10, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 6, strokeColor: '#2479db', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
+  }, [accessEstimated, accessPath, status])
 
   useEffect(() => {
     const map = mapRef.current
