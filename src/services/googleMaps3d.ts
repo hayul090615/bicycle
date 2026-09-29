@@ -17,6 +17,7 @@ export interface GoogleMap3D extends HTMLElement {
 }
 export interface Maps3DLibrary {
   Map3DElement: new (options: Camera3D & { mode: string; gestureHandling: string; description: string }) => GoogleMap3D
+  Marker3DElement: new (options: Record<string, unknown>) => HTMLElement
   Marker3DInteractiveElement: new (options: Record<string, unknown>) => HTMLElement
   Polyline3DElement: new (options: Record<string, unknown>) => HTMLElement
   MapMode: { HYBRID: string }
