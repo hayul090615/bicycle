@@ -299,7 +299,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
     }
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
-    map.fitBounds(bounds, { padding: { top: 66, right: 72, bottom: 66, left: 72 }, maxZoom: 14.2, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
+    map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
   }, [isFlatMap, linePoints, points, selectedStop, status])
 
   useEffect(() => {
