@@ -10,7 +10,7 @@ const seasonNames: Record<TourSeason, [string, string]> = {
   spring: ['Spring', '봄'], summer: ['Summer', '여름'], autumn: ['Autumn', '가을'], winter: ['Winter', '겨울'],
 }
 
-export function TouristGuide({ onBack }: { onBack: () => void }) {
+export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () => void; darkMode: boolean; onToggleTheme: () => void }) {
   const [locale, setLocale] = useState<Locale>(() => new URLSearchParams(window.location.search).get('lang') === 'ko' ? 'ko' : 'en')
   const [seoulClock, setSeoulClock] = useState(nowInSeoul)
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
@@ -80,10 +80,11 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
     setLocale(nextLocale)
   }
 
-  return <main className="tour-screen">
+  return <main className={`tour-screen${darkMode ? ' tour-screen--dark' : ''}`}>
     <header className="tour-topbar">
       <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'SEOUL BIKE JOURNEYS', '따릉이 서울 여행')}<small>{textFor(locale, 'Explore Seoul with Ttareungi', '따릉이로 서울을 둘러보세요')}</small></span></div>
       <div className="tour-header-actions">
+        <button type="button" className="tour-theme-button" aria-pressed={darkMode} onClick={onToggleTheme}>{darkMode ? textFor(locale, '☀ Light', '☀ 라이트') : textFor(locale, '☾ Dark', '☾ 다크')}</button>
         <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
         <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}>{textFor(locale, 'Typing game', '타자 게임')} ↗</button>
       </div>
