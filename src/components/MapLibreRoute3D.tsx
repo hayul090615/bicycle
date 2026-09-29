@@ -6,7 +6,7 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
-import type { RouteCondition } from '../services/routeConditions'
+import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import riderSpriteUrl from '../assets/map-riders.png'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -69,7 +69,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, season, routeConditions, cctvCameras, showCctv, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -77,8 +77,14 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   accessEstimated: boolean
   season: TourSeason
   routeConditions: RouteCondition[]
+  restaurants: RouteRestaurant[]
+  showCourse: boolean
+  showRestaurants: boolean
+  showRoadInfo: boolean
+  showRiders: boolean
   cctvCameras: PublicCamera[]
   showCctv: boolean
+  locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right'; serial: number } | null
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
@@ -94,8 +100,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const markersRef = useRef<MapLibreMarker[]>([])
   const peopleMarkersRef = useRef<MapLibreMarker[]>([])
   const conditionMarkersRef = useRef<MapLibreMarker[]>([])
+  const restaurantMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
+  const cctvPopupRef = useRef<maplibregl.Popup | null>(null)
   const userMarkerRef = useRef<MapLibreMarker | null>(null)
+  const lastLocationFocusRequestRef = useRef(0)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
   const updateBuildingShadowsRef = useRef<() => void>(() => {})
@@ -159,6 +168,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       peopleMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
+      restaurantMarkersRef.current.forEach(marker => marker.remove())
+      restaurantMarkersRef.current = []
       cctvMarkersRef.current.forEach(marker => marker.remove())
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
@@ -285,6 +296,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       peopleMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
+      restaurantMarkersRef.current.forEach(marker => marker.remove())
+      restaurantMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
       if (!failed) map.remove()
@@ -311,9 +324,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     source?.setData(accessPath && accessPath.length >= 2
       ? { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: accessPath } }
       : EMPTY_LINE)
-    map.setLayoutProperty('tour-access-solid', 'visibility', accessPath && !accessEstimated ? 'visible' : 'none')
-    map.setLayoutProperty('tour-access-dashed', 'visibility', accessPath && accessEstimated ? 'visible' : 'none')
-  }, [accessPath, accessEstimated, status])
+    map.setLayoutProperty('tour-access-solid', 'visibility', showCourse && accessPath && !accessEstimated ? 'visible' : 'none')
+    map.setLayoutProperty('tour-access-dashed', 'visibility', showCourse && accessPath && accessEstimated ? 'visible' : 'none')
+  }, [accessPath, accessEstimated, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -322,7 +335,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     conditionMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
     conditionMarkersRef.current = []
-    if (!isFlatMap && routePath && routePath.length >= 2) {
+    if (showRiders && !isFlatMap && routePath && routePath.length >= 2) {
       const routeLength = routePath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
         (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
       const riderCount = Math.max(2, Math.min(7, Math.floor(routeLength / 1800)))
@@ -336,7 +349,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
       })
     }
-    conditionMarkersRef.current = routeConditions.map(condition => {
+    conditionMarkersRef.current = showRoadInfo ? routeConditions.map(condition => {
       const element = document.createElement('div')
       element.className = `tour-road-event tour-road-event--${condition.kind}`
       const label = condition.kind === 'signal'
@@ -347,7 +360,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       element.title = label
       element.textContent = condition.kind === 'signal' ? '' : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
       return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([condition.lng, condition.lat]).addTo(map)
-    })
+    }) : []
     let frame = 0
     const updateVisibility = () => {
       window.cancelAnimationFrame(frame)
@@ -388,7 +401,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       peopleMarkersRef.current = []
       conditionMarkersRef.current = []
     }
-  }, [isFlatMap, linePoints, locale, routeConditions, routePath, status])
+  }, [isFlatMap, linePoints, locale, routeConditions, routePath, showRiders, showRoadInfo, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -416,7 +429,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     })
     markersRef.current.forEach(marker => marker.remove())
     markersRef.current = []
-    route.stops.forEach((stop, index) => {
+    if (showCourse) route.stops.forEach((stop, index) => {
       const label = locale === 'ko' ? stop.placeKo : stop.place
       const element = document.createElement('button')
       element.type = 'button'
@@ -436,7 +449,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         .setLngLat([points[index].lng, points[index].lat])
         .addTo(map))
     })
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, status])
+  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, showCourse, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const visibility = showCourse ? 'visible' : 'none'
+    map.setLayoutProperty('tour-route-casing', 'visibility', visibility)
+    map.setLayoutProperty('tour-route-line', 'visibility', visibility)
+  }, [showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -462,43 +483,159 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready') return
-    cctvMarkersRef.current.forEach(marker => marker.remove())
-    cctvMarkersRef.current = []
-    if (!showCctv) return
-    cctvCameras.forEach(camera => {
-      const label = camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')
-      const element = document.createElement('button')
-      element.type = 'button'
-      element.className = 'tour-cctv-map-marker'
-      element.setAttribute('aria-label', `${label}: ${camera.name}`)
-      element.title = `${label} · ${camera.name}`
-      element.textContent = 'C'
+    if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    lastLocationFocusRequestRef.current = locationFocusRequest
+    map.flyTo({
+      center: [userLocation.lng, userLocation.lat],
+      zoom: 16,
+      pitch: isFlatMap ? 0 : 62,
+      bearing: isFlatMap ? 0 : -12,
+      duration: 600,
+      essential: false,
+    })
+  }, [isFlatMap, locationFocusRequest, status, userLocation])
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const sourceId = 'tour-cctv-data'
+    const clusterLayerId = 'tour-cctv-clusters'
+    const countLayerId = 'tour-cctv-count'
+    const pointLayerId = 'tour-cctv-points'
+    if (!showCctv) {
+      cctvPopupRef.current?.remove()
+      cctvPopupRef.current = null
+      for (const layerId of [clusterLayerId, countLayerId, pointLayerId]) {
+        if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', 'none')
+      }
+      return
+    }
+    const data: GeoJSON.FeatureCollection<GeoJSON.Point> = {
+      type: 'FeatureCollection',
+      features: cctvCameras.map(camera => ({
+        type: 'Feature',
+        id: camera.id,
+        properties: { ...camera },
+        geometry: { type: 'Point', coordinates: [camera.lng, camera.lat] },
+      })),
+    }
+    const source = map.getSource(sourceId) as GeoJSONSource | undefined
+    if (source) source.setData(data)
+    else {
+      map.addSource(sourceId, { type: 'geojson', data, cluster: true, clusterRadius: 48, clusterMaxZoom: 16, maxzoom: 18 })
+      map.addLayer({
+        id: clusterLayerId,
+        type: 'circle',
+        source: sourceId,
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': ['step', ['get', 'point_count'], '#7155a6', 20, '#604493', 100, '#4c347e'],
+          'circle-radius': ['step', ['get', 'point_count'], 15, 20, 19, 100, 23],
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 2,
+          'circle-opacity': .94,
+        },
+      })
+      map.addLayer({
+        id: countLayerId,
+        type: 'symbol',
+        source: sourceId,
+        filter: ['has', 'point_count'],
+        layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 11, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'] },
+        paint: { 'text-color': '#ffffff' },
+      })
+      map.addLayer({
+        id: pointLayerId,
+        type: 'circle',
+        source: sourceId,
+        filter: ['!', ['has', 'point_count']],
+        minzoom: 12,
+        paint: { 'circle-color': '#7155a6', 'circle-radius': 5, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 },
+      })
+    }
+    for (const layerId of [clusterLayerId, countLayerId, pointLayerId]) {
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', 'visible')
+    }
+    const openCameraPopup = (event: maplibregl.MapMouseEvent) => {
+      const feature = map.queryRenderedFeatures(event.point, { layers: [pointLayerId] })[0]
+      if (!feature) return
+      const properties = feature.properties ?? {}
       const popupContent = document.createElement('div')
       popupContent.className = 'tour-cctv-popup'
       const heading = document.createElement('strong')
-      heading.textContent = label
+      heading.textContent = String(properties.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV'))
       const name = document.createElement('div')
-      name.textContent = camera.name
+      name.textContent = String(properties.name || '')
       const address = document.createElement('div')
-      address.textContent = camera.address || (locale === 'ko' ? '주소 정보 없음' : 'Address not listed')
+      address.textContent = String(properties.address || (locale === 'ko' ? '주소 정보 없음' : 'Address not listed'))
       const metadata = document.createElement('small')
-      metadata.textContent = `${locale === 'ko' ? '카메라' : 'Cameras'} ${camera.cameras || '—'} · ${camera.resolution || '—'} · ${camera.direction || '—'}`
+      metadata.textContent = `${locale === 'ko' ? '카메라' : 'Cameras'} ${String(properties.cameras || '—')} · ${String(properties.resolution || '—')} · ${String(properties.direction || '—')}`
       const date = document.createElement('small')
-      date.textContent = `${locale === 'ko' ? '자료 기준일' : 'Data date'} ${camera.updatedAt || '—'}`
+      date.textContent = `${locale === 'ko' ? '자료 기준일' : 'Data date'} ${String(properties.updatedAt || '—')}`
       const notice = document.createElement('small')
       notice.textContent = locale === 'ko'
         ? '공개 설치 위치 정보입니다. 실시간 영상 주소는 제공되지 않습니다.'
         : 'Public installation record; no live video URL is provided.'
       popupContent.append(heading, name, address, metadata, date, notice)
-      const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '300px' }).setDOMContent(popupContent)
-      cctvMarkersRef.current.push(new maplibregl.Marker({ element, anchor: 'bottom' })
-        .setLngLat([camera.lng, camera.lat])
+      const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [number, number]
+      cctvPopupRef.current?.remove()
+      cctvPopupRef.current = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '300px' })
+        .setLngLat(coordinates).setDOMContent(popupContent).addTo(map)
+    }
+    const zoomCluster = (event: maplibregl.MapMouseEvent) => {
+      const feature = map.queryRenderedFeatures(event.point, { layers: [clusterLayerId] })[0]
+      if (!feature) return
+      const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [number, number]
+      map.easeTo({ center: coordinates, zoom: Math.min(map.getZoom() + 2.2, 19), duration: 350 })
+    }
+    const setPointer = () => { map.getCanvas().style.cursor = 'pointer' }
+    const clearPointer = () => { map.getCanvas().style.cursor = '' }
+    map.on('click', clusterLayerId, zoomCluster)
+    map.on('click', pointLayerId, openCameraPopup)
+    map.on('mouseenter', clusterLayerId, setPointer)
+    map.on('mouseleave', clusterLayerId, clearPointer)
+    map.on('mouseenter', pointLayerId, setPointer)
+    map.on('mouseleave', pointLayerId, clearPointer)
+    return () => {
+      map.off('click', clusterLayerId, zoomCluster)
+      map.off('click', pointLayerId, openCameraPopup)
+      map.off('mouseenter', clusterLayerId, setPointer)
+      map.off('mouseleave', clusterLayerId, clearPointer)
+      map.off('mouseenter', pointLayerId, setPointer)
+      map.off('mouseleave', pointLayerId, clearPointer)
+    }
+  }, [cctvCameras, locale, showCctv, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    restaurantMarkersRef.current.forEach(marker => marker.remove())
+    restaurantMarkersRef.current = []
+    if (!showRestaurants) return
+    restaurants.forEach(place => {
+      const element = document.createElement('button')
+      element.type = 'button'
+      element.className = `tour-restaurant-map-marker tour-restaurant-map-marker--${place.kind}`
+      const kindLabel = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
+      element.setAttribute('aria-label', `${place.name} · ${kindLabel}`)
+      element.title = place.name
+      element.textContent = place.kind === 'cafe' ? '☕' : '식'
+      const popupContent = document.createElement('div')
+      popupContent.className = 'tour-restaurant-popup'
+      const name = document.createElement('strong')
+      name.textContent = place.name
+      const category = document.createElement('small')
+      category.textContent = `${kindLabel}${place.cuisine ? ` · ${place.cuisine}` : ''}`
+      const source = document.createElement('small')
+      source.textContent = locale === 'ko' ? 'OpenStreetMap 지도 등록 정보' : 'OpenStreetMap map listing'
+      popupContent.append(name, category, source)
+      const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '260px' }).setDOMContent(popupContent)
+      restaurantMarkersRef.current.push(new maplibregl.Marker({ element, anchor: 'bottom' })
+        .setLngLat([place.lng, place.lat])
         .setPopup(popup)
         .addTo(map))
     })
-  }, [cctvCameras, locale, showCctv, status])
+  }, [locale, restaurants, showRestaurants, status])
 
   useEffect(() => {
     const map = mapRef.current
