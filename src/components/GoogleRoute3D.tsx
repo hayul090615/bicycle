@@ -3,11 +3,61 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
+import type { RouteCondition } from '../services/routeConditions'
+import riderSpriteUrl from '../assets/map-riders.png'
 
-export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
+  if (path.length < 2) return []
+  const distances = [0]
+  for (let index = 1; index < path.length; index++) {
+    const [startLng, startLat] = path[index - 1]
+    const [endLng, endLat] = path[index]
+    distances.push(distances[index - 1] + Math.hypot((endLng - startLng) * 88_000, (endLat - startLat) * 111_000))
+  }
+  const total = distances[distances.length - 1]
+  if (!total) return []
+  return Array.from({ length: count }, (_, step) => {
+    const target = total * (step + 1) / (count + 1)
+    let index = 1
+    while (index < distances.length - 1 && distances[index] < target) index++
+    const ratio = (target - distances[index - 1]) / Math.max(1, distances[index] - distances[index - 1])
+    return [path[index - 1][0] + (path[index][0] - path[index - 1][0]) * ratio,
+      path[index - 1][1] + (path[index][1] - path[index - 1][1]) * ratio] as LonLat
+  })
+}
+
+let riderImageSourcesPromise: Promise<string[]> | undefined
+function loadRiderImageSources(): Promise<string[]> {
+  if (riderImageSourcesPromise) return riderImageSourcesPromise
+  riderImageSourcesPromise = new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      const panelWidth = image.naturalWidth / 3
+      const panelHeight = image.naturalHeight
+      const width = 128
+      const height = Math.round(width * panelHeight / panelWidth)
+      const sources = Array.from({ length: 3 }, (_, index) => {
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Could not prepare the rider image')
+        context.drawImage(image, panelWidth * index, 0, panelWidth, panelHeight, 0, 0, width, height)
+        return canvas.toDataURL('image/png')
+      })
+      resolve(sources)
+    }
+    image.onerror = () => reject(new Error('Could not load the rider image'))
+    image.src = riderSpriteUrl
+  })
+  return riderImageSourcesPromise
+}
+
+export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, cctvCameras, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
+  routeConditions: RouteCondition[]
   cctvCameras: PublicCamera[]
   rotationRequest: { direction: 'left' | 'right'; serial: number } | null
   userLocation: { lat: number; lng: number } | null
@@ -20,6 +70,8 @@ export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotat
   const routeLineRef = useRef<HTMLElement | null>(null)
   const accessLineRef = useRef<HTMLElement | null>(null)
   const markersRef = useRef<HTMLElement[]>([])
+  const peopleMarkersRef = useRef<HTMLElement[]>([])
+  const conditionMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -81,6 +133,10 @@ export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotat
       window.removeEventListener('seoul-google-maps-error', fail)
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      peopleMarkersRef.current.forEach(marker => marker.remove())
+      peopleMarkersRef.current = []
+      conditionMarkersRef.current.forEach(marker => marker.remove())
+      conditionMarkersRef.current = []
       cctvMarkersRef.current.forEach(marker => marker.remove())
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
@@ -101,7 +157,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotat
     map.description = locale === 'ko' ? route.titleKo : route.title
     routeLineRef.current?.remove()
     markersRef.current.forEach(marker => marker.remove())
-    routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5 })
+    routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#08765b', strokeWidth: 5, drawsOccludedSegments: false })
     map.append(routeLineRef.current)
     markersRef.current = points.map((position, index) => {
       const stop = route.stops[index]
@@ -113,7 +169,75 @@ export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotat
       map.append(marker)
       return marker
     })
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, status])
+    peopleMarkersRef.current.forEach(marker => marker.remove())
+    peopleMarkersRef.current = []
+    let cancelled = false
+    if (routePath && routePath.length >= 2) {
+      const distance = routePath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
+        (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
+      const count = Math.max(2, Math.min(7, Math.floor(distance / 1800)))
+      const riderPositions = sampleRiderPositions(routePath, count)
+      void loadRiderImageSources().then(sources => {
+        if (cancelled || mapRef.current !== map) return
+        peopleMarkersRef.current = riderPositions.map(([lng, lat], index) => {
+          const marker = new library.Marker3DElement({
+            position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+            drawsWhenOccluded: false, sizePreserved: false,
+          })
+          const accessibilityLabel = locale === 'ko' ? 'AI 생성 라이딩 장면 · 실제 이용자 아님' : 'AI-generated rider illustration · not a live person'
+          marker.setAttribute('aria-label', accessibilityLabel)
+          marker.setAttribute('title', accessibilityLabel)
+          const image = document.createElement('img')
+          image.src = sources[index % sources.length]
+          image.width = 64
+          image.height = 128
+          image.alt = ''
+          const template = document.createElement('template')
+          template.content.append(image)
+          marker.append(template)
+          marker.style.display = map.range <= 4500 ? '' : 'none'
+          map.append(marker)
+          return marker
+        })
+      }).catch(() => { /* Keep the route usable if the illustrative image cannot load. */ })
+    }
+    return () => { cancelled = true }
+  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, routePath, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const updatePeopleVisibility = () => peopleMarkersRef.current.forEach(marker => {
+      marker.style.display = map.range <= 4500 ? '' : 'none'
+    })
+    map.addEventListener('gmp-rangechange', updatePeopleVisibility)
+    updatePeopleVisibility()
+    return () => map.removeEventListener('gmp-rangechange', updatePeopleVisibility)
+  }, [status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const library = libraryRef.current
+    if (!map || !library || status !== 'ready') return
+    conditionMarkersRef.current.forEach(marker => marker.remove())
+    conditionMarkersRef.current = routeConditions.map(condition => {
+      const signal = condition.kind === 'signal'
+      const label = signal ? '🚦' : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
+      const title = signal
+        ? locale === 'ko' ? 'OpenStreetMap에 기록된 신호등 · 실시간 상태 아님' : 'OpenStreetMap signal record · not live state'
+        : `${condition.kind === 'uphill' ? (locale === 'ko' ? '오르막 경사 추정' : 'Estimated uphill') : (locale === 'ko' ? '내리막 경사 추정' : 'Estimated downhill')} ${condition.grade}%`
+      const marker = new library.Marker3DElement({
+        position: { lat: condition.lat, lng: condition.lng }, label, title,
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
+      })
+      map.append(marker)
+      return marker
+    })
+    return () => {
+      conditionMarkersRef.current.forEach(marker => marker.remove())
+      conditionMarkersRef.current = []
+    }
+  }, [locale, routeConditions, status])
 
   useEffect(() => {
     const map = mapRef.current, library = libraryRef.current
@@ -122,7 +246,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, cctvCameras, rotat
     accessLineRef.current = null
     if (!accessPath || accessPath.length < 2) return
     accessLineRef.current = new library.Polyline3DElement({ path: accessPath.map(([lng, lat]) => ({ lat, lng })),
-      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#2479db', strokeWidth: 7 })
+      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#2479db', strokeWidth: 7, drawsOccludedSegments: false })
     map.append(accessLineRef.current)
   }, [accessPath, status])
 
