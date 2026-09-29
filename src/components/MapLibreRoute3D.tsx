@@ -375,6 +375,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
     {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
       {locale === 'ko' ? '위성 사진' : 'Satellite'}
     </button>}
-    {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? '도시 3D 지도를 불러오는 중…' : 'Loading the 3D city map…'}</p>}
+    {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko'
+      ? isFlatMap ? '일반 지도를 불러오는 중…' : '도시 3D 지도를 불러오는 중…'
+      : isFlatMap ? 'Loading the street map…' : 'Loading the 3D city map…'}</p>}
   </div>
 }

@@ -117,6 +117,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [showCctv, setShowCctv] = useState(true)
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
+  const [routeSearch, setRouteSearch] = useState('')
   const pendingNearest = useRef<{ routeId: string; index: number } | null>(null)
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
@@ -144,6 +145,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const seasonGuide = seasonGuides[displaySeason]
   const categoryRoutes = routes.filter(candidate => candidate.category === category)
     .sort((first, second) => userLocation ? nearestStopDistance(first, userLocation) - nearestStopDistance(second, userLocation) : 0)
+  const visibleRoutes = categoryRoutes.filter(candidate => `${candidate.title} ${candidate.titleKo} ${candidate.area} ${candidate.areaKo}`
+    .toLocaleLowerCase().includes(routeSearch.trim().toLocaleLowerCase()))
   const locateNearestRoute = () => {
     if (!navigator.geolocation) {
       setLocationError('unavailable')
@@ -225,6 +228,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }, [hoveredStop, route])
   const chooseSeason = (season: TourSeason) => {
     setDisplaySeason(season)
+    setRouteSearch('')
     const seasonalRoute = routes.find(candidate => candidate.category === 'seasonal' && candidate.season === season)
     if (seasonalRoute) onRouteSelect(seasonalRoute.id)
   }
@@ -276,7 +280,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <div className="tour-season-controls">
           <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
             {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
-              aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
+              className={`tour-season-tab tour-season-tab--${option.id}`} aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
           </div>
           <div className="tour-map-overlay-meta">
             <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
@@ -303,17 +307,33 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button type="button" className="button button--ghost" onClick={() => downloadEarthRoute(route, locale)}>{text('Download route for Earth', 'Earth용 코스 받기')}</button>
         <button type="button" className="tour-show-all" onClick={() => selectStop(null)}>{text('Show all stops', '전체 경유지 보기')}</button>
       </div>
-      <p className="tour-map-note">{view === 'map'
-        ? text('Street map view · route line, stops and public camera locations. Use the center-side arrows to rotate the map.', '일반 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 지도 양쪽 중앙 화살표로 화면을 회전할 수 있어요.')
-        : view === 'google'
-          ? text('Explore this route in Google 3D. Building detail varies by area; Google Earth can open the selected stop or the downloaded KML can show the full route.', 'Google 3D로 코스를 살펴보세요. 지역별 건물 표현은 다를 수 있으며 Google Earth에서 선택한 경유지를 열거나 KML로 전체 코스를 볼 수 있습니다.')
-          : text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
-      <p className="tour-map-note">{routedPath
-        ? text('The line is a suggested bicycle route between stops. Check signs and path conditions before riding.', '표시된 선은 경유지 사이의 추천 자전거 경로입니다. 출발 전에 표지와 길 상태를 확인하세요.')
-        : text('The line connects stops while bicycle routing loads or is unavailable. It is not turn-by-turn directions.', '자전거 경로를 불러오는 동안 또는 불러올 수 없을 때는 경유지를 선으로 연결합니다. 이 선은 길안내가 아닙니다.')}</p>
+      <details className="tour-map-details">
+        <summary>{text('Map and route information', '지도 및 코스 안내')}</summary>
+        <div>
+          <p className="tour-map-note">{view === 'map'
+            ? text('Street map view · route line, stops and public camera locations. Use the center-side arrows to rotate the map.', '일반 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 지도 양쪽 중앙 화살표로 화면을 회전할 수 있어요.')
+            : view === 'google'
+              ? text('Explore this route in Google 3D. Building detail varies by area; Google Earth can open the selected stop or the downloaded KML can show the full route.', 'Google 3D로 코스를 살펴보세요. 지역별 건물 표현은 다를 수 있으며 Google Earth에서 선택한 경유지를 열거나 KML로 전체 코스를 볼 수 있습니다.')
+              : text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
+          <p className="tour-map-note">{routedPath
+            ? text('The line is a suggested bicycle route between stops. Check signs and path conditions before riding.', '표시된 선은 경유지 사이의 추천 자전거 경로입니다. 출발 전에 표지와 길 상태를 확인하세요.')
+            : text('The line connects stops while bicycle routing loads or is unavailable. It is not turn-by-turn directions.', '자전거 경로를 불러오는 동안 또는 불러올 수 없을 때는 경유지를 선으로 연결합니다. 이 선은 길안내가 아닙니다.')}</p>
+        </div>
+      </details>
     </section>
     <aside className="tour-itinerary" aria-label={text('Route stops', '코스 경유지')}>
+      <div className="tour-sidebar-heading">
+        <span className="tour-card-kicker">{text('EXPLORE SEOUL BY BIKE', '따릉이로 서울 둘러보기')}</span>
+        <h1>{text(route.title, route.titleKo)}</h1>
+        <p>{text(route.summary, route.summaryKo)}</p>
+        <div><span>◷ {text(route.suggestedTime, route.suggestedTimeKo)}</span><span>{route.stops.length} {text('stops', '곳 경유')}</span></div>
+      </div>
       <div className="tour-route-finder">
+        <label className="tour-map-search">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" value={routeSearch} onChange={event => setRouteSearch(event.target.value)}
+            placeholder={text('Search Seoul routes', '서울 코스 검색')} aria-label={text('Search routes', '코스 검색')} />
+        </label>
         <button type="button" className="tour-nearby-button" onClick={locateNearestRoute} disabled={locating}>
           <span aria-hidden="true">◎</span>{locating ? text('Finding nearby routes…', '가까운 코스를 찾는 중…') : text('Find routes near me', '내 위치로 가까운 코스 찾기')}
         </button>
@@ -341,14 +361,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <div className="tour-itinerary-heading"><h3>{text('Browse routes', '코스 구경하기')}</h3><span>{routes.length}{text(' routes', '개 코스')}</span></div>
         <div className="tour-finder-categories" role="group" aria-label={text('Route categories', '코스 종류')}>
           {(Object.keys(categoryNames) as TourCategory[]).map(key => <button key={key} type="button" aria-pressed={category === key}
-            onClick={() => { const next = routes.find(candidate => candidate.category === key); if (next) onRouteSelect(next.id) }}>
+            onClick={() => { setRouteSearch(''); const next = routes.find(candidate => candidate.category === key); if (next) onRouteSelect(next.id) }}>
             {text(...categoryNames[key])}</button>)}
         </div>
         <div className="tour-finder-routes" role="group" aria-label={text('Choose a route', '코스 선택')}>
-          {categoryRoutes.map(candidate => <button key={candidate.id} type="button" aria-pressed={candidate.id === route.id} onClick={() => onRouteSelect(candidate.id)}>
+          {visibleRoutes.map(candidate => <button key={candidate.id} type="button" aria-pressed={candidate.id === route.id} onClick={() => onRouteSelect(candidate.id)}>
             <strong>{text(candidate.title, candidate.titleKo)}</strong>
             <small>{userLocation ? `${distanceLabel(nearestStopDistance(candidate, userLocation))} · ` : ''}{text(candidate.suggestedTime, candidate.suggestedTimeKo)}</small>
           </button>)}
+          {visibleRoutes.length === 0 && <p className="tour-no-routes">{text('No routes match this search.', '검색 결과가 없습니다.')}</p>}
         </div>
         {category === 'seasonal' && route.season && <section className={`tour-season-guide tour-season-guide--${route.season}`} aria-live="polite" aria-atomic="true">
           <div className="tour-season-guide-heading"><span>{text('SEASONAL RIDE NOTES', '계절 라이딩 노트')}</span><b>{text(route.season.toUpperCase(), `${route.season === 'spring' ? '봄' : route.season === 'summer' ? '여름' : route.season === 'autumn' ? '가을' : '겨울'} 시즌`)}</b></div>
@@ -378,6 +399,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         })}
       </ol>
       <a className="tour-resource-link" href="#tour-checks">{text('Next: check before riding', '다음: 출발 전 확인하기')} <span aria-hidden="true">↓</span></a>
+      <div className="tour-route-source">{text('Route reference: ', '코스 참고: ')}
+        <a href={route.source} target="_blank" rel="noopener noreferrer">{text("Visit Seoul's official travel guide ↗", '서울 공식 관광 안내 ↗')}</a>
+        <p>{text('Station locations: Seoul Open Data, June 2026 snapshot. Check live availability in the official app.', '대여소 위치: 서울 열린데이터광장 2026년 6월 자료. 실시간 대여 가능 여부는 공식 앱에서 확인하세요.')}</p></div>
     </aside>
   </div>
 }
