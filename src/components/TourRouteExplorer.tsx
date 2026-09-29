@@ -9,7 +9,7 @@ import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
-import { fetchBikeRoute, type LonLat } from '../services/bikeRoute'
+import { fetchBikePath, fetchBikeRoute, type LonLat } from '../services/bikeRoute'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
@@ -57,13 +57,14 @@ const seasonOptions: { id: TourSeason; en: string; ko: string; sceneryEn: string
   { id: 'winter', en: 'Winter', ko: '겨울', sceneryEn: 'Snowfall · cool winter haze', sceneryKo: '눈발과 차분한 겨울빛' },
 ]
 
-const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [string, string]; highlight: [string, string]; timing: [string, string]; advice: [string, string] }> = {
+const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [string, string]; highlight: [string, string]; timing: [string, string]; advice: [string, string]; details: [string, string][] }> = {
   spring: {
     title: ['A riverside in bloom', '꽃빛이 번지는 강변'],
     atmosphere: ['Fresh air · blossom color · gentle light', '산뜻한 공기 · 봄꽃 색감 · 부드러운 햇빛'],
     highlight: ['Yeouido flowers, then a quiet Saetgang walk', '여의도 봄꽃길을 지나 샛강생태공원 산책'],
     timing: ['A quiet weekday morning', '한적한 평일 오전'],
     advice: ['Bloom dates shift each year. Expect crowds near festival areas and slow down around pedestrians.', '개화 시기는 해마다 다릅니다. 축제 구간은 붐빌 수 있으니 보행자 주변에서 속도를 줄이세요.'],
+    details: [['Pink blossoms frame the path; fresh leaves brighten the riverside.', '분홍 꽃이 길을 감싸고 강변 새잎이 밝게 돋아납니다.'], ['Soft morning light gives the water a pale rose reflection.', '부드러운 아침빛이 강물에 연분홍 반사를 남깁니다.'], ['The map colors are seasonal illustrations, not live bloom reports.', '지도 색감은 계절 연출이며 실시간 개화 정보는 아닙니다.']],
   },
   summer: {
     title: ['Find shade by the river', '강변 그늘을 따라'],
@@ -71,6 +72,7 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
     highlight: ['Rest beneath Seoul Forest trees, then meet the river at Ttukseom', '서울숲 그늘에서 쉬고 뚝섬 강변으로 이어가기'],
     timing: ['Early morning or late afternoon', '이른 오전 또는 늦은 오후'],
     advice: ['Avoid peak heat, bring water, and check for rain or wet surfaces before setting out.', '한낮 더위를 피하고 물을 챙기세요. 출발 전 비와 젖은 노면도 확인하세요.'],
+    details: [['Dense green canopies provide pauses between open river sections.', '짙은 녹음이 탁 트인 강변 구간 사이사이에 쉼터를 만듭니다.'], ['The sun sits high; ride early for longer shadows and cooler air.', '해가 높으니 그림자가 길고 공기가 선선한 이른 시간에 달려보세요.'], ['The map uses a warm green summer treatment; check actual heat and rain.', '지도는 따뜻한 여름 녹음을 연출합니다. 실제 더위와 비는 별도로 확인하세요.']],
   },
   autumn: {
     title: ['Follow the golden reeds', '황금빛 갈대길을 따라'],
@@ -78,6 +80,7 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
     highlight: ['Ride from Jamsil toward Amsa and leave time for the reed trail', '잠실에서 암사까지 달린 뒤 갈대 산책길 걷기'],
     timing: ['Morning through mid-afternoon', '오전부터 이른 오후까지'],
     advice: ['Riverside wind can pick up. Check sunset time and leave enough daylight for the return.', '강변 바람이 강해질 수 있어요. 해 지는 시간을 확인하고 돌아올 낮 시간을 남겨두세요.'],
+    details: [['Copper leaves and pale gold reeds line the quieter paths.', '구릿빛 단풍과 연한 금빛 갈대가 한적한 길을 따라 이어집니다.'], ['Low afternoon light brings out warm colors along the river.', '낮게 비치는 오후 햇살이 강변의 따뜻한 색을 또렷하게 만듭니다.'], ['Falling leaves can hide uneven paving, especially after rain.', '낙엽은 특히 비 온 뒤 고르지 않은 노면을 가릴 수 있어요.']],
   },
   winter: {
     title: ['A short ride in clear winter light', '겨울 햇빛 아래 짧은 라이딩'],
@@ -85,15 +88,17 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
     highlight: ['Keep to the Ttukseom riverside and turn back while it is bright', '뚝섬 강변을 짧게 달리고 밝을 때 돌아오기'],
     timing: ['Around midday', '햇살이 있는 한낮'],
     advice: ['Check for ice before riding. Shorten the route if the path is slippery, cold, or visibility is poor.', '주행 전 결빙을 확인하세요. 길이 미끄럽거나 춥고 시야가 나쁘면 코스를 줄이세요.'],
+    details: [['Cool blue water and bare branches give the river a quiet outline.', '푸른 강물과 잎을 떨군 나무가 차분한 강변의 윤곽을 만듭니다.'], ['Snow details on the map are illustrative; they do not report snowfall.', '지도 속 눈 표현은 연출이며 실제 강설 정보가 아닙니다.'], ['Bridges and shaded stretches may freeze before open paths.', '다리와 그늘진 구간은 햇볕 드는 길보다 먼저 얼 수 있어요.']],
   },
 }
 
-function FocusMap({ points, linePoints, selectedStop }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; selectedStop: number | null }) {
+function FocusMap({ points, linePoints, approachPoints, selectedStop }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; approachPoints: LatLngExpression[]; selectedStop: number | null }) {
   const map = useMap()
   useEffect(() => {
-    if (selectedStop === null) map.fitBounds(latLngBounds(linePoints), { padding: [45, 45], maxZoom: 14, animate: false })
+    if (approachPoints.length) map.fitBounds(latLngBounds(selectedStop === null ? [...linePoints, ...approachPoints] : approachPoints), { padding: [42, 42], maxZoom: 15, animate: false })
+    else if (selectedStop === null) map.fitBounds(latLngBounds(linePoints), { padding: [45, 45], maxZoom: 14, animate: false })
     else map.setView(points[selectedStop], 15, { animate: false })
-  }, [map, points, linePoints, selectedStop])
+  }, [map, points, linePoints, approachPoints, selectedStop])
   return null
 }
 
@@ -112,19 +117,28 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [photoLoading, setPhotoLoading] = useState(false)
   const [view, setView] = useState<'city' | 'google' | 'kakao' | 'map'>(() => hasKakaoMapsKey ? 'kakao' : 'map')
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
+  const [trackingLocation, setTrackingLocation] = useState(false)
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
   const [nearestResult, setNearestResult] = useState<{ routeId: string; distance: number } | null>(null)
   const [routeGeometry, setRouteGeometry] = useState<{ routeId: string; points: LonLat[] } | null>(null)
+  const [approachRoute, setApproachRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [showCctv, setShowCctv] = useState(true)
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
-  const pendingNearest = useRef<{ routeId: string; index: number } | null>(null)
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
   const selectedStop = selection?.routeId === route.id ? selection.index : null
   const hoveredStop = hover?.routeId === route.id ? hover.index : null
+  const destinationIndex = selectedStop ?? route.stops.length - 1
+  const destinationStop = route.stops[destinationIndex]
+  const destinationStation = getTouristStation(destinationStop.stationId)
+  const locationLat = userLocation ? Number(userLocation.lat.toFixed(4)) : null
+  const locationLng = userLocation ? Number(userLocation.lng.toFixed(4)) : null
+  const approachKey = locationLat === null || locationLng === null ? null : `${route.id}:${destinationIndex}:${locationLng}:${locationLat}`
+  const activeApproachRoute = approachRoute?.key === approachKey ? approachRoute : null
+  const approachPath = activeApproachRoute?.points ?? null
   const selectStop = useCallback((index: number | null) => {
     setSelection(index === null ? null : { routeId: route.id, index })
   }, [route.id])
@@ -139,6 +153,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const linePoints = useMemo<LatLngExpression[]>(() => routedPath
     ? routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)
     : points, [routedPath, points])
+  const approachPoints = useMemo<LatLngExpression[]>(() => approachPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [approachPath])
   const cctvCenter = useMemo(() => userLocation ?? getTouristStation(route.stops[0].stationId), [route, userLocation])
   const cctvData = usePublicCctvData(cctvCenter)
   const cctvCameras = useMemo(() => showCctv ? cctvData.nearby.map(item => item.camera) : [], [cctvData.nearby, showCctv])
@@ -149,7 +164,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     .sort((first, second) => userLocation ? nearestStopDistance(first, userLocation) - nearestStopDistance(second, userLocation) : 0)
   const visibleRoutes = categoryRoutes.filter(candidate => `${candidate.title} ${candidate.titleKo} ${candidate.area} ${candidate.areaKo}`
     .toLocaleLowerCase().includes(routeSearch.trim().toLocaleLowerCase()))
-  const locateNearestRoute = () => {
+  const locateNearestRoute = (chooseNearest = true) => {
     if (!navigator.geolocation) {
       setLocationError('unavailable')
       return
@@ -158,23 +173,23 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setLocationError(null)
     navigator.geolocation.getCurrentPosition(position => {
       const location = { lat: position.coords.latitude, lng: position.coords.longitude }
-      let closest: { route: TouristRoute; index: number; distance: number } | null = null
+      let closest: { route: TouristRoute; distance: number } | null = null
       for (const candidate of routes) {
-        candidate.stops.forEach((stop, index) => {
+        candidate.stops.forEach(stop => {
           const station = getTouristStation(stop.stationId)
           const distance = distanceMeters(location, station)
-          if (closest === null || distance < closest.distance) closest = { route: candidate, index, distance }
+          if (closest === null || distance < closest.distance) closest = { route: candidate, distance }
         })
       }
       setLocating(false)
       setUserLocation(location)
+      setTrackingLocation(true)
       if (closest === null) return
-      const nearest: { route: TouristRoute; index: number; distance: number } = closest
+      const nearest: { route: TouristRoute; distance: number } = closest
       setNearestResult({ routeId: nearest.route.id, distance: nearest.distance })
-      if (nearest.route.id === route.id) setSelection({ routeId: route.id, index: nearest.index })
-      else {
-        pendingNearest.current = { routeId: nearest.route.id, index: nearest.index }
-        onRouteSelect(nearest.route.id)
+      if (chooseNearest) {
+        if (nearest.route.id === route.id) setSelection(null)
+        else onRouteSelect(nearest.route.id)
       }
     }, error => {
       setLocating(false)
@@ -183,11 +198,28 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   useLayoutEffect(() => {
-    const pending = pendingNearest.current
-    setSelection(pending?.routeId === route.id ? pending : null)
-    if (pending?.routeId === route.id) pendingNearest.current = null
+    setSelection(null)
     setHover(null)
   }, [route.id])
+  useEffect(() => {
+    let active = true
+    if (!navigator.permissions) return
+    void navigator.permissions.query({ name: 'geolocation' }).then(permission => {
+      if (active && permission.state === 'granted') setTrackingLocation(true)
+    }).catch(() => { /* the button still allows manual location access */ })
+    return () => { active = false }
+  }, [])
+  useEffect(() => {
+    if (!trackingLocation || !navigator.geolocation) return
+    const watchId = navigator.geolocation.watchPosition(position => {
+      setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
+      setLocationError(null)
+    }, error => {
+      setLocationError(error.code === 1 ? 'denied' : error.code === 3 ? 'timeout' : 'unavailable')
+      if (error.code === 1) { setTrackingLocation(false); setUserLocation(null) }
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 })
+    return () => navigator.geolocation.clearWatch(watchId)
+  }, [trackingLocation])
   useEffect(() => {
     if (route.season) setDisplaySeason(route.season)
   }, [route.season])
@@ -200,6 +232,26 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       .finally(() => window.clearTimeout(timeout))
     return () => { window.clearTimeout(timeout); controller.abort() }
   }, [route])
+  useEffect(() => {
+    if (approachKey === null || locationLng === null || locationLat === null) {
+      setApproachRoute(null)
+      return
+    }
+    const origin: LonLat = [locationLng, locationLat]
+    const destination: LonLat = [destinationStation.lng, destinationStation.lat]
+    setApproachRoute({ key: approachKey, points: [origin, destination], estimated: true, loading: true })
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
+    void fetchBikePath([origin, destination], controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted) setApproachRoute({ key: approachKey, points: result.geometry, estimated: false, loading: false, distanceMeters: result.distanceMeters })
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setApproachRoute({ key: approachKey, points: [origin, destination], estimated: true, loading: false })
+      })
+      .finally(() => window.clearTimeout(timeout))
+    return () => { window.clearTimeout(timeout); controller.abort() }
+  }, [approachKey, destinationStation.lat, destinationStation.lng, locationLat, locationLng])
   useEffect(() => {
     if (hoveredStop === null || hoveredStop >= route.stops.length) {
       setSceneryPhoto(null)
@@ -236,9 +288,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom={false}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
-    <FocusMap points={points} linePoints={linePoints} selectedStop={selectedStop} />
+    <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} selectedStop={selectedStop} />
     <Polyline positions={linePoints} pathOptions={{ color: '#f5f5ed', weight: 9, opacity: .96 }} />
     <Polyline positions={linePoints} pathOptions={{ color: '#08765b', weight: 5, opacity: 1 }} />
+    {approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 9, opacity: .95 }} />}
+    {approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#3578e5', weight: 5, opacity: 1, dashArray: approachRoute?.estimated ? '8 7' : undefined }} />}
     {userLocation && <CircleMarker center={[userLocation.lat, userLocation.lng]} radius={9}
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#246fe5', fillOpacity: 1 }}>
       <Tooltip direction="top">{text('You are here', '내 위치')}</Tooltip>
@@ -273,12 +327,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </div>
       <div className={`tour-map-stage tour-weather-${displaySeason}`} data-season={displaySeason} onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} cctvCameras={cctvCameras} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} cctvCameras={cctvCameras} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} cctvCameras={cctvCameras} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} cctvCameras={cctvCameras} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
         {view === 'map' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <div className="tour-season-atmosphere" aria-hidden="true" />
         <div className="tour-season-controls">
@@ -291,6 +345,17 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             {view !== 'google' && view !== 'kakao' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
           </div>
         </div>
+        <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text('Show my location and a route to the destination', '내 위치와 목적지까지의 경로 표시')}>
+          <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
+        </button>
+        {userLocation && <div className="tour-journey-legend" role="status">
+          <span className="tour-journey-legend-route"><i aria-hidden="true" />{text('Your location → destination', '내 위치 → 목적지')}</span>
+          <strong>{text(destinationStop.place, destinationStop.placeKo)}</strong>
+          <small>{activeApproachRoute?.loading ? text('Finding a bike route…', '자전거 경로를 찾는 중…')
+            : activeApproachRoute?.estimated ? text('Straight connection shown until a road route is available', '도로 경로를 찾지 못해 직선으로 연결해요')
+              : activeApproachRoute?.distanceMeters ? text(`${distanceLabel(activeApproachRoute.distanceMeters)} by bike route`, `자전거 경로 ${distanceLabel(activeApproachRoute.distanceMeters)}`)
+                : text('Bike route shown in blue', '파란색으로 이동 경로를 표시해요')}</small>
+        </div>}
         {view !== 'kakao' && <div className="tour-map-rotate-controls" role="group" aria-label={text('Rotate the map', '지도 회전')}>
           <button type="button" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>
           <button type="button" onClick={() => rotateMap('right')} aria-label={text('Rotate map to the right', '지도를 오른쪽으로 회전')}>→</button>
@@ -340,7 +405,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <input type="search" value={routeSearch} onChange={event => setRouteSearch(event.target.value)}
             placeholder={text('Search Seoul routes', '서울 코스 검색')} aria-label={text('Search routes', '코스 검색')} />
         </label>
-        <button type="button" className="tour-nearby-button" onClick={locateNearestRoute} disabled={locating}>
+        <button type="button" className="tour-nearby-button" onClick={() => locateNearestRoute()} disabled={locating}>
           <span aria-hidden="true">◎</span>{locating ? text('Finding nearby routes…', '가까운 코스를 찾는 중…') : text('Find routes near me', '내 위치로 가까운 코스 찾기')}
         </button>
         <p className="tour-location-result" role="status">
@@ -348,7 +413,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             : locationError === 'timeout' ? text('Location timed out. Please try again.', '위치를 찾는 시간이 초과됐어요. 다시 시도해 주세요.')
               : locationError === 'unavailable' ? text('Your location is unavailable. Choose a route below.', '현재 위치를 사용할 수 없어요. 아래에서 코스를 선택해 주세요.')
                 : nearestResult ? text(`Nearest stop: ${distanceLabel(nearestResult.distance)} away`, `가장 가까운 경유지까지 ${distanceLabel(nearestResult.distance)}`)
-                  : text('Use your location to highlight the closest course.', '현재 위치에서 가장 가까운 코스를 지도에 표시합니다.')}
+                  : userLocation ? text('Your position and route to the selected destination are on the map.', '지도에 내 위치와 선택한 목적지까지의 경로를 표시했어요.')
+                    : text('Use your location to show a route from here to your destination.', '내 위치를 사용해 목적지까지의 경로를 지도에 표시합니다.')}
         </p>
         <button type="button" className="tour-cctv-toggle" aria-pressed={showCctv} onClick={() => setShowCctv(value => !value)}>
           <span className="tour-cctv-dot" aria-hidden="true" />
@@ -386,6 +452,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <div><small>{text('ROUTE MOMENT', '이 계절의 장면')}</small><strong>{text(...seasonGuide.highlight)}</strong></div>
           </div>
           <p className="tour-season-guide-advice"><span aria-hidden="true">↗</span>{text(...seasonGuide.advice)}</p>
+          <ul className="tour-season-guide-details">{seasonGuide.details.map((detail, index) => <li key={index}>{text(...detail)}</li>)}</ul>
           <div className="tour-season-guide-footer"><strong>{text(route.title, route.titleKo)}</strong><span>{text(route.distance ?? route.suggestedTime, route.distance ?? route.suggestedTimeKo)}</span></div>
         </section>}
       </div>
