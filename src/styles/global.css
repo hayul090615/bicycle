@@ -1719,7 +1719,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-journey-legend-route { display: flex; align-items: center; gap: .35rem; font-weight: 800; }
 .tour-journey-legend-route i { width: 20px; border-top: 4px solid #2479db; }
 .tour-journey-legend strong { font-size: .72rem; }
+.tour-journey-legend b { color: #135eaf; font-size: .75rem; }
 .tour-journey-legend small { color: #5a7184; line-height: 1.4; }
+.tour-sidebar-heading > .tour-bike-time { display: grid; gap: .18rem; margin-top: .7rem; padding: .65rem .75rem; border: 1px solid #cfe0d3; border-radius: 6px; background: #eff7f0; }
+.tour-bike-time strong { color: #176747; font-size: .79rem; line-height: 1.35; }
+.tour-bike-time small { color: #5a7566; font-size: .61rem; line-height: 1.4; }
 .tour-theme-button { padding: .55rem .75rem; border: 1px solid #cbd5cc; border-radius: 6px; color: #3b5a48; background: #f3f6f1; font: 750 .72rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; white-space: nowrap; }
 .tour-theme-button:hover { background: #e8f1e9; }
 
@@ -1756,6 +1760,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-season-picker .tour-season-tab--autumn:not([aria-pressed='true']) { background: #514033; }
 .tour-screen--dark .tour-season-picker .tour-season-tab--winter:not([aria-pressed='true']) { background: #304651; }
 .tour-screen--dark .tour-journey-legend small { color: #aac4d7; }
+.tour-screen--dark .tour-journey-legend b { color: #91c8ff; }
+.tour-screen--dark .tour-sidebar-heading > .tour-bike-time { border-color: #426651; background: #263d30; }
+.tour-screen--dark .tour-bike-time strong { color: #b5f3ce; }
+.tour-screen--dark .tour-bike-time small { color: #bdd5c3; }
+.tour-screen--dark .tour-more-details > summary strong, .tour-screen--dark .tour-safety-details > summary strong { color: #eef6ef; }
+.tour-screen--dark .tour-more-details > summary small, .tour-screen--dark .tour-safety-details > summary small { color: #ebc980; }
+.tour-screen--dark .tour-more-details > summary i, .tour-screen--dark .tour-safety-details > summary i { color: #eaf5ed; border-color: #718e7a; background: #2b4035; }
+.tour-screen--dark .tour-more-details[open] > summary, .tour-screen--dark .tour-safety-details[open] > summary { border-color: #42594a; background: #26382e; }
+.tour-screen--dark .tour-safety-content, .tour-screen--dark .tour-checks-route, .tour-screen--dark .tour-fine-print { color: #c7d8ca !important; }
+.tour-screen--dark .tour-route-heading h2, .tour-screen--dark .tour-category-intro h3 { color: #eef6ef; }
+.tour-screen--dark .tour-category-intro { background: #283b30; }
+.tour-screen--dark .tour-category-intro p, .tour-screen--dark .tour-route-tab .tour-route-discovery { color: #c4d4c7; }
+.tour-screen--dark .tour-route-tab .tour-route-open, .tour-screen--dark .tour-route-heading a,
+.tour-screen--dark .tour-route-source a, .tour-screen--dark .tour-footer a, .tour-screen--dark .tour-resource-link { color: #a3e6bb; }
+.tour-screen--dark .tour-route-tab.is-selected { color: #f5fff5; border-color: #70b187; background: #315b43; }
 @media (max-width: 600px) {
   .tour-theme-button { padding: .32rem .36rem; font-size: .52rem; }
   .tour-map-locate { right: .55rem; bottom: .65rem; padding: .42rem .55rem; font-size: .6rem; }
