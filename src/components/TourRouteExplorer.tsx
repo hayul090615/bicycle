@@ -11,12 +11,30 @@ import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
 import { fetchBikePath, fetchBikeRoute, type LonLat } from '../services/bikeRoute'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
-import { fetchRouteGrades, fetchRouteSignals, type RouteCondition } from '../services/routeConditions'
+import { clusterPublicCameras } from '../services/publicCctv'
+import { fetchRouteGrades, fetchRouteRestaurants, fetchRouteSignals, type RouteCondition, type RouteRestaurant } from '../services/routeConditions'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
 type Coordinates = { lat: number; lng: number }
 type RotationRequest = { direction: 'left' | 'right'; serial: number }
+type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders'
+type MapLayers = Record<MapLayerKey, boolean>
+const DEFAULT_MAP_LAYERS: MapLayers = { course: true, restaurants: false, cctv: true, roadInfo: true, riders: true }
+
+function readMapLayers(): MapLayers {
+  try {
+    const saved = localStorage.getItem('seoul-bike-map-layers-v1')
+    if (!saved) return DEFAULT_MAP_LAYERS
+    const parsed = JSON.parse(saved) as Partial<MapLayers>
+    return Object.fromEntries(Object.keys(DEFAULT_MAP_LAYERS).map(key => [
+      key,
+      typeof parsed[key as MapLayerKey] === 'boolean' ? parsed[key as MapLayerKey] : DEFAULT_MAP_LAYERS[key as MapLayerKey],
+    ])) as MapLayers
+  } catch {
+    return DEFAULT_MAP_LAYERS
+  }
+}
 const categoryNames: Record<TourCategory, [string, string]> = {
   sightseeing: ['Sights', '관광'],
   fitness: ['Workout', '운동'],
@@ -103,13 +121,22 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
   },
 }
 
-function FocusMap({ points, linePoints, approachPoints, selectedStop }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; approachPoints: LatLngExpression[]; selectedStop: number | null }) {
+function FocusMap({ points, linePoints, approachPoints, selectedStop, userLocation, locationFocusRequest }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; approachPoints: LatLngExpression[]; selectedStop: number | null; userLocation: Coordinates | null; locationFocusRequest: number }) {
   const map = useMap()
+  const lastFocusRequest = useRef(0)
+  const userLocationRef = useRef(userLocation)
+  userLocationRef.current = userLocation
   useEffect(() => {
+    const currentLocation = userLocationRef.current
+    if (locationFocusRequest > lastFocusRequest.current && currentLocation) {
+      lastFocusRequest.current = locationFocusRequest
+      map.setView([currentLocation.lat, currentLocation.lng], 16, { animate: false })
+      return
+    }
     if (approachPoints.length) map.fitBounds(latLngBounds(selectedStop === null ? [...linePoints, ...approachPoints] : approachPoints), { padding: [42, 42], maxZoom: 15, animate: false })
     else if (selectedStop === null) map.fitBounds(latLngBounds(linePoints), { padding: [45, 45], maxZoom: 14, animate: false })
     else map.setView(points[selectedStop], 15, { animate: false })
-  }, [map, points, linePoints, approachPoints, selectedStop])
+  }, [map, points, linePoints, approachPoints, selectedStop, locationFocusRequest])
   return null
 }
 
@@ -126,7 +153,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [hover, setHover] = useState<{ routeId: string; index: number } | null>(null)
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
-  const [view, setView] = useState<'city' | 'google' | 'kakao' | 'map'>(() => hasKakaoMapsKey ? 'kakao' : 'map')
+  const [view, setView] = useState<'city' | 'google' | 'kakao' | 'map'>('city')
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [trackingLocation, setTrackingLocation] = useState(false)
   const [locating, setLocating] = useState(false)
@@ -139,7 +166,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     gradesStatus: 'idle' | 'loading' | 'ready' | 'unavailable'
   }>({ routeId: '', signals: [], grades: [], signalsStatus: 'idle', gradesStatus: 'idle' })
   const [approachRoute, setApproachRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
-  const [showCctv, setShowCctv] = useState(true)
+  const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
+  const [locationFocusRequest, setLocationFocusRequest] = useState(0)
+  const [routePlacesState, setRoutePlacesState] = useState<{ routeId: string; places: RouteRestaurant[]; status: 'idle' | 'loading' | 'ready' | 'unavailable' }>(
+    { routeId: '', places: [], status: 'idle' },
+  )
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
@@ -169,8 +200,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }), [route])
   const routedPath = routeGeometry?.routeId === route.id ? routeGeometry.points : null
   const activeRoadConditions = roadConditions.routeId === route.id ? roadConditions : null
+  const activeRoutePlaces = routePlacesState.routeId === route.id ? routePlacesState : null
   const routeSignals = activeRoadConditions?.signals ?? []
   const routeGrades = activeRoadConditions?.grades ?? []
+  const routeRestaurants = activeRoutePlaces?.places ?? []
+  const showCourse = mapLayers.course
+  const showRestaurants = mapLayers.restaurants
+  const showCctv = mapLayers.cctv
+  const showRoadInfo = mapLayers.roadInfo
+  const showRiders = mapLayers.riders
   const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
   const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
     : activeRoadConditions?.signalsStatus === 'ready' ? String(routeSignals.length) : '—'
@@ -191,9 +229,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     ? routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)
     : points, [routedPath, points])
   const approachPoints = useMemo<LatLngExpression[]>(() => approachPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [approachPath])
-  const cctvCenter = useMemo(() => userLocation ?? getTouristStation(route.stops[0].stationId), [route, userLocation])
-  const cctvData = usePublicCctvData(cctvCenter)
-  const cctvCameras = useMemo(() => showCctv ? cctvData.nearby.map(item => item.camera) : [], [cctvData.nearby, showCctv])
+  const cctvData = usePublicCctvData()
+  const cctvCameras = useMemo(() => showCctv ? cctvData.cameras : [], [cctvData.cameras, showCctv])
+  const fallbackCctvClusters = useMemo(() => showCctv
+    ? clusterPublicCameras(cctvCameras, getTouristStation(route.stops[0].stationId), 48_000, 2_000)
+    : [], [cctvCameras, route.stops, showCctv])
   const solar = getSolarPosition(shadowDate || todayInSeoul(), shadowMinutes, SEOUL_REFERENCE.lat, SEOUL_REFERENCE.lng)
   const activeSeason = seasonOptions.find(item => item.id === displaySeason) ?? seasonOptions[0]
   const seasonGuide = seasonGuides[displaySeason]
@@ -221,6 +261,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       setLocating(false)
       setUserLocation(location)
       setTrackingLocation(true)
+      setLocationFocusRequest(request => request + 1)
       if (closest === null) return
       const nearest: { route: TouristRoute; distance: number } = closest
       setNearestResult({ routeId: nearest.route.id, distance: nearest.distance })
@@ -234,6 +275,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 })
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
+  const toggleMapLayer = (layer: MapLayerKey) => setMapLayers(current => ({ ...current, [layer]: !current[layer] }))
   useLayoutEffect(() => {
     setSelection(null)
     setHover(null)
@@ -246,6 +288,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     }).catch(() => { /* the button still allows manual location access */ })
     return () => { active = false }
   }, [])
+  useEffect(() => {
+    try { localStorage.setItem('seoul-bike-map-layers-v1', JSON.stringify(mapLayers)) } catch { /* Map controls remain available without storage. */ }
+  }, [mapLayers])
   useEffect(() => {
     if (!trackingLocation || !navigator.geolocation) return
     const watchId = navigator.geolocation.watchPosition(position => {
@@ -298,6 +343,26 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       gradesController.abort()
     }
   }, [route.id, routedPath])
+  useEffect(() => {
+    if (!showRestaurants || !routedPath || routedPath.length < 2) {
+      setRoutePlacesState({ routeId: route.id, places: [], status: 'idle' })
+      return
+    }
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 14000)
+    let active = true
+    setRoutePlacesState({ routeId: route.id, places: [], status: 'loading' })
+    void fetchRouteRestaurants(routedPath, controller.signal).then(places => {
+      if (active) setRoutePlacesState({ routeId: route.id, places, status: 'ready' })
+    }).catch(() => {
+      if (active) setRoutePlacesState(current => current.routeId === route.id ? { ...current, status: 'unavailable' } : current)
+    }).finally(() => window.clearTimeout(timeout))
+    return () => {
+      active = false
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [route.id, routedPath, showRestaurants])
   useEffect(() => {
     if (approachKey === null || locationLng === null || locationLat === null) {
       setApproachRoute(null)
@@ -354,31 +419,38 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom={false}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
-    <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} selectedStop={selectedStop} />
-    <Polyline positions={linePoints} pathOptions={{ color: '#f5f5ed', weight: 9, opacity: .96 }} />
-    <Polyline positions={linePoints} pathOptions={{ color: '#08765b', weight: 5, opacity: 1 }} />
-    {approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 9, opacity: .95 }} />}
-    {approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#3578e5', weight: 5, opacity: 1, dashArray: approachRoute?.estimated ? '8 7' : undefined }} />}
+    <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
+    {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#f5f5ed', weight: 9, opacity: .96 }} />}
+    {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#08765b', weight: 5, opacity: 1 }} />}
+    {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 9, opacity: .95 }} />}
+    {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#3578e5', weight: 5, opacity: 1, dashArray: approachRoute?.estimated ? '8 7' : undefined }} />}
     {userLocation && <CircleMarker center={[userLocation.lat, userLocation.lng]} radius={9}
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#246fe5', fillOpacity: 1 }}>
       <Tooltip direction="top">{text('You are here', '내 위치')}</Tooltip>
     </CircleMarker>}
-    {routeConditions.map(condition => <CircleMarker key={condition.id} center={[condition.lat, condition.lng]}
+    {showRoadInfo && routeConditions.map(condition => <CircleMarker key={condition.id} center={[condition.lat, condition.lng]}
       radius={condition.kind === 'signal' ? 7 : 9} pathOptions={{ color: '#fff', weight: 2,
         fillColor: condition.kind === 'signal' ? '#e3aa45' : condition.kind === 'uphill' ? '#c85c43' : '#428cba', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{condition.kind === 'signal' ? text('Signal', '신호등') : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`}</Tooltip>
     </CircleMarker>)}
-    {cctvCameras.map(camera => <CircleMarker key={`cctv-${camera.id}`} center={[camera.lat, camera.lng]} radius={7}
+    {showRestaurants && routeRestaurants.map(place => <CircleMarker key={`place-${place.id}`} center={[place.lat, place.lng]} radius={8}
+      pathOptions={{ color: '#fff', weight: 2, fillColor: place.kind === 'cafe' ? '#8d6246' : '#d8723b', fillOpacity: 1 }}>
+      <Tooltip direction="top" permanent>{place.kind === 'cafe' ? '☕ ' : '🍽 '}{place.name}</Tooltip>
+    </CircleMarker>)}
+    {fallbackCctvClusters.map((cluster, index) => <CircleMarker key={`cctv-cluster-${index}`} center={[cluster.lat, cluster.lng]} radius={cluster.cameras.length > 1 ? 9 : 7}
       pathOptions={{ color: '#fff', weight: 2, fillColor: '#7654ba', fillOpacity: .98 }}>
       <Popup>
-        <strong>{camera.purpose || text('Public CCTV', '공공 CCTV')}</strong>
-        <div>{camera.name}</div><div>{camera.address || text('Address not listed', '주소 정보 없음')}</div>
-        <div>{text(`Cameras: ${camera.cameras || '—'}`, `카메라 ${camera.cameras || '—'}대`)} · {camera.resolution || '—'}</div>
-        <div>{text(`Data date: ${camera.updatedAt || '—'}`, `자료 기준일: ${camera.updatedAt || '—'}`)}</div>
-        <div>{text('Public location record; no live video URL is provided.', '공개된 설치 위치이며 실시간 영상 주소는 제공되지 않습니다.')}</div>
+        {cluster.cameras.length > 1 ? <><strong>{text(`${cluster.cameras.length} public CCTV locations`, `공공 CCTV ${cluster.cameras.length}곳`)}</strong>
+          {cluster.cameras.slice(0, 6).map(camera => <div key={camera.id}>{camera.name} · {camera.address}</div>)}</>
+          : <><strong>{cluster.cameras[0].purpose || text('Public CCTV', '공공 CCTV')}</strong>
+            <div>{cluster.cameras[0].name}</div><div>{cluster.cameras[0].address || text('Address not listed', '주소 정보 없음')}</div>
+            <div>{text(`Cameras: ${cluster.cameras[0].cameras || '—'}`, `카메라 ${cluster.cameras[0].cameras || '—'}대`)} · {cluster.cameras[0].resolution || '—'}</div>
+            <div>{text(`Data date: ${cluster.cameras[0].updatedAt || '—'}`, `자료 기준일: ${cluster.cameras[0].updatedAt || '—'}`)}</div></>}
+        <div>{text('Public location records; live video is not provided.', '공개 설치 위치이며 실시간 영상은 제공되지 않습니다.')}</div>
       </Popup>
+      <Tooltip direction="top">CCTV {cluster.cameras.length > 1 ? cluster.cameras.length : ''}</Tooltip>
     </CircleMarker>)}
-    {route.stops.map((stop, index) => <CircleMarker key={stop.stationId} center={points[index]} radius={selectedStop === index ? 13 : 9}
+    {showCourse && route.stops.map((stop, index) => <CircleMarker key={stop.stationId} center={points[index]} radius={selectedStop === index ? 13 : 9}
       eventHandlers={{ click: () => selectStop(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
     </CircleMarker>)}
@@ -398,12 +470,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </div>
       <div className={`tour-map-stage tour-weather-${displaySeason}`} data-season={displaySeason} onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} routeConditions={routeConditions} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} routeConditions={routeConditions} cctvCameras={cctvCameras} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} routeConditions={routeConditions} cctvCameras={cctvCameras} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
         {view === 'map' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} routeConditions={routeConditions} cctvCameras={cctvCameras} showCctv={showCctv} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <div className="tour-season-atmosphere" aria-hidden="true" />
         <div className="tour-season-controls">
@@ -488,20 +560,30 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                   : userLocation ? text('Your position and route to the selected destination are on the map.', '지도에 내 위치와 선택한 목적지까지의 경로를 표시했어요.')
                     : text('Use your location to show a route from here to your destination.', '내 위치를 사용해 목적지까지의 경로를 지도에 표시합니다.')}
         </p>
-        <button type="button" className="tour-cctv-toggle" aria-pressed={showCctv} onClick={() => setShowCctv(value => !value)}>
-          <span className="tour-cctv-dot" aria-hidden="true" />
-          <span>{text('Show public CCTV on map', '지도에 공공 CCTV 표시')}</span>
-          <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvData.nearby.length}</strong>
-          <i>{showCctv ? text('ON', '표시') : text('OFF', '숨김')}</i>
-        </button>
-        <p className="tour-cctv-status" role="status">{cctvData.loading
-          ? text('Loading public CCTV data…', '공공 CCTV 데이터를 불러오는 중…')
-          : cctvData.error
-            ? text('Public camera locations could not be loaded.', '공공 CCTV 위치 데이터를 불러오지 못했습니다.')
-            : text(`${cctvData.nearby.length} locations shown within 5 km · data ${cctvData.latestRecordDate}`, `반경 5km 내 ${cctvData.nearby.length}곳 표시 · 자료 기준일 ${cctvData.latestRecordDate}`)}</p>
-        <a className="tour-cctv-source" href="https://www.data.go.kr/data/15013094/standard.do" target="_blank" rel="noopener noreferrer">
-          {text('Source: National Public CCTV Standard Data ↗', '출처: 전국 공공 CCTV 표준데이터 ↗')}
-        </a>
+        <details className="tour-my-map" open>
+          <summary><strong>{text('My map', '나만의 지도')}</strong><span>{text('Choose what appears on the map', '지도에 표시할 항목을 선택하세요')}</span></summary>
+          <div className="tour-my-map-layers" role="group" aria-label={text('Map layers', '지도 항목')}>
+            <label><input type="checkbox" checked={showCourse} onChange={() => toggleMapLayer('course')} /><span>{text('Tour route', '관광 코스')}</span></label>
+            <label><input type="checkbox" checked={showRestaurants} onChange={() => toggleMapLayer('restaurants')} /><span>{text('Restaurants', '맛집')}</span><small>{activeRoutePlaces?.status === 'loading' ? '…' : routeRestaurants.length || ''}</small></label>
+            <label><input type="checkbox" checked={showCctv} onChange={() => toggleMapLayer('cctv')} /><span>{text('Public CCTV', '공공 CCTV')}</span><small>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvData.count.toLocaleString()}</small></label>
+            <label><input type="checkbox" checked={showRoadInfo} onChange={() => toggleMapLayer('roadInfo')} /><span>{text('Signals & slopes', '신호등·오르막·내리막')}</span><small>{routeConditions.length || ''}</small></label>
+            <label><input type="checkbox" checked={showRiders} onChange={() => toggleMapLayer('riders')} /><span>{text('AI riders', 'AI 라이더')}</span></label>
+          </div>
+          <p className="tour-cctv-status" role="status">{cctvData.loading
+            ? text('Loading Seoul public CCTV locations…', '서울 공공 CCTV 위치를 불러오는 중…')
+            : cctvData.error
+              ? text('Public camera locations could not be loaded.', '공공 CCTV 위치 데이터를 불러오지 못했습니다.')
+              : text(`${cctvData.count.toLocaleString()} locations across Seoul · map clusters nearby cameras · data ${cctvData.latestRecordDate}`, `서울 전역 ${cctvData.count.toLocaleString()}곳 · 가까운 CCTV는 지도에서 묶어 표시 · 자료 기준일 ${cctvData.latestRecordDate}`)}</p>
+          <a className="tour-cctv-source" href="https://www.data.go.kr/data/15013094/standard.do" target="_blank" rel="noopener noreferrer">
+            {text('Source: National Public CCTV Standard Data ↗', '출처: 전국 공공 CCTV 표준데이터 ↗')}
+          </a>
+        </details>
+        {showRestaurants && activeRoutePlaces && <p className="tour-cctv-status" role="status">
+          {activeRoutePlaces.status === 'loading' ? text('Loading food places along the route…', '코스 주변 식당을 불러오는 중…')
+            : activeRoutePlaces.status === 'unavailable' ? text('Nearby food places could not be loaded. Try again shortly.', '주변 식당을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+              : activeRoutePlaces.places.length ? text(`${activeRoutePlaces.places.length} cafes and food places shown near the route.`, `코스 주변 카페·식당 ${activeRoutePlaces.places.length}곳을 표시합니다.`)
+                : text('No named food places were found near this route.', '이 코스 주변에 이름이 등록된 식당을 찾지 못했습니다.')}
+        </p>}
         <section className="tour-road-conditions" aria-live="polite" aria-label={text('Route terrain and traffic signals', '코스 경사와 신호등')}>
           <div className="tour-road-conditions-heading"><strong>{text('Along this route', '이 코스의 도로 정보')}</strong><span>{text('MAP DATA', '지도 자료')}</span></div>
           <div className="tour-road-conditions-grid">
