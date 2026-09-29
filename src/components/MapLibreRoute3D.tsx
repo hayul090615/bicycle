@@ -5,6 +5,7 @@ import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeo
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
 import type { LonLat } from '../services/bikeRoute'
+import type { PublicCamera } from '../services/publicCctv'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl)
@@ -42,10 +43,13 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showCctv, panRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
+  cctvCameras: PublicCamera[]
+  showCctv: boolean
+  panRequest: { direction: 'left' | 'right'; serial: number } | null
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
   selectedStop: number | null
@@ -58,6 +62,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, locale, userLocati
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
+  const cctvMarkersRef = useRef<MapLibreMarker[]>([])
   const userMarkerRef = useRef<MapLibreMarker | null>(null)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
@@ -118,6 +123,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, locale, userLocati
       window.clearTimeout(timeout)
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      cctvMarkersRef.current.forEach(marker => marker.remove())
+      cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
       map.remove()
@@ -220,6 +227,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, locale, userLocati
       updateBuildingShadowsRef.current = () => {}
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      cctvMarkersRef.current.forEach(marker => marker.remove())
+      cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
       if (!failed) map.remove()
@@ -292,6 +301,52 @@ export function MapLibreRoute3D({ viewMode, route, routePath, locale, userLocati
     linePoints.forEach(point => bounds.extend(point))
     map.fitBounds(bounds, { padding: { top: 66, right: 72, bottom: 66, left: 72 }, maxZoom: 14.2, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
   }, [isFlatMap, linePoints, points, selectedStop, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    cctvMarkersRef.current.forEach(marker => marker.remove())
+    cctvMarkersRef.current = []
+    if (!showCctv) return
+    cctvCameras.forEach(camera => {
+      const label = camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')
+      const element = document.createElement('button')
+      element.type = 'button'
+      element.className = 'tour-cctv-map-marker'
+      element.setAttribute('aria-label', `${label}: ${camera.name}`)
+      element.title = `${label} · ${camera.name}`
+      element.textContent = 'C'
+
+      const popupContent = document.createElement('div')
+      popupContent.className = 'tour-cctv-popup'
+      const heading = document.createElement('strong')
+      heading.textContent = label
+      const name = document.createElement('div')
+      name.textContent = camera.name
+      const address = document.createElement('div')
+      address.textContent = camera.address || (locale === 'ko' ? '주소 정보 없음' : 'Address not listed')
+      const metadata = document.createElement('small')
+      metadata.textContent = `${locale === 'ko' ? '카메라' : 'Cameras'} ${camera.cameras || '—'} · ${camera.resolution || '—'} · ${camera.direction || '—'}`
+      const date = document.createElement('small')
+      date.textContent = `${locale === 'ko' ? '자료 기준일' : 'Data date'} ${camera.updatedAt || '—'}`
+      const notice = document.createElement('small')
+      notice.textContent = locale === 'ko'
+        ? '공개 설치 위치 정보입니다. 실시간 영상 주소는 제공되지 않습니다.'
+        : 'Public installation record; no live video URL is provided.'
+      popupContent.append(heading, name, address, metadata, date, notice)
+      const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '300px' }).setDOMContent(popupContent)
+      cctvMarkersRef.current.push(new maplibregl.Marker({ element, anchor: 'bottom' })
+        .setLngLat([camera.lng, camera.lat])
+        .setPopup(popup)
+        .addTo(map))
+    })
+  }, [cctvCameras, locale, showCctv, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready' || !panRequest) return
+    map.panBy([panRequest.direction === 'left' ? 260 : -260, 0], { duration: 420 })
+  }, [panRequest, status])
 
   useEffect(() => {
     const map = mapRef.current

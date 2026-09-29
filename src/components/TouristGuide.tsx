@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { getTouristStation, touristRoutes, type TourCategory, type TouristRoute } from '../data/touristRoutes'
 import { nowInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
-import { PublicCctvMap } from './PublicCctvMap'
 import { SeoulRideIllustration } from './SeoulRideIllustration'
 import { TourRouteExplorer } from './TourRouteExplorer'
 
@@ -151,7 +150,6 @@ export function TouristGuide({ onBack }: { onBack: () => void }) {
             <h2 id="tour-checks-title">{textFor(locale, 'A little planning, a better ride.', '출발 전에 한 번 더 살펴보세요.')}</h2>
             <p className="tour-checks-route" aria-live="polite">{textFor(locale, route.title, route.titleKo)} · {textFor(locale, 'Daylight and cameras near the route start', '코스 출발점 기준 햇빛·주변 CCTV')}</p></div></div>
           <div className="tour-preflight-grid">
-          <PublicCctvMap route={route} locale={locale} />
           <section className="tour-info-card tour-safety-card" aria-labelledby="tour-safety-title">
             <div className="tour-card-kicker">{textFor(locale, 'RIDE INFORMED', '안전하게 달리기')}</div>
             <h2 id="tour-safety-title">{textFor(locale, 'Cycling safety', '자전거 안전 정보')}</h2>

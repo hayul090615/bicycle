@@ -1,17 +1,19 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { latLngBounds, type LatLngExpression } from 'leaflet'
-import { getTouristStation, type TourCategory, type TouristRoute } from '../data/touristRoutes'
+import { getTouristStation, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { GoogleRoute3D } from './GoogleRoute3D'
 import { hasGoogleMapsKey } from '../services/googleMaps3d'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
 import { fetchBikeRoute, type LonLat } from '../services/bikeRoute'
+import { usePublicCctvData } from '../hooks/usePublicCctvData'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
 type Coordinates = { lat: number; lng: number }
+type PanRequest = { direction: 'left' | 'right'; serial: number }
 const categoryNames: Record<TourCategory, [string, string]> = {
   sightseeing: ['Sights', '관광'],
   fitness: ['Workout', '운동'],
@@ -38,12 +40,30 @@ function distanceLabel(meters: number) {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
 }
 
-function FocusMap({ points, linePoints, selectedStop }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; selectedStop: number | null }) {
+function seasonForToday(): TourSeason {
+  const month = Number(todayInSeoul().slice(5, 7))
+  if (month >= 3 && month <= 5) return 'spring'
+  if (month >= 6 && month <= 8) return 'summer'
+  if (month >= 9 && month <= 11) return 'autumn'
+  return 'winter'
+}
+
+const seasonOptions: { id: TourSeason; en: string; ko: string; sceneryEn: string; sceneryKo: string }[] = [
+  { id: 'spring', en: 'Spring', ko: '봄', sceneryEn: 'Blossoms · soft spring light', sceneryKo: '봄꽃과 부드러운 봄빛' },
+  { id: 'summer', en: 'Summer', ko: '여름', sceneryEn: 'Deep green · summer sun', sceneryKo: '짙은 녹음과 여름 햇살' },
+  { id: 'autumn', en: 'Autumn', ko: '가을', sceneryEn: 'Golden leaves · crisp air', sceneryKo: '황금빛 단풍과 맑은 공기' },
+  { id: 'winter', en: 'Winter', ko: '겨울', sceneryEn: 'Snowfall · cool winter haze', sceneryKo: '눈발과 차분한 겨울빛' },
+]
+
+function FocusMap({ points, linePoints, selectedStop, panRequest }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; selectedStop: number | null; panRequest: PanRequest | null }) {
   const map = useMap()
   useEffect(() => {
     if (selectedStop === null) map.fitBounds(latLngBounds(linePoints), { padding: [45, 45], maxZoom: 14, animate: false })
     else map.setView(points[selectedStop], 15, { animate: false })
   }, [map, points, linePoints, selectedStop])
+  useEffect(() => {
+    if (panRequest) map.panBy([panRequest.direction === 'left' ? 240 : -240, 0], { animate: true, duration: .4 })
+  }, [map, panRequest])
   return null
 }
 
@@ -66,6 +86,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
   const [nearestResult, setNearestResult] = useState<{ routeId: string; distance: number } | null>(null)
   const [routeGeometry, setRouteGeometry] = useState<{ routeId: string; points: LonLat[] } | null>(null)
+  const [showCctv, setShowCctv] = useState(true)
+  const [panRequest, setPanRequest] = useState<PanRequest | null>(null)
+  const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const pendingNearest = useRef<{ routeId: string; index: number } | null>(null)
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
@@ -85,7 +108,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const linePoints = useMemo<LatLngExpression[]>(() => routedPath
     ? routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)
     : points, [routedPath, points])
+  const cctvCenter = useMemo(() => userLocation ?? getTouristStation(route.stops[0].stationId), [route, userLocation])
+  const cctvData = usePublicCctvData(cctvCenter)
+  const cctvCameras = showCctv ? cctvData.nearby.map(item => item.camera) : []
   const solar = getSolarPosition(shadowDate || todayInSeoul(), shadowMinutes, SEOUL_REFERENCE.lat, SEOUL_REFERENCE.lng)
+  const activeSeason = seasonOptions.find(item => item.id === displaySeason) ?? seasonOptions[0]
   const categoryRoutes = routes.filter(candidate => candidate.category === category)
     .sort((first, second) => userLocation ? nearestStopDistance(first, userLocation) - nearestStopDistance(second, userLocation) : 0)
   const locateNearestRoute = () => {
@@ -120,12 +147,16 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       setLocationError(error.code === 1 ? 'denied' : error.code === 3 ? 'timeout' : 'unavailable')
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 })
   }
+  const pan = (direction: PanRequest['direction']) => setPanRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   useLayoutEffect(() => {
     const pending = pendingNearest.current
     setSelection(pending?.routeId === route.id ? pending : null)
     if (pending?.routeId === route.id) pendingNearest.current = null
     setHover(null)
   }, [route.id])
+  useEffect(() => {
+    if (route.season) setDisplaySeason(route.season)
+  }, [route.season])
   useEffect(() => {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 12000)
@@ -163,15 +194,32 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       controller.abort()
     }
   }, [hoveredStop, route])
+  const chooseSeason = (season: TourSeason) => {
+    setDisplaySeason(season)
+    if (category === 'seasonal') {
+      const seasonalRoute = routes.find(candidate => candidate.category === 'seasonal' && candidate.season === season)
+      if (seasonalRoute) onRouteSelect(seasonalRoute.id)
+    }
+  }
   const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom={false}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
-    <FocusMap points={points} linePoints={linePoints} selectedStop={selectedStop} />
+    <FocusMap points={points} linePoints={linePoints} selectedStop={selectedStop} panRequest={panRequest} />
     <Polyline positions={linePoints} pathOptions={{ color: '#f5f5ed', weight: 9, opacity: .96 }} />
     <Polyline positions={linePoints} pathOptions={{ color: '#08765b', weight: 5, opacity: 1 }} />
     {userLocation && <CircleMarker center={[userLocation.lat, userLocation.lng]} radius={9}
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#246fe5', fillOpacity: 1 }}>
       <Tooltip direction="top">{text('You are here', '내 위치')}</Tooltip>
     </CircleMarker>}
+    {cctvCameras.map(camera => <CircleMarker key={`cctv-${camera.id}`} center={[camera.lat, camera.lng]} radius={7}
+      pathOptions={{ color: '#fff', weight: 2, fillColor: '#7654ba', fillOpacity: .98 }}>
+      <Popup>
+        <strong>{camera.purpose || text('Public CCTV', '공공 CCTV')}</strong>
+        <div>{camera.name}</div><div>{camera.address || text('Address not listed', '주소 정보 없음')}</div>
+        <div>{text(`Cameras: ${camera.cameras || '—'}`, `카메라 ${camera.cameras || '—'}대`)} · {camera.resolution || '—'}</div>
+        <div>{text(`Data date: ${camera.updatedAt || '—'}`, `자료 기준일: ${camera.updatedAt || '—'}`)}</div>
+        <div>{text('Public location record; no live video URL is provided.', '공개된 설치 위치이며 실시간 영상 주소는 제공되지 않습니다.')}</div>
+      </Popup>
+    </CircleMarker>)}
     {route.stops.map((stop, index) => <CircleMarker key={stop.stationId} center={points[index]} radius={selectedStop === index ? 13 : 9}
       eventHandlers={{ click: () => selectStop(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
@@ -189,14 +237,26 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <button type="button" aria-pressed={view === 'map'} onClick={() => setView('map')}>{text('2D map', '2D 지도')}</button>
         </div>
       </div>
-      <div className="tour-map-stage" onMouseLeave={() => hoverStop(null)}>
+      <div className={`tour-map-stage tour-weather-${displaySeason}`} data-season={displaySeason} onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="city" route={route} routePath={routedPath} cctvCameras={cctvCameras} showCctv={showCctv} panRequest={panRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} cctvCameras={cctvCameras} panRequest={panRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
         {view === 'map' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D viewMode="map" route={route} routePath={routedPath} cctvCameras={cctvCameras} showCctv={showCctv} panRequest={panRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
+        <div className="tour-season-atmosphere" aria-hidden="true" />
+        <div className="tour-season-controls">
+          <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
+            {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
+              aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
+          </div>
+          <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
+        </div>
+        <div className="tour-map-pan-controls" role="group" aria-label={text('Pan the map', '지도 좌우 이동')}>
+          <button type="button" onClick={() => pan('left')} aria-label={text('Show area to the left', '왼쪽 지역 보기')}>←</button>
+          <button type="button" onClick={() => pan('right')} aria-label={text('Show area to the right', '오른쪽 지역 보기')}>→</button>
+        </div>
         {view !== 'google' && <div className="tour-shadow-legend" aria-label={text('Building shadow areas', '건물 그림자 영역')}><span />{text('Building shadows', '건물 그림자')}</div>}
         {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
           <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>
@@ -231,6 +291,20 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                 : nearestResult ? text(`Nearest stop: ${distanceLabel(nearestResult.distance)} away`, `가장 가까운 경유지까지 ${distanceLabel(nearestResult.distance)}`)
                   : text('Use your location to highlight the closest course.', '현재 위치에서 가장 가까운 코스를 지도에 표시합니다.')}
         </p>
+        <button type="button" className="tour-cctv-toggle" aria-pressed={showCctv} onClick={() => setShowCctv(value => !value)}>
+          <span className="tour-cctv-dot" aria-hidden="true" />
+          <span>{text('Show public CCTV on map', '지도에 공공 CCTV 표시')}</span>
+          <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvData.nearby.length}</strong>
+          <i>{showCctv ? text('ON', '표시') : text('OFF', '숨김')}</i>
+        </button>
+        <p className="tour-cctv-status" role="status">{cctvData.loading
+          ? text('Loading public CCTV data…', '공공 CCTV 데이터를 불러오는 중…')
+          : cctvData.error
+            ? text('Public camera locations could not be loaded.', '공공 CCTV 위치 데이터를 불러오지 못했습니다.')
+            : text(`${cctvData.nearby.length} locations shown within 5 km · data ${cctvData.latestRecordDate}`, `반경 5km 내 ${cctvData.nearby.length}곳 표시 · 자료 기준일 ${cctvData.latestRecordDate}`)}</p>
+        <a className="tour-cctv-source" href="https://www.data.go.kr/data/15013094/standard.do" target="_blank" rel="noopener noreferrer">
+          {text('Source: National Public CCTV Standard Data ↗', '출처: 전국 공공 CCTV 표준데이터 ↗')}
+        </a>
         <div className="tour-itinerary-heading"><h3>{text('Browse routes', '코스 구경하기')}</h3><span>{routes.length}{text(' routes', '개 코스')}</span></div>
         <div className="tour-finder-categories" role="group" aria-label={text('Route categories', '코스 종류')}>
           {(Object.keys(categoryNames) as TourCategory[]).map(key => <button key={key} type="button" aria-pressed={category === key}
