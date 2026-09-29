@@ -1707,11 +1707,17 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-season-guide-details li { position: relative; padding-left: .85rem; color: #59675d; font-size: .59rem; line-height: 1.45; }
 .tour-season-guide-details li::before { position: absolute; top: .46em; left: .2rem; width: .31rem; height: .31rem; border-radius: 50%; background: #9d8b60; content: ''; }
 
-.tour-map-person { position: relative; width: 10px; height: 21px; filter: drop-shadow(1px 3px 2px #101d2780); pointer-events: none; }
-.tour-map-person::before { position: absolute; top: 0; left: 3px; width: 7px; height: 7px; border-radius: 50%; background: #d7aa86; box-shadow: 0 1px 0 #492d24; content: ''; }
-.tour-map-person::after { position: absolute; top: 7px; left: 2px; width: 9px; height: 12px; border-radius: 3px 3px 2px 2px; background: #263e64; box-shadow: -2px 9px 0 -1px #26323b, 4px 9px 0 -1px #26323b; content: ''; }
-.tour-map-person--1::after { background: #b8523d; }
-.tour-map-person--2::after { background: #e5ba5b; }
+.tour-map-person { position: relative; display: block; width: 24px; height: 44px; background-repeat: no-repeat; background-size: 300% 100%; filter: drop-shadow(1px 3px 2px #101d2780); pointer-events: none; }
+.tour-map-person--0 { background-position: 0 50%; }
+.tour-map-person--1 { background-position: 50% 50%; }
+.tour-map-person--2 { background-position: 100% 50%; }
+.tour-road-event { min-width: 34px; min-height: 34px; display: grid; place-items: center; padding: .12rem .3rem; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #34453d; box-shadow: 0 2px 9px #15241b80; font: 850 .72rem 'DM Sans', 'Noto Sans KR', sans-serif; white-space: nowrap; cursor: help; }
+.tour-road-event--signal { width: 31px; height: 39px; min-width: 31px; border-radius: 11px; background: #24332d; animation: tour-signal-pulse 2.1s ease-out infinite; }
+.tour-road-event--signal::before { width: 11px; height: 25px; border-radius: 8px; background: radial-gradient(circle at 50% 18%, #ff544f 0 2.3px, #7f302d 3px 4px, transparent 4.5px), radial-gradient(circle at 50% 50%, #ffd064 0 2.3px, #785f2d 3px 4px, transparent 4.5px), radial-gradient(circle at 50% 82%, #69d49b 0 2.3px, #326c50 3px 4px, transparent 4.5px), #46564b; box-shadow: 0 0 8px #ffd36a50; content: ''; }
+.tour-road-event--uphill { border-color: #fff4d2; background: #9c531f; }
+.tour-road-event--downhill { border-color: #d7efff; background: #285f91; }
+.tour-road-condition-card--signal > span { animation: tour-signal-pulse 2.1s ease-out infinite; }
+@keyframes tour-signal-pulse { 0%, 100% { box-shadow: 0 0 0 0 #f8cb5e42; } 50% { box-shadow: 0 0 0 5px #f8cb5e00; } }
 .tour-map-locate { position: absolute; z-index: 1203; right: .85rem; bottom: 1rem; display: flex; align-items: center; gap: .4rem; padding: .55rem .75rem; border: 1px solid #d4e2ed; border-radius: 5px; color: #215b8f; background: #fffffff2; box-shadow: 0 2px 10px #17324b30; font: 750 .7rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
 .tour-map-locate span { font-size: 1.1rem; }
 .tour-map-locate:disabled { opacity: .75; cursor: wait; }
@@ -1724,6 +1730,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-sidebar-heading > .tour-bike-time { display: grid; gap: .18rem; margin-top: .7rem; padding: .65rem .75rem; border: 1px solid #cfe0d3; border-radius: 6px; background: #eff7f0; }
 .tour-bike-time strong { color: #176747; font-size: .79rem; line-height: 1.35; }
 .tour-bike-time small { color: #5a7566; font-size: .61rem; line-height: 1.4; }
+.tour-road-conditions { display: grid; gap: .42rem; margin-top: .6rem; padding: .62rem; border: 1px solid #dce5da; border-radius: 6px; background: #f7f8f2; }
+.tour-road-conditions-heading { display: flex; align-items: center; justify-content: space-between; gap: .35rem; }
+.tour-road-conditions-heading strong { color: #35493c; font-size: .69rem; }
+.tour-road-conditions-heading > span { color: #788675; font-size: .48rem; font-weight: 850; letter-spacing: .1em; }
+.tour-road-conditions-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .28rem; }
+.tour-road-condition-card { min-width: 0; min-height: 48px; display: flex; align-items: center; gap: .32rem; padding: .33rem; border: 1px solid #e1e5d9; border-radius: 4px; background: #fff; }
+.tour-road-condition-card > span { flex: 0 0 auto; font-size: .95rem; font-weight: 900; }
+.tour-road-condition-card > div { min-width: 0; display: grid; gap: .12rem; }
+.tour-road-condition-card small { overflow: hidden; color: #788175; font-size: .47rem; line-height: 1.25; text-overflow: ellipsis; }
+.tour-road-condition-card strong { color: #344b3a; font: 800 .78rem 'DM Sans', 'Noto Sans KR', sans-serif; }
+.tour-road-condition-card--signal > span { font-size: .82rem; }
+.tour-road-condition-card--uphill > span { color: #a45a21; }
+.tour-road-condition-card--downhill > span { color: #3578ad; }
+.tour-road-conditions-note { margin: 0; color: #74796d; font-size: .53rem; line-height: 1.45; }
+.tour-road-conditions-sources { display: flex; flex-wrap: wrap; gap: .55rem; }
+.tour-road-conditions-sources a { color: #39715a; font-size: .51rem; font-weight: 700; text-underline-offset: 2px; }
 .tour-theme-button { padding: .55rem .75rem; border: 1px solid #cbd5cc; border-radius: 6px; color: #3b5a48; background: #f3f6f1; font: 750 .72rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; white-space: nowrap; }
 .tour-theme-button:hover { background: #e8f1e9; }
 
@@ -1762,6 +1784,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-journey-legend small { color: #aac4d7; }
 .tour-screen--dark .tour-journey-legend b { color: #91c8ff; }
 .tour-screen--dark .tour-sidebar-heading > .tour-bike-time { border-color: #426651; background: #263d30; }
+.tour-screen--dark .tour-road-conditions { border-color: #42574c; background: #26352d; }
+.tour-screen--dark .tour-road-conditions-heading strong, .tour-screen--dark .tour-road-condition-card strong { color: #e5eee5; }
+.tour-screen--dark .tour-road-condition-card { border-color: #405147; background: #1d2b25; }
+.tour-screen--dark .tour-road-condition-card small, .tour-screen--dark .tour-road-conditions-note { color: #b4c4b6; }
+.tour-screen--dark .tour-road-conditions-sources a { color: #a3e6bb; }
 .tour-screen--dark .tour-bike-time strong { color: #b5f3ce; }
 .tour-screen--dark .tour-bike-time small { color: #bdd5c3; }
 .tour-screen--dark .tour-more-details > summary strong, .tour-screen--dark .tour-safety-details > summary strong { color: #eef6ef; }
