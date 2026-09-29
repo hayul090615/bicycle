@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker } from 'maplibre-gl'
-import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
+import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
@@ -14,6 +14,30 @@ const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
 const IMAGERY_ATTRIBUTION = 'Imagery © Esri. Sources: Esri, Vantor, Earthstar Geographics, and the GIS User Community.'
 const SATELLITE_SURFACES = new Set(['park', 'landuse', 'landcover', 'water', 'aeroway', 'building'])
 const EMPTY_SHADOWS: GeoJSON.FeatureCollection<GeoJSON.Polygon> = { type: 'FeatureCollection', features: [] }
+const EMPTY_LINE: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: 'FeatureCollection', features: [] }
+const SEASON_BUILDING_COLORS: Record<TourSeason, string> = {
+  spring: '#c5bbb8', summer: '#b6bab1', autumn: '#c6b6a5', winter: '#bcc7ca',
+}
+
+function samplePath(path: LonLat[], count: number): LonLat[] {
+  if (path.length < 2) return []
+  const distances = [0]
+  for (let index = 1; index < path.length; index++) {
+    const [startLng, startLat] = path[index - 1]
+    const [endLng, endLat] = path[index]
+    distances.push(distances[index - 1] + Math.hypot((endLng - startLng) * 88_000, (endLat - startLat) * 111_000))
+  }
+  const total = distances[distances.length - 1]
+  if (!total) return []
+  return Array.from({ length: count }, (_, step) => {
+    const target = total * (step + 1) / (count + 1)
+    let index = 1
+    while (index < distances.length - 1 && distances[index] < target) index++
+    const ratio = (target - distances[index - 1]) / Math.max(1, distances[index] - distances[index - 1])
+    return [path[index - 1][0] + (path[index][0] - path[index - 1][0]) * ratio,
+      path[index - 1][1] + (path[index][1] - path[index - 1][1]) * ratio] as LonLat
+  })
+}
 
 function getFeatureRings(feature: MapGeoJSONFeature): number[][][] {
   if (feature.geometry.type === 'Polygon') return [feature.geometry.coordinates[0] as number[][]]
@@ -43,10 +67,13 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showCctv, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, season, cctvCameras, showCctv, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
+  accessPath: LonLat[] | null
+  accessEstimated: boolean
+  season: TourSeason
   cctvCameras: PublicCamera[]
   showCctv: boolean
   rotationRequest: { direction: 'left' | 'right'; serial: number } | null
@@ -62,6 +89,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
+  const peopleMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
   const userMarkerRef = useRef<MapLibreMarker | null>(null)
   const shadowAzimuthRef = useRef(shadowAzimuth)
@@ -162,6 +190,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
           }
         }
         map.addSource('tour-route-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+        map.addSource('tour-access-line', { type: 'geojson', data: EMPTY_LINE })
         const buildingLayer = layers.find(layer => layer.id === 'building-3d')?.id
         const routeLayer = {
           id: 'tour-route-line',
@@ -185,6 +214,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
             'line-opacity': 0.96,
           },
         }
+        const accessCasing = { id: 'tour-access-casing', type: 'line' as const, source: 'tour-access-line',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          paint: { 'line-color': '#fffdf5', 'line-width': 10, 'line-opacity': .98 } }
+        const accessLine = { id: 'tour-access-solid', type: 'line' as const, source: 'tour-access-line',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
+          paint: { 'line-color': '#2479db', 'line-width': 6, 'line-opacity': 1 } }
+        const accessDashed = { id: 'tour-access-dashed', type: 'line' as const, source: 'tour-access-line',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
+          paint: { 'line-color': '#2479db', 'line-width': 6, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
         map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
         const shadowFill = {
           id: 'tour-building-shadow-fill',
@@ -203,11 +241,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
           map.addLayer(shadowOutline, buildingLayer)
           map.addLayer(routeCasing, buildingLayer)
           map.addLayer(routeLayer, buildingLayer)
+          map.addLayer(accessCasing)
+          map.addLayer(accessLine)
+          map.addLayer(accessDashed)
         } else {
           map.addLayer(shadowFill)
           map.addLayer(shadowOutline)
           map.addLayer(routeCasing)
           map.addLayer(routeLayer)
+          map.addLayer(accessCasing)
+          map.addLayer(accessLine)
+          map.addLayer(accessDashed)
         }
         setStatus('ready')
         shadowUpdateTimeout = window.setTimeout(updateBuildingShadows, 350)
@@ -229,6 +273,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
       markersRef.current = []
       cctvMarkersRef.current.forEach(marker => marker.remove())
       cctvMarkersRef.current = []
+      peopleMarkersRef.current.forEach(marker => marker.remove())
+      peopleMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
       if (!failed) map.remove()
@@ -237,6 +283,51 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
   }, [])
 
   useEffect(() => { updateBuildingShadowsRef.current() }, [shadowAzimuth, sunElevation, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    if (map.getLayer('building-3d')) {
+      map.setPaintProperty('building-3d', 'fill-extrusion-color', SEASON_BUILDING_COLORS[season])
+      map.setPaintProperty('building-3d', 'fill-extrusion-opacity', .96)
+      map.setPaintProperty('building-3d', 'fill-extrusion-vertical-gradient', true)
+    }
+  }, [season, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const source = map.getSource('tour-access-line') as GeoJSONSource | undefined
+    source?.setData(accessPath && accessPath.length >= 2
+      ? { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: accessPath } }
+      : EMPTY_LINE)
+    map.setLayoutProperty('tour-access-solid', 'visibility', accessPath && !accessEstimated ? 'visible' : 'none')
+    map.setLayoutProperty('tour-access-dashed', 'visibility', accessPath && accessEstimated ? 'visible' : 'none')
+  }, [accessPath, accessEstimated, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready' || isFlatMap) return
+    peopleMarkersRef.current.forEach(marker => marker.remove())
+    peopleMarkersRef.current = samplePath(linePoints, 13).map(([lng, lat], index) => {
+      const element = document.createElement('span')
+      element.className = `tour-map-person tour-map-person--${index % 3}`
+      element.setAttribute('aria-hidden', 'true')
+      const marker = new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
+      return marker
+    })
+    const updateVisibility = () => {
+      const visible = map.getZoom() >= 16.2
+      peopleMarkersRef.current.forEach(marker => { marker.getElement().style.display = visible ? '' : 'none' })
+    }
+    map.on('zoom', updateVisibility)
+    updateVisibility()
+    return () => {
+      map.off('zoom', updateVisibility)
+      peopleMarkersRef.current.forEach(marker => marker.remove())
+      peopleMarkersRef.current = []
+    }
+  }, [isFlatMap, linePoints, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -292,6 +383,12 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
     markersRef.current.forEach((marker, index) => {
       marker.getElement().classList.toggle('is-selected', selectedStop === index)
     })
+    if (accessPath && accessPath.length >= 2) {
+      const bounds = new maplibregl.LngLatBounds()
+      ;(selectedStop === null ? [...linePoints, ...accessPath] : accessPath).forEach(point => bounds.extend(point))
+      map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 16.2, pitch: isFlatMap ? 0 : 55, duration: 480 })
+      return
+    }
     if (selectedStop !== null) {
       const point = points[selectedStop]
       map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: isFlatMap ? 0 : 67, bearing: isFlatMap ? 0 : -18, duration: 1100, essential: false })
@@ -300,7 +397,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
     map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
-  }, [isFlatMap, linePoints, points, selectedStop, status])
+  }, [accessPath, isFlatMap, linePoints, points, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -369,7 +466,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, cctvCameras, showC
     <div className="tour-map-error-fallback">{fallback}</div>
   </>
 
-  return <div className={`tour-maplibre-3d${isFlatMap ? ' tour-maplibre-2d' : ''}`}>
+  return <div className={`tour-maplibre-3d tour-scene-${season}${isFlatMap ? ' tour-maplibre-2d' : ''}`}>
     {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
     <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={locale === 'ko' ? `${route.titleKo} ${isFlatMap ? '2D 지도' : '위성 3D 지도'}` : `${route.title} ${isFlatMap ? '2D map' : '3D aerial map'}`} />
     {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
