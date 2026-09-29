@@ -3,7 +3,7 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoOverlay } from '../services/kakaoMaps'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
-import type { RouteCondition } from '../services/routeConditions'
+import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
 
 function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
   const popup = document.createElement('div')
@@ -35,13 +35,19 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, routeConditions, cctvCameras, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
   routeConditions: RouteCondition[]
+  restaurants: RouteRestaurant[]
+  showCourse: boolean
+  showRestaurants: boolean
+  showRoadInfo: boolean
+  showCctv: boolean
   cctvCameras: PublicCamera[]
+  locationFocusRequest: number
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
   selectedStop: number | null
@@ -55,10 +61,12 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
   const routeOverlaysRef = useRef<KakaoOverlay[]>([])
   const accessOverlaysRef = useRef<KakaoOverlay[]>([])
   const conditionOverlaysRef = useRef<KakaoOverlay[]>([])
+  const restaurantOverlaysRef = useRef<KakaoOverlay[]>([])
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
+  const lastLocationFocusRequestRef = useRef(0)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
@@ -102,12 +110,14 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
       routeOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      restaurantOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       routeOverlaysRef.current = []
       accessOverlaysRef.current = []
       conditionOverlaysRef.current = []
+      restaurantOverlaysRef.current = []
       cctvOverlaysRef.current = []
       userOverlayRef.current = null
       activePopupRef.current = null
@@ -181,22 +191,37 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
   }, [accessPath, linePoints, locale, onHoverStop, onSelectStop, points, route, selectedStop, status])
 
   useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    routeOverlaysRef.current.forEach(overlay => overlay.setMap(showCourse ? map : null))
+  }, [showCourse, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready' || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    lastLocationFocusRequestRef.current = locationFocusRequest
+    map.setLevel(4, { animate: true })
+    map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
+  }, [locationFocusRequest, status, userLocation])
+
+  useEffect(() => {
     const map = mapRef.current, api = apiRef.current
     if (!map || !api || status !== 'ready') return
     accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
     accessOverlaysRef.current = []
-    if (!accessPath || accessPath.length < 2) return
+    if (!showCourse || !accessPath || accessPath.length < 2) return
     const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 10, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 6, strokeColor: '#2479db', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
-  }, [accessEstimated, accessPath, status])
+  }, [accessEstimated, accessPath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
     conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
-    conditionOverlaysRef.current = routeConditions.map(condition => {
+    conditionOverlaysRef.current = showRoadInfo ? routeConditions.map(condition => {
       const signal = condition.kind === 'signal'
       const label = signal
         ? locale === 'ko' ? '지도에 기록된 신호등 · 실시간 아님' : 'Mapped signal · not live'
@@ -215,23 +240,76 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
         yAnchor: .5,
         zIndex: 6,
       })
-    })
+    }) : []
     return () => {
       conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       conditionOverlaysRef.current = []
     }
-  }, [locale, routeConditions, status])
+  }, [locale, routeConditions, showRoadInfo, status])
 
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
-    cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
-    cctvOverlaysRef.current = []
-    activePopupRef.current?.setMap(null)
-    activePopupRef.current = null
-    activePopupIdRef.current = null
-    cctvCameras.forEach(camera => {
+    restaurantOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    restaurantOverlaysRef.current = []
+    if (!showRestaurants) return
+    restaurantOverlaysRef.current = restaurants.map(place => {
+      const marker = document.createElement('button')
+      marker.type = 'button'
+      marker.className = `tour-restaurant-map-marker tour-restaurant-map-marker--${place.kind}`
+      marker.textContent = place.kind === 'cafe' ? '☕' : '식'
+      const kind = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
+      marker.setAttribute('aria-label', `${place.name} · ${kind}`)
+      marker.title = `${place.name} · ${kind}${place.cuisine ? ` · ${place.cuisine}` : ''}`
+      return new api.CustomOverlay({ map, position: new api.LatLng(place.lat, place.lng), content: marker, xAnchor: .5, yAnchor: 1, zIndex: 7 })
+    })
+  }, [locale, restaurants, showRestaurants, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    const clearOverlays = () => {
+      cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      cctvOverlaysRef.current = []
+    }
+    const renderCameras = () => {
+      clearOverlays()
+      if (!showCctv) return
+      const bounds = map.getBounds()
+      const southWest = bounds.getSouthWest(), northEast = bounds.getNorthEast()
+      const south = Math.min(southWest.getLat(), northEast.getLat()), north = Math.max(southWest.getLat(), northEast.getLat())
+      const west = Math.min(southWest.getLng(), northEast.getLng()), east = Math.max(southWest.getLng(), northEast.getLng())
+      const visible = cctvCameras.filter(camera => camera.lat >= south && camera.lat <= north && camera.lng >= west && camera.lng <= east)
+      const level = map.getLevel()
+      const latCell = Math.max(.00045, Math.sqrt(Math.max(.000001, (north - south) * (east - west) / 420)))
+      const lngCell = latCell / Math.max(.45, Math.cos(((south + north) / 2) * Math.PI / 180))
+      const groups = new Map<string, PublicCamera[]>()
+      visible.forEach(camera => {
+        const key = `${Math.floor(camera.lat / latCell)}:${Math.floor(camera.lng / lngCell)}`
+        const group = groups.get(key)
+        if (group) group.push(camera)
+        else groups.set(key, [camera])
+      })
+      groups.forEach(group => {
+        const lat = group.reduce((sum, camera) => sum + camera.lat, 0) / group.length
+        const lng = group.reduce((sum, camera) => sum + camera.lng, 0) / group.length
+        if (group.length > 1) {
+          const button = document.createElement('button')
+          button.type = 'button'
+          button.className = 'tour-cctv-cluster-marker kakao-cctv-marker'
+          button.textContent = group.length.toLocaleString()
+          button.setAttribute('aria-label', `${group.length} public CCTV locations`)
+          button.title = locale === 'ko' ? `CCTV ${group.length}곳 · 눌러서 확대` : `${group.length} CCTV locations · click to zoom`
+          button.addEventListener('click', () => {
+            map.setLevel(Math.max(1, level - 2), { animate: true })
+            map.setCenter(new api.LatLng(lat, lng))
+          })
+          cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(lat, lng), content: button, xAnchor: .5, yAnchor: .5, zIndex: 4 }))
+          return
+        }
+        const camera = group[0]
       const marker = document.createElement('button')
       marker.type = 'button'
       marker.className = 'tour-cctv-map-marker kakao-cctv-marker'
@@ -265,8 +343,18 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
         activePopupIdRef.current = camera.id
       })
       cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position, content: marker, xAnchor: .5, yAnchor: 1, zIndex: 4 }))
-    })
-  }, [cctvCameras, locale, status])
+      })
+    }
+    activePopupRef.current?.setMap(null)
+    activePopupRef.current = null
+    activePopupIdRef.current = null
+    renderCameras()
+    api.addListener(map, 'idle', renderCameras)
+    return () => {
+      api.removeListener(map, 'idle', renderCameras)
+      clearOverlays()
+    }
+  }, [cctvCameras, locale, showCctv, status])
 
   useEffect(() => {
     const map = mapRef.current
