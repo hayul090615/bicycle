@@ -2,13 +2,17 @@ import type { TourSeason } from '../data/touristRoutes'
 import routeTreeSpriteUrl from '../assets/route-tree.png'
 
 /** Create a small, season-aware tree billboard for the route map. */
-export function createRouteTreeMarker(season: TourSeason, locale: 'en' | 'ko', variation = 0) {
-  const tree = document.createElement('span')
+export function createRouteTreeMarker(season: TourSeason, locale: 'en' | 'ko', variation: number, onFocus: () => void) {
+  const tree = document.createElement('button')
+  tree.type = 'button'
   tree.className = `tour-map-tree tour-map-tree--${season} tour-map-tree--variation-${variation % 2}`
   tree.style.setProperty('--tree-sprite', `url("${routeTreeSpriteUrl}")`)
-  tree.setAttribute('role', 'img')
-  tree.setAttribute('aria-label', locale === 'ko' ? '\uC790\uC804\uAC70 \uAE38\uAC00 \uACC4\uC808 \uB098\uBB34' : 'Seasonal tree beside the bicycle route')
-  tree.title = locale === 'ko' ? '\uC790\uC804\uAC70 \uAE38 \uC591\uCABD\uC5D0 \uBC30\uCE58\uB41C \uACC4\uC808 \uB098\uBB34' : 'Seasonal tree along both sides of the route'
+  tree.title = locale === 'ko' ? '이 나무가 있는 구간 확대' : 'Zoom to this tree'
+  tree.setAttribute('aria-label', tree.title)
+  tree.addEventListener('click', event => {
+    event.stopPropagation()
+    onFocus()
+  })
 
   const shadow = document.createElement('i')
   shadow.className = 'tour-map-tree-shadow'

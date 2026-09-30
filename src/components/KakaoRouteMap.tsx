@@ -73,7 +73,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
@@ -95,6 +95,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   selectedStop: number | null
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
+  onFocusTree: (point: LonLat) => void
   fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -293,7 +294,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
     const treeSamples = routeSamples(path, 240, 10)
     treeSamples.forEach((point, index) => {
-      const tree = createRouteTreeMarker(season, locale, index)
+      const tree = createRouteTreeMarker(season, locale, index, () => onFocusTree([point.lng, point.lat]))
       sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: tree, xAnchor: .5, yAnchor: 1, zIndex: 3 }))
     })
     if (showRiders) {
@@ -310,7 +311,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []
     }
-  }, [locale, points, routePath, season, showCourse, showRiders, status])
+  }, [locale, onFocusTree, points, routePath, season, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current

@@ -19,6 +19,7 @@ const IMAGERY_ATTRIBUTION = 'Imagery © Esri. Sources: Esri, Vantor, Earthstar G
 const SATELLITE_SURFACES = new Set(['park', 'landuse', 'landcover', 'water', 'aeroway', 'building'])
 const EMPTY_SHADOWS: GeoJSON.FeatureCollection<GeoJSON.Polygon> = { type: 'FeatureCollection', features: [] }
 const EMPTY_LINE: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: 'FeatureCollection', features: [] }
+export type TreeFocusRequest = { routeId: string; serial: number; anchor: LonLat }
 const SEASON_BUILDING_COLORS: Record<TourSeason, string> = {
   spring: '#c5bbb8', summer: '#b6bab1', autumn: '#c6b6a5', winter: '#bcc7ca',
 }
@@ -123,7 +124,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -144,6 +145,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   showCctv: boolean
   locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
+  treeFocusRequest: TreeFocusRequest | null
+  onFocusTree: (point: LonLat) => void
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number; heading?: number } | null
   selectedStop: number | null
@@ -181,6 +184,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     return { lat: station.lat, lng: station.lng }
   }), [route])
   const linePoints = useMemo(() => routePath ?? points.map(point => [point.lng, point.lat] as LonLat), [routePath, points])
+  // Camera targets and markers share the same coordinates, including the roadside offset.
+  const treePositions = useMemo(() => {
+    const length = linePoints.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
+      (point[0] - linePoints[index - 1][0]) * 88_000, (point[1] - linePoints[index - 1][1]) * 111_000), 0)
+    return samplePathWithBearing(linePoints, Math.max(12, Math.min(180, Math.ceil(length / 100))))
+      .map(({ point, bearing }, index) => {
+        const offset = (index % 2 === 0 ? 1 : -1) * (9 + index % 3 * 2)
+        return { point: offsetFromRoute(point, bearing, offset), bearing }
+      })
+  }, [linePoints])
+  const activeTreeFocus = treeFocusRequest?.routeId === route.id ? treeFocusRequest : null
   if (initialCenter.current === null) initialCenter.current = [points[0].lng, points[0].lat]
 
   useEffect(() => {
@@ -477,12 +491,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         })
       }
       // Keep trees along the full ride, alternating between the two road sides.
-      const treeCount = Math.max(12, Math.min(180, Math.ceil(routeLength / 100)))
-      treeMarkersRef.current = samplePathWithBearing(sceneryPath, treeCount).map(({ point, bearing }, index) => {
-        const element = createRouteTreeMarker(season, locale, index)
-        const offset = index % 2 === 0 ? 9 + index % 3 * 2 : -(9 + index % 3 * 2)
+      treeMarkersRef.current = treePositions.map(({ point }, index) => {
+        const element = createRouteTreeMarker(season, locale, index, () => onFocusTree(point))
         return new maplibregl.Marker({ element, anchor: 'bottom' })
-          .setLngLat(offsetFromRoute(point, bearing, offset))
+          .setLngLat(point)
           .addTo(map)
       })
     }
@@ -549,7 +561,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       treeMarkersRef.current = []
       conditionMarkersRef.current = []
     }
-  }, [is3DView, linePoints, locale, routeConditions, routePath, season, showRiders, showRoadInfo, status])
+  }, [is3DView, linePoints, locale, onFocusTree, routeConditions, routePath, season, showRiders, showRoadInfo, status, treePositions])
 
   useEffect(() => {
     const map = mapRef.current
@@ -635,6 +647,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     markersRef.current.forEach((marker, index) => {
       marker.getElement().classList.toggle('is-selected', selectedStop === index)
     })
+    if (activeTreeFocus) return
     if (locationFocusRequest > 0 && selectedStop === null && userLocation) return
     if (accessPath && accessPath.length >= 2) {
       const bounds = new maplibregl.LngLatBounds()
@@ -650,11 +663,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
     map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
-  }, [accessPath, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
+  }, [accessPath, activeTreeFocus, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || status !== 'ready' || activeTreeFocus || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
     const destination = points[selectedStop ?? points.length - 1]
     const bounds = new maplibregl.LngLatBounds([userLocation.lng, userLocation.lat], [destination.lng, destination.lat])
@@ -667,7 +680,16 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       duration: 720,
       essential: false,
     })
-  }, [accessPath, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
+  }, [accessPath, activeTreeFocus, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready' || !activeTreeFocus || treePositions.length === 0) return
+    const [lng, lat] = activeTreeFocus.anchor
+    const distance = (point: LonLat) => Math.hypot((point[0] - lng) * Math.cos(lat * Math.PI / 180), point[1] - lat)
+    const target = treePositions.reduce((nearest, tree) => distance(tree.point) < distance(nearest.point) ? tree : nearest)
+    map.flyTo({ center: target.point, zoom: 17.2, pitch: is3DView ? 52 : 0, bearing: is3DView ? target.bearing : 0, duration: 900, essential: false })
+  }, [activeTreeFocus, is3DView, status, treePositions])
 
   useEffect(() => {
     const map = mapRef.current

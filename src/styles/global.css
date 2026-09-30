@@ -1400,6 +1400,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-cctv-toggle--map[aria-pressed='false'] .tour-cctv-dot { background: #92978e; box-shadow: 0 0 0 3px #92978e24; }
 .tour-cctv-toggle--map strong { margin-left: .25rem; color: #594583; }
 .tour-cctv-toggle--map i { color: #71618b; }
+.tour-map-quick-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; max-width: calc(100vw - 5rem); }
+.tour-tree-focus { display: inline-flex; align-items: center; gap: .3rem; min-height: 34px; padding: .32rem .55rem; border: 1px solid #a9c6b7; border-radius: 5px; color: #245d43; background: #f5fff8f5; box-shadow: 0 2px 7px #14251c20; font: 750 .65rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; pointer-events: auto; }
+.tour-tree-focus svg { width: 17px; height: 17px; }
+.tour-tree-focus:hover { background: #dcefe3; }
+.tour-tree-focus:focus-visible { outline: 3px solid #238b62; outline-offset: 2px; }
 .tour-cctv-status, .tour-cctv-source { margin: -.15rem 0 0; color: #727568; font-size: .62rem; line-height: 1.5; }
 .tour-cctv-source { color: #596b54; text-underline-offset: 2px; }
 .tour-my-map { display: grid; gap: .5rem; margin-top: .65rem; padding: .68rem; border: 1px solid #cdd8ce; border-radius: 6px; background: #f7f8f4; }
@@ -1590,7 +1595,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-explorer-map { height: 100%; }
 .tour-maplibre-host { width: 100%; height: 100%; }
 .tour-map-error-fallback { height: 100%; min-height: 0; }
-.tour-maplibre-3d .tour-map-style-toggle { z-index: 5; top: 5.5rem; right: auto; left: .8rem; }
+.tour-maplibre-3d .tour-map-style-toggle { z-index: 5; top: 7rem; right: .65rem; left: auto; }
 .tour-season-controls { top: .8rem; left: .8rem; }
 .tour-season-picker { gap: .1rem; padding: .2rem; border-color: #d9ded9; border-radius: 5px; background: #fffffff2; box-shadow: 0 2px 7px #1d2c2430; }
 .tour-season-picker button { min-width: 48px; min-height: 34px; padding: .35rem .55rem; border-radius: 3px; color: #48554c; font-size: .64rem; }
@@ -1643,7 +1648,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-map-overlay-meta { gap: .25rem; }
   .tour-season-weather, .tour-shadow-status { padding: .28rem .38rem; font-size: .54rem; }
   .tour-season-weather { max-width: calc(100vw - 8rem); }
-  .tour-maplibre-3d .tour-map-style-toggle { top: 5rem; right: auto; left: .55rem; }
+  .tour-maplibre-3d .tour-map-style-toggle { top: 7rem; right: .55rem; left: auto; }
   .tour-map-rotate-controls { right: .4rem; left: .4rem; }
   .tour-map-rotate-controls button { width: 39px; height: 46px; }
   .tour-earth-actions { gap: .2rem; padding: .3rem .4rem; }
@@ -1802,6 +1807,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-cctv-toggle--map { color: #dce8e2; border-color: #526157; background: #1c2c24f2; }
 .tour-screen--dark .tour-cctv-toggle--map[aria-pressed='true'] { color: #f1eaff; border-color: #a493ce; background: #44385b; }
 .tour-screen--dark .tour-cctv-toggle--map strong, .tour-screen--dark .tour-cctv-toggle--map i { color: #d4c6f5; }
+.tour-screen--dark .tour-tree-focus { color: #d7f2df; border-color: #668873; background: #243c2df5; }
+.tour-screen--dark .tour-tree-focus:hover { background: #35533f; }
 .tour-screen--dark .tour-bike-time strong { color: #b5f3ce; }
 .tour-screen--dark .tour-bike-time small { color: #bdd5c3; }
 .tour-screen--dark .tour-more-details > summary strong, .tour-screen--dark .tour-safety-details > summary strong { color: #eef6ef; }
@@ -1928,7 +1935,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map-stock-overlay > div { min-width: 0; display: grid; gap: .12rem; }
 .tour-map-stock-overlay strong { color: #087653; font-size: .7rem; }
 .tour-map-stock-overlay small { overflow: hidden; color: #64786d; font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
-.tour-map-tree { position: relative; display: block; width: 38px; height: 56px; overflow: visible; transform-origin: 50% 100%; filter: drop-shadow(1px 3px 3px #14201678); pointer-events: none; }
+.tour-map-tree { position: relative; display: block; width: 38px; height: 56px; padding: 0; border: 0; background: transparent; overflow: visible; transform-origin: 50% 100%; filter: drop-shadow(1px 3px 3px #14201678); cursor: zoom-in; pointer-events: auto; }
+.tour-map-tree > * { pointer-events: none; }
+.tour-map-tree:hover { filter: drop-shadow(0 0 3px #f3ffe2) drop-shadow(1px 3px 3px #14201678); }
+.tour-map-tree:focus-visible { outline: 3px solid #238b62; outline-offset: 3px; border-radius: 5px; }
 .tour-map-tree-shadow { position: absolute; z-index: 0; bottom: 1%; left: 12%; width: 76%; height: 11%; border-radius: 50%; background: radial-gradient(ellipse, #101a1680 0%, #17221c50 46%, transparent 76%); filter: blur(1.5px); }
 .tour-map-tree-sprite { position: absolute; z-index: 5; inset: 0; display: block; background-image: var(--tree-sprite); background-position: center bottom; background-repeat: no-repeat; background-size: contain; filter: brightness(.88) saturate(.86); }
 .tour-map-tree--variation-1 .tour-map-tree-sprite { transform: scaleX(-1); }
@@ -1986,7 +1996,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 700px) {
   .tour-view-switch { max-width: 100%; }
   .tour-view-switch button { padding-right: .43rem; padding-left: .43rem; font-size: .57rem; }
-  .tour-map-rotate-controls { top: 4.5rem; left: 50%; right: auto; width: 110px; height: 110px; transform: translateX(-50%); }
+  .tour-map-rotate-controls { top: 7.8rem; left: 50%; right: auto; width: 110px; height: 110px; transform: translateX(-50%); }
   .tour-map-rotate-controls button { width: 35px; height: 35px; font-size: 1.12rem; }
   .tour-map-stock-overlay { bottom: .65rem; left: .55rem; max-width: 43%; padding: .38rem .45rem; }
   .tour-map-stock-overlay strong { font-size: .61rem; }

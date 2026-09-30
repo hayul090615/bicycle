@@ -5,6 +5,7 @@ import { getTouristStation, type TourCategory, type TourSeason, type TouristRout
 import { GoogleRoute3D } from './GoogleRoute3D'
 import { hasGoogleMapsKey } from '../services/googleMaps3d'
 import { KakaoRouteMap } from './KakaoRouteMap'
+import type { TreeFocusRequest } from './MapLibreRoute3D'
 import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
@@ -200,6 +201,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
+  const [treeFocusRequest, setTreeFocusRequest] = useState<TreeFocusRequest | null>(null)
   const autoLocationRequested = useRef(false)
   const previousLocationRef = useRef<Coordinates | null>(null)
   const distanceSinceMovementTickRef = useRef(0)
@@ -254,12 +256,25 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const walkingDistance = activeWalkingRoute?.distanceMeters ?? (pickupStation && userLocation
     ? distanceMeters(userLocation, pickupStation) * 1.25 : null)
   const selectStop = useCallback((index: number | null) => {
+    setTreeFocusRequest(null)
     setSelection(index === null ? null : { routeId: route.id, index })
     if (userLocation) setLocationFocusRequest(request => request + 1)
   }, [route.id, userLocation])
   const hoverStop = useCallback((index: number | null) => {
     setHover(index === null ? null : { routeId: route.id, index })
   }, [route.id])
+  const focusTree = useCallback((anchor: LonLat) => {
+    setTreeFocusRequest(current => ({ routeId: route.id, anchor, serial: (current?.serial ?? 0) + 1 }))
+    setRotationRequest(null)
+    setMapLayers(current => ({ ...current, course: true }))
+    setSidebarOpen(false)
+    setView('city')
+  }, [route.id])
+  const viewTrees = () => {
+    const station = getTouristStation(route.stops[selectedStop ?? 0].stationId)
+    const anchor = selectedStop === null && userLocation ? userLocation : station
+    focusTree([anchor.lng, anchor.lat])
+  }
   const points = useMemo<LatLngExpression[]>(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
     return [station.lat, station.lng]
@@ -324,6 +339,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const visibleRoutes = routeChoices.filter(candidate => `${candidate.title} ${candidate.titleKo} ${candidate.area} ${candidate.areaKo}`
     .toLocaleLowerCase().includes(routeSearch.trim().toLocaleLowerCase()))
   const locateNearestRoute = (chooseNearest = true) => {
+    setTreeFocusRequest(null)
     if (!navigator.geolocation) {
       setLocationError('unavailable')
       return
@@ -358,11 +374,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   const chooseMapView = (nextView: 'city' | 'satellite' | 'map' | 'google' | 'kakao') => {
+    setTreeFocusRequest(null)
     setRotationRequest(null)
     setView(nextView)
   }
   const toggleMapLayer = (layer: MapLayerKey) => setMapLayers(current => ({ ...current, [layer]: !current[layer] }))
   useLayoutEffect(() => {
+    setTreeFocusRequest(null)
     setSelection(null)
     setHover(null)
     if (userLocation) setLocationFocusRequest(request => request + 1)
@@ -660,12 +678,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </div>
       <div className="tour-map-stage" onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFocusTree={focusTree} fallback={map} />}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <div className="tour-season-controls">
           <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
@@ -676,14 +694,21 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
             {view === 'city' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
           </div>
-          <button type="button" className="tour-cctv-toggle tour-cctv-toggle--map" aria-pressed={showCctv}
-            aria-label={text(showCctv ? 'Hide public CCTV from the map' : 'Show public CCTV on the map', showCctv ? '지도에서 공공 CCTV 숨기기' : '지도에 공공 CCTV 표시하기')}
-            onClick={() => toggleMapLayer('cctv')}>
-            <span className="tour-cctv-dot" aria-hidden="true" />
-            <span>{text('Public CCTV', '공공 CCTV')}</span>
-            <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</strong>
-            <i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
-          </button>
+          <div className="tour-map-quick-actions">
+            <button type="button" className="tour-tree-focus" onClick={viewTrees}
+              title={text('Zoom to trees along this route in 3D', '이 코스의 나무가 있는 구간을 3D로 확대')}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v-7m-3 7h6M8 16a4 4 0 0 1-3-6 5 5 0 0 1 4-7 4 4 0 0 1 7 3 5 5 0 0 1 3 8 4 4 0 0 1-5 2" /></svg>
+              {text('View trees', '나무길 보기')}
+            </button>
+            <button type="button" className="tour-cctv-toggle tour-cctv-toggle--map" aria-pressed={showCctv}
+              aria-label={text(showCctv ? 'Hide public CCTV from the map' : 'Show public CCTV on the map', showCctv ? '지도에서 공공 CCTV 숨기기' : '지도에 공공 CCTV 표시하기')}
+              onClick={() => toggleMapLayer('cctv')}>
+              <span className="tour-cctv-dot" aria-hidden="true" />
+              <span>{text('Public CCTV', '공공 CCTV')}</span>
+              <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</strong>
+              <i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
+            </button>
+          </div>
         </div>
         <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
           <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
