@@ -699,15 +699,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
           <strong aria-live="polite">{selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
-        <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
-          <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
-            {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
-            <option value="city">{text('3D city', '3D 도시')}</option>
-            <option value="satellite">{text('2D satellite', '2D 위성')}</option>
-            <option value="map">{text('Flat map', '평면 지도')}</option>
-            {hasGoogleMapsKey && <option value="google">Google 3D</option>}
-          </select>
-        </label>
         <button className="tour-sidebar-toggle" type="button" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
           onClick={() => setSidebarOpen(open => !open)}>{sidebarOpen ? text('Hide routes ×', '코스 닫기 ×') : text('Routes & bikes ☰', '코스·대여소 ☰')}</button>
       </div>
@@ -732,6 +723,21 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
+        <nav className="tour-map-quick-filters" aria-label={text('Quick map layers', '빠른 지도 필터')}>
+          <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
+          <button type="button" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
+          <button type="button" aria-pressed={showBikeLanes} onClick={() => toggleMapLayer('bikeLanes')}><span aria-hidden="true">↗</span>{text('Bike paths', '자전거도로')}</button>
+          <button type="button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}><span aria-hidden="true">◉</span>{text('CCTV', 'CCTV')}</button>
+        </nav>
+        <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
+          <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
+            {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
+            <option value="city">{text('3D city', '3D 도시')}</option>
+            <option value="satellite">{text('2D satellite', '2D 위성')}</option>
+            <option value="map">{text('Flat map', '평면 지도')}</option>
+            {hasGoogleMapsKey && <option value="google">Google 3D</option>}
+          </select>
+        </label>
         <details className="tour-season-controls tour-map-settings">
           <summary><span aria-hidden="true">⚙</span>{text('Map settings', '지도 설정')}<i aria-hidden="true">⌄</i></summary>
           <div className="tour-map-settings-panel">

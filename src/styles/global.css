@@ -2290,6 +2290,60 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-food-guide-map-marker--1 { background: #ffe08a; }
 .tour-food-guide-map-marker--2 { background: #bfe77b; }
 .tour-food-guide-map-marker:hover, .tour-food-guide-map-marker:focus-visible { transform: rotate(-45deg) scale(1.18); }
+.tour-map-quick-filters {
+  position: absolute;
+  z-index: 1201;
+  top: .75rem;
+  left: 50%;
+  max-width: calc(100% - 2rem);
+  display: flex;
+  align-items: center;
+  gap: .42rem;
+  padding: .3rem;
+  overflow-x: auto;
+  border: 1px solid #e6e7e2;
+  border-radius: 999px;
+  background: #ffffffed;
+  box-shadow: 0 5px 20px #18271b26;
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+  scrollbar-width: none;
+}
+.tour-map-quick-filters::-webkit-scrollbar { display: none; }
+.tour-map-quick-filters button {
+  min-height: 42px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: .48rem;
+  padding: .55rem .9rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #31443a;
+  background: transparent;
+  font: 750 .76rem 'DM Sans', 'Noto Sans KR', sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+.tour-map-quick-filters button > span { color: #158a62; font-size: 1.12rem; line-height: 1; }
+.tour-map-quick-filters button:hover { background: #f1f5ef; }
+.tour-map-quick-filters button[aria-pressed='true'] { color: #fff; background: #0b855d; box-shadow: 0 3px 10px #0b855d35; }
+.tour-map-quick-filters button[aria-pressed='true'] > span { color: #dff5e8; }
+.tour-map-stage > .tour-map-mode-select {
+  position: absolute;
+  z-index: 1201;
+  top: .75rem;
+  right: .75rem;
+  min-width: 190px;
+  box-shadow: 0 5px 18px #18271b26;
+}
+.tour-screen--dark .tour-map-quick-filters { border-color: #394d43; background: #1b2b23ed; }
+.tour-screen--dark .tour-map-quick-filters button { color: #e2e9df; }
+.tour-screen--dark .tour-map-quick-filters button:hover { background: #2a3e32; }
+.tour-screen--dark .tour-map-quick-filters button[aria-pressed='true'] { color: #15251c; background: #c8f45c; }
+.tour-screen--dark .tour-map-quick-filters button[aria-pressed='true'] > span { color: #15251c; }
 
 @media (max-width: 900px) {
   .tour-screen .tour-topbar { flex-basis: 64px; }
@@ -2305,4 +2359,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-food-guide-trigger:hover, .tour-food-guide-trigger:focus-visible { transform: translateY(-2px); }
   .tour-food-guide-panel { top: auto; bottom: 9.4rem; }
   .tour-earth-actions { left: .4rem; bottom: .4rem; max-width: calc(100% - .8rem); flex-wrap: wrap; }
+  .tour-map-quick-filters { top: .5rem; right: .4rem; left: .4rem; max-width: none; justify-content: flex-start; gap: .2rem; transform: none; }
+  .tour-map-quick-filters button { min-height: 38px; gap: .28rem; padding: .42rem .65rem; font-size: .66rem; }
+  .tour-map-stage > .tour-map-mode-select { top: 3.7rem; right: .45rem; min-width: 154px; }
+  .tour-season-controls.tour-map-settings { top: 3.7rem; left: .45rem; width: min(195px, 51vw); }
 }
