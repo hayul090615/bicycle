@@ -4,12 +4,13 @@ import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type 
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import { createRouteMotion } from '../services/routeMotion'
 import { createRouteTreeMarker } from './routeTreeMarker'
 import { createCyclistMarker } from './cyclistMarker'
 
 type MapPoint = { lat: number; lng: number }
 
-function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number, maximum = 220) {
+function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number) {
   if (path.length < 2) return []
   const segmentLengths = path.slice(1).map((point, index) => {
     const previous = path[index]
@@ -39,7 +40,6 @@ function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number, m
     const lat = from.lat + (north * ratio + Math.cos(sideRadians) * offsetMeters) / 111_000
     const lng = from.lng + (east * ratio + Math.sin(sideRadians) * offsetMeters) / (111_000 * Math.max(.2, Math.cos(meanLatitude)))
     samples.push({ lat, lng })
-    if (samples.length >= maximum) break
   }
   return samples
 }
@@ -293,8 +293,10 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     sceneryOverlaysRef.current = []
     if (!showCourse) return
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
-    const treeSamples = routeSamples(path, 95, 10, 220)
+    const treeSamples = routeSamples(path, 55, 10)
     const treeElements: HTMLButtonElement[] = []
+    const riderOverlays: Array<{ overlay: KakaoOverlay; phase: number; person: HTMLElement }> = []
+    let riderFrame = 0
     treeSamples.forEach((point, index) => {
       const tree = createRouteTreeMarker(season, locale, index, () => onFocusTree([point.lng, point.lat]))
       treeElements.push(tree)
@@ -304,12 +306,38 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     api.addListener(map, 'zoom_changed', updateLeafMotion)
     updateLeafMotion()
     if (showRiders) {
-      routeSamples(path, 760, 9).forEach((point, index) => {
+      const lonLatPath = path.map(point => [point.lng, point.lat] as LonLat)
+      const motion = createRouteMotion(lonLatPath)
+      const routeLength = motion?.lengthMeters ?? 0
+      const riderCount = Math.max(3, Math.min(8, Math.floor(routeLength / 2200)))
+      Array.from({ length: riderCount }, (_, index) => {
+        const position = motion?.pointAt(index / riderCount).point
+        return position ? { lat: position[1], lng: position[0] } : null
+      }).filter((point): point is MapPoint => point !== null).forEach((point, index) => {
         const person = createCyclistMarker(index, locale)
-        sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: person, xAnchor: .5, yAnchor: 1, zIndex: 4 }))
+        const overlay = new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: person, xAnchor: .5, yAnchor: 1, zIndex: 4 })
+        sceneryOverlaysRef.current.push(overlay)
+        riderOverlays.push({ overlay, phase: index / riderCount, person })
       })
+      if (motion && riderOverlays.length) {
+        const startedAt = performance.now()
+        let lastUpdate = 0
+        const moveRiders = (now: number) => {
+          if (now - lastUpdate < 45) { riderFrame = window.requestAnimationFrame(moveRiders); return }
+          lastUpdate = now
+          const traveled = (now - startedAt) / 1000 * 3.2 / motion.lengthMeters
+          riderOverlays.forEach(({ overlay, phase, person }) => {
+            const position = motion.pointAt(traveled + phase)
+            overlay.setPosition?.(new api.LatLng(position.point[1], position.point[0]))
+            person.style.setProperty('--rider-heading', `${position.bearing}deg`)
+          })
+          riderFrame = window.requestAnimationFrame(moveRiders)
+        }
+        riderFrame = window.requestAnimationFrame(moveRiders)
+      }
     }
     return () => {
+      window.cancelAnimationFrame(riderFrame)
       api.removeListener(map, 'zoom_changed', updateLeafMotion)
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []

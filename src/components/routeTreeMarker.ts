@@ -41,7 +41,7 @@ export function createRouteTreeMarker(season: TourSeason, locale: 'en' | 'ko', v
   }
   const fallingLeaves = document.createElement('span')
   fallingLeaves.className = 'tour-map-tree-falling-leaves'
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < 8; index++) {
     const leaf = document.createElement('i')
     leaf.style.setProperty('--leaf-index', String(index))
     fallingLeaves.append(leaf)

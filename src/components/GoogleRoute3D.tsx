@@ -4,6 +4,7 @@ import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary }
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
 import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createRouteTreeMarker } from './routeTreeMarker'
 
@@ -152,6 +153,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     const map = mapRef.current
     const library = libraryRef.current
     if (!map || !library || status !== 'ready') return
+    let riderFrame = 0
     map.description = locale === 'ko' ? route.titleKo : route.title
     routeLineRef.current?.remove()
     markersRef.current.forEach(marker => marker.remove())
@@ -171,13 +173,16 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     }) : []
     treeMarkersRef.current.forEach(marker => marker.remove())
     treeMarkersRef.current = []
-    if (showCourse && routePath && routePath.length >= 2) {
-      const distance = routePath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
-        (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
-      const positions = sampleRiderPositions(routePath, Math.max(10, Math.min(140, Math.ceil(distance / 150))))
+    const sceneryPath = routePath && routePath.length >= 2
+      ? routePath
+      : linePoints.map(point => [point.lng, point.lat] as LonLat)
+    if (showCourse && sceneryPath.length >= 2) {
+      const distance = sceneryPath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
+        (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
+      const positions = sampleRiderPositions(sceneryPath, Math.max(1, Math.ceil(distance / 55)))
       treeMarkersRef.current = positions.map(([lng, lat], index) => {
-        const marker = new library.Marker3DInteractiveElement({
-          position: { lat, lng }, label: locale === 'ko' ? '나무길' : 'Tree-lined route',
+        const marker = new library.Marker3DElement({
+          position: { lat, lng },
           title: locale === 'ko' ? '가을 길의 나무와 떨어지는 잎' : 'Trees and falling leaves along the autumn route',
           altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
         })
@@ -196,11 +201,12 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     }
     peopleMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
-    if (showRiders && routePath && routePath.length >= 2) {
-      const distance = routePath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
-        (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
+    const motion = createRouteMotion(sceneryPath)
+    const riderIcons: HTMLElement[] = []
+    if (showRiders && motion) {
+      const distance = motion.lengthMeters
       const count = Math.max(2, Math.min(7, Math.floor(distance / 1800)))
-      const riderPositions = sampleRiderPositions(routePath, count)
+      const riderPositions = sampleRiderPositions(sceneryPath, count)
       peopleMarkersRef.current = riderPositions.map(([lng, lat], index) => {
         const marker = new library.Marker3DElement({
           position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
@@ -209,6 +215,8 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
         const icon = createCyclistMarker(index, locale)
         icon.style.width = '48px'
         icon.style.height = '70px'
+        icon.style.setProperty('--rider-heading', '90deg')
+        riderIcons.push(icon)
         const template = document.createElement('template')
         template.content.append(icon)
         marker.append(template)
@@ -216,6 +224,22 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
         map.append(marker)
         return marker
       })
+      const startedAt = performance.now()
+      let lastUpdate = 0
+      const moveRiders = (now: number) => {
+        if (now - lastUpdate < 45) { riderFrame = window.requestAnimationFrame(moveRiders); return }
+        lastUpdate = now
+        const traveled = (now - startedAt) / 1000 * 3.2 / motion.lengthMeters
+        peopleMarkersRef.current.forEach((marker, index) => {
+          const position = motion.pointAt(traveled + index / count)
+          ;(marker as HTMLElement & { position: { lat: number; lng: number; altitude: number } }).position = {
+            lat: position.point[1], lng: position.point[0], altitude: 0,
+          }
+          riderIcons[index]?.style.setProperty('--rider-heading', `${position.bearing}deg`)
+        })
+        riderFrame = window.requestAnimationFrame(moveRiders)
+      }
+      riderFrame = window.requestAnimationFrame(moveRiders)
     }
     const updateTreeVisibility = () => treeMarkersRef.current.forEach(marker => {
       marker.style.display = map.range <= 12000 ? '' : 'none'
@@ -224,6 +248,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     map.addEventListener('gmp-rangechange', updateTreeVisibility)
     updateTreeVisibility()
     return () => {
+      window.cancelAnimationFrame(riderFrame)
       map.removeEventListener('gmp-rangechange', updateTreeVisibility)
       peopleMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
@@ -390,7 +415,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     if (!map || status !== 'ready' || !rotationRequest) return
     const current = rotatedCameraRef.current
     const endCamera: Camera3D = rotationRequest.direction === 'up' || rotationRequest.direction === 'down'
-      ? { ...current, tilt: Math.max(0, Math.min(58, current.tilt + (rotationRequest.direction === 'up' ? 8 : -8))) }
+      ? { ...current, tilt: Math.max(0, Math.min(85, current.tilt + (rotationRequest.direction === 'up' ? 15 : -15))) }
       : { ...current, heading: ((current.heading + (rotationRequest.direction === 'left' ? -32 : 32)) % 360 + 360) % 360 }
     rotatedCameraRef.current = endCamera
     map.stopCameraAnimation()

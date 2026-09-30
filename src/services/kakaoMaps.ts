@@ -7,6 +7,7 @@ export interface KakaoLatLng {
 
 export interface KakaoOverlay {
   setMap(map: KakaoMap | null): void
+  setPosition?(position: KakaoLatLng): void
 }
 
 export interface KakaoBounds {

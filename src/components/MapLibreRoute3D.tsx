@@ -9,6 +9,7 @@ import { createCyclistMarker } from './cyclistMarker'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import { createRouteMotion } from '../services/routeMotion'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -189,7 +190,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const treePositions = useMemo(() => {
     const length = linePoints.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
       (point[0] - linePoints[index - 1][0]) * 88_000, (point[1] - linePoints[index - 1][1]) * 111_000), 0)
-    return samplePathWithBearing(linePoints, Math.max(18, Math.min(240, Math.ceil(length / 60))))
+    return samplePathWithBearing(linePoints, Math.max(1, Math.ceil(length / 55)))
       .map(({ point, bearing }, index) => {
         const offset = (index % 2 === 0 ? 1 : -1) * (9 + index % 3 * 2)
         return { point: offsetFromRoute(point, bearing, offset), bearing }
@@ -213,7 +214,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       pitch: is3DView ? 50 : 0,
       bearing: is3DView ? -10 : 0,
       maxZoom: 23,
-      maxPitch: 58,
+      maxPitch: 85,
       attributionControl: {},
       canvasContextAttributes: { antialias: true },
     })
@@ -485,8 +486,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     peopleMarkersRef.current = []
     treeMarkersRef.current = []
     conditionMarkersRef.current = []
+    let riderFrame = 0
     const sceneryPath = routePath && routePath.length >= 2 ? routePath : linePoints
     if (sceneryPath.length >= 2) {
+      const motion = createRouteMotion(sceneryPath)
       const routeLength = sceneryPath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
         (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
       if (showRiders) {
@@ -495,6 +498,22 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           const element = createCyclistMarker(index, locale)
           return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
         })
+        if (motion) {
+          const startedAt = performance.now()
+          let lastUpdate = 0
+          const moveRiders = (now: number) => {
+            if (now - lastUpdate < 45) { riderFrame = window.requestAnimationFrame(moveRiders); return }
+            lastUpdate = now
+            const traveled = (now - startedAt) / 1000 * 3.2 / motion.lengthMeters
+            peopleMarkersRef.current.forEach((marker, index) => {
+              const position = motion.pointAt(traveled + index / riderCount)
+              marker.setLngLat(position.point)
+              marker.getElement().style.setProperty('--rider-heading', `${position.bearing}deg`)
+            })
+            riderFrame = window.requestAnimationFrame(moveRiders)
+          }
+          riderFrame = window.requestAnimationFrame(moveRiders)
+        }
       }
       // Keep trees along the full ride, alternating between the two road sides.
       treeMarkersRef.current = treePositions.map(({ point }, index) => {
@@ -538,7 +557,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         })
         treeMarkersRef.current.forEach(marker => {
           const visible = zoom >= 13.2 && !(zoom >= 16 && isBlocked(marker))
-          marker.getElement().classList.toggle('is-close-view', zoom >= 15)
           const scale = Math.max(19, Math.min(36, 22 + (zoom - 14) * 3))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.48}px`
@@ -558,6 +576,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     map.on('idle', updateVisibility)
     updateVisibility()
     return () => {
+      window.cancelAnimationFrame(riderFrame)
       window.cancelAnimationFrame(frame)
       map.off('zoom', updateVisibility)
       map.off('move', updateVisibility)
@@ -846,7 +865,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (!map || status !== 'ready' || !rotationRequest) return
     if (rotationRequest.direction === 'up' || rotationRequest.direction === 'down') {
       if (is3DView) {
-      const pitch = Math.max(18, Math.min(58, map.getPitch() + (rotationRequest.direction === 'up' ? 7 : -7)))
+      const pitch = Math.max(0, Math.min(85, map.getPitch() + (rotationRequest.direction === 'up' ? 15 : -15)))
         map.easeTo({ pitch, duration: 420 })
       } else {
         map.panBy([0, rotationRequest.direction === 'up' ? -120 : 120], { duration: 350 })

@@ -672,13 +672,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
           <strong aria-live="polite">{selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
-        <div className={`tour-view-switch${hasKakaoMapsKey ? ' tour-view-switch--kakao' : ''}`} role="group" aria-label={text('Map view', '지도 보기')}>
-          {hasKakaoMapsKey && <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseMapView('kakao')}>{text('Kakao map', '카카오 지도')}</button>}
-          <button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>{text('3D city', '3D 도시')}</button>
-          <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('2D aerial', '2D 위성')}</button>
-          <button type="button" aria-pressed={view === 'map'} onClick={() => chooseMapView('map')}>{text('Flat map', '평면 지도')}</button>
-          {hasGoogleMapsKey && <button type="button" aria-pressed={view === 'google'} onClick={() => chooseMapView('google')}>Google 3D</button>}
-        </div>
+        <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
+          <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
+            {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
+            <option value="city">{text('3D city', '3D 도시')}</option>
+            <option value="satellite">{text('2D satellite', '2D 위성')}</option>
+            <option value="map">{text('Flat map', '평면 지도')}</option>
+            {hasGoogleMapsKey && <option value="google">Google 3D</option>}
+          </select>
+        </label>
         <button className="tour-sidebar-toggle" type="button" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
           onClick={() => setSidebarOpen(open => !open)}>{sidebarOpen ? text('Hide routes ×', '코스 닫기 ×') : text('Routes & bikes ☰', '코스·대여소 ☰')}</button>
       </div>
