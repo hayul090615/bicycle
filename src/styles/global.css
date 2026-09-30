@@ -1683,6 +1683,77 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-view-switch--kakao button { min-width: 0; padding-right: .2rem; padding-left: .2rem; font-size: .59rem; white-space: nowrap; }
 }
 
+.tour-elevation-card { width: min(300px, 34vw); position: absolute; z-index: 1180; top: 5.2rem; right: .8rem; display: grid; gap: .4rem; padding: .65rem .8rem .5rem; border: 1px solid #dfe6dc; border-radius: 12px; color: #263a2f; background: #fffefaed; box-shadow: 0 6px 22px #15281e2b; backdrop-filter: blur(12px); }
+.tour-elevation-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.tour-elevation-heading > div { display: grid; gap: .12rem; }
+.tour-elevation-heading small, .tour-transfer-recommendation > small { color: #78886f; font-size: .5rem; font-weight: 850; letter-spacing: .1em; }
+.tour-elevation-heading strong { color: #314d3d; font-size: .66rem; }
+.tour-elevation-heading > span { color: #65766a; font-size: .55rem; white-space: nowrap; }
+.tour-elevation-card svg { width: 100%; height: 48px; overflow: visible; }
+.tour-elevation-fill { fill: #1caa7830; }
+.tour-elevation-line { fill: none; stroke: #15946b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.tour-turn-guide, .tour-rental-timer { display: grid; gap: .55rem; padding: .8rem; border: 1px solid #e4e9e0; border-radius: 12px; background: #fafbf7; }
+.tour-turn-guide h3, .tour-rental-timer h3 { margin: 0; color: #294235; font-size: .76rem; }
+.tour-turn-guide > p, .tour-rental-timer > p { margin: 0; color: #728075; font-size: .65rem; line-height: 1.5; }
+.tour-turn-guide ol { display: grid; gap: 0; max-height: min(44vh, 420px); margin: 0; padding: 0; overflow-y: auto; list-style: none; counter-reset: turn-step; }
+.tour-turn-guide li { position: relative; display: grid; gap: .16rem; padding: .58rem .25rem .58rem 1.9rem; border-bottom: 1px solid #e9ede6; counter-increment: turn-step; }
+.tour-turn-guide li::before { content: counter(turn-step); position: absolute; top: .55rem; left: .1rem; width: 1.2rem; height: 1.2rem; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #18845e; font-size: .57rem; font-weight: 800; }
+.tour-turn-guide li span { color: #34483b; font-size: .68rem; font-weight: 750; }
+.tour-turn-guide li small { color: #7b887e; font-size: .57rem; }
+.tour-rental-duration { display: flex; gap: .35rem; }
+.tour-rental-duration button { min-height: 34px; flex: 1; border: 1px solid #dce4d8; border-radius: 8px; color: #4a5c4f; background: #fff; font: 700 .64rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-rental-duration button[aria-pressed='true'] { border-color: #158a62; color: #fff; background: #158a62; }
+.tour-rental-countdown { color: #19392b; font-size: 1.4rem; font-variant-numeric: tabular-nums; text-align: center; }
+.tour-rental-countdown.is-due-soon { color: #b84a35; }
+.tour-transfer-recommendation { display: grid; gap: .3rem; padding: .65rem; border-radius: 9px; background: #eef4e7; }
+.tour-transfer-recommendation strong { color: #294235; font-size: .68rem; }
+.tour-transfer-recommendation span, .tour-transfer-recommendation > b { color: #65766a; font-size: .59rem; line-height: 1.45; }
+.tour-transfer-recommendation > b { color: #a64331; }
+.tour-map-panel-check { min-height: 38px; display: flex; align-items: center; gap: .5rem; padding: .35rem .5rem; border: 1px solid #e3e8df; border-radius: 8px; color: #425447; background: #fafbf8; font-size: .64rem; }
+.tour-map-panel-check input { accent-color: #11845f; }
+.tour-map-panel-check small { margin-left: auto; color: #829078; }
+.tour-course-bike-stations { display: grid; gap: .4rem; padding: .7rem; border: 1px solid #dfe7dc; border-radius: 11px; background: #f9fbf6; }
+.tour-course-bike-stations h3 { margin: 0; color: #2e4537; font-size: .71rem; }
+.tour-course-bike-stations > p { margin: 0; color: #758276; font-size: .58rem; line-height: 1.45; }
+.tour-course-bike-stations ul { display: grid; gap: .2rem; max-height: 220px; margin: .1rem 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.tour-course-bike-stations li { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: .55rem; padding: .35rem .4rem; border-radius: 7px; background: #fff; }
+.tour-course-bike-stations li > span { min-width: 0; display: grid; gap: .1rem; }
+.tour-course-bike-stations li strong { overflow: hidden; color: #3b4c40; font-size: .6rem; text-overflow: ellipsis; white-space: nowrap; }
+.tour-course-bike-stations li small { color: #829078; font-size: .52rem; }
+.tour-course-bike-stations li > b { color: #168359; font-size: .75rem; white-space: nowrap; }
+.tour-course-bike-stations li > b.is-empty { color: #a44b40; }
+.tour-course-bike-stations li > b small { margin-left: .15rem; }
+.tour-live-bike-marker, .tour-live-bike-icon { width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; color: #fff; background: #0c8261; box-shadow: 0 3px 10px #15271e66; font: 850 .66rem 'DM Sans', 'Noto Sans KR', sans-serif; transform: rotate(-45deg); }
+.tour-live-bike-marker { cursor: default; }
+.tour-live-bike-marker > span, .tour-live-bike-icon > span { display: block; transform: rotate(45deg); }
+.tour-screen--dark .tour-course-bike-stations { border-color: #42564a; background: #26372c; }
+.tour-screen--dark .tour-course-bike-stations h3, .tour-screen--dark .tour-course-bike-stations li strong { color: #e5ede4; }
+.tour-screen--dark .tour-course-bike-stations > p, .tour-screen--dark .tour-course-bike-stations li small { color: #b6c4b7; }
+.tour-screen--dark .tour-course-bike-stations li { background: #1e2e25; }
+.tour-amenity-icon { width: 28px; height: 28px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #277fa4; box-shadow: 0 2px 9px #172a1d66; font: 850 .56rem 'DM Sans', 'Noto Sans KR', sans-serif; }
+.tour-amenity-icon--pump { background: #7564a8; }
+.tour-amenity-icon--water { background: #268cab; }
+.tour-amenity-icon--toilet { background: #426f89; }
+.tour-amenity-icon--convenience { background: #c68134; }
+.tour-screen--dark .tour-elevation-card { border-color: #405348; color: #e5ede4; background: #1c2b23ed; }
+.tour-screen--dark .tour-elevation-heading strong, .tour-screen--dark .tour-rental-countdown { color: #e8f1e4; }
+.tour-screen--dark .tour-elevation-heading small, .tour-screen--dark .tour-elevation-heading > span { color: #bdcabc; }
+.tour-screen--dark .tour-turn-guide, .tour-screen--dark .tour-rental-timer { border-color: #405348; background: #22342a; }
+.tour-screen--dark .tour-turn-guide h3, .tour-screen--dark .tour-rental-timer h3, .tour-screen--dark .tour-turn-guide li span, .tour-screen--dark .tour-transfer-recommendation strong { color: #e5ede4; }
+.tour-screen--dark .tour-turn-guide > p, .tour-screen--dark .tour-rental-timer > p, .tour-screen--dark .tour-turn-guide li small { color: #b6c4b7; }
+.tour-screen--dark .tour-turn-guide li { border-color: #405348; }
+.tour-screen--dark .tour-rental-duration button { border-color: #43574a; color: #dce7da; background: #293a30; }
+.tour-screen--dark .tour-rental-duration button[aria-pressed='true'] { border-color: #c8f45c; color: #16251c; background: #c8f45c; }
+.tour-screen--dark .tour-transfer-recommendation { background: #304332; }
+.tour-screen--dark .tour-transfer-recommendation span { color: #c2d0c0; }
+.tour-screen--dark .tour-map-panel-check { border-color: #43574a; color: #dce7da; background: #293a30; }
+@media (max-width: 720px) {
+  .tour-elevation-card { top: .55rem; right: .55rem; width: min(240px, calc(100% - 6rem)); padding: .5rem .65rem .35rem; }
+  .tour-elevation-card svg { height: 38px; }
+  .tour-elevation-heading strong { font-size: .59rem; }
+  .tour-turn-guide ol { max-height: 34vh; }
+}
+
 /* Four distinct seasonal scenes, inspired by a continuous spring-to-winter landscape. */
 .tour-route-tabs--seasonal .tour-season-art { height: 148px; border-bottom: 1px solid #ffffff55; }
 .tour-route-tabs--seasonal .tour-season-art--spring { --season-hill: #57975c; --season-water: #8accba; --season-leaves: #f5a0c4;

@@ -14,6 +14,8 @@ export type RouteRestaurant = {
 }
 
 export type RouteBikeLane = { id: string; points: LonLat[]; kind: 'cycleway' | 'lane' }
+export type RouteAmenity = { id: string; name: string; lat: number; lng: number; kind: 'pump' | 'water' | 'toilet' | 'convenience'; distanceMeters: number }
+export type RouteElevationPoint = { distanceMeters: number; elevationMeters: number }
 
 type Sample = { point: LonLat; distance: number }
 type OSMResponse = { elements?: Array<{ id: number; type?: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; geometry?: Array<{ lat: number; lon: number }>; tags?: Record<string, string> }> }
@@ -22,6 +24,8 @@ const signalCache = new Map<string, RouteCondition[]>()
 const gradeCache = new Map<string, RouteCondition[]>()
 const restaurantCache = new Map<string, RouteRestaurant[]>()
 const bikeLaneCache = new Map<string, RouteBikeLane[]>()
+const amenityCache = new Map<string, RouteAmenity[]>()
+const elevationCache = new Map<string, RouteElevationPoint[]>()
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
@@ -150,6 +154,51 @@ export async function fetchRouteBikeLanes(path: LonLat[], signal: AbortSignal): 
   }).slice(0, 220)
   bikeLaneCache.set(key, lanes)
   return lanes
+}
+
+export async function fetchRouteAmenities(path: LonLat[], signal: AbortSignal): Promise<RouteAmenity[]> {
+  const key = cacheKey(path)
+  const cached = amenityCache.get(key)
+  if (cached) return cached
+  const samples = routeSamples(path, 600, 28)
+  if (samples.length < 2) return []
+  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
+  const query = `[out:json][timeout:12];(node["amenity"~"^(bicycle_repair_station|drinking_water|toilets)$"](around:140,${pairs});way["amenity"~"^(bicycle_repair_station|drinking_water|toilets)$"](around:140,${pairs});node["shop"="convenience"](around:140,${pairs});way["shop"="convenience"](around:140,${pairs});node["service:bicycle:pump"="yes"](around:140,${pairs});way["service:bicycle:pump"="yes"](around:140,${pairs});node["compressed_air"="yes"](around:140,${pairs}););out center 120;`
+  const data = await queryOverpass(query, signal)
+  const amenities: RouteAmenity[] = []
+  for (const item of data.elements ?? []) {
+    const lat = item.lat ?? item.center?.lat
+    const lng = item.lon ?? item.center?.lon
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
+    const tags = item.tags ?? {}
+    const kind: RouteAmenity['kind'] = tags.shop === 'convenience' ? 'convenience'
+      : tags.amenity === 'toilets' ? 'toilet'
+        : tags.amenity === 'drinking_water' ? 'water' : 'pump'
+    const closest = distanceAlongRoute([lng!, lat!], path)
+    if (closest.gap > 170) continue
+    amenities.push({ id: `amenity-${item.type ?? 'node'}-${item.id}`, name: tags.name?.trim() || '', lat: lat!, lng: lng!, kind, distanceMeters: closest.along })
+  }
+  const result = amenities.sort((a, b) => a.distanceMeters - b.distanceMeters).filter((item, index, all) =>
+    all.findIndex(other => other.kind === item.kind && segmentLength([other.lng, other.lat], [item.lng, item.lat]) < 30) === index).slice(0, 60)
+  amenityCache.set(key, result)
+  return result
+}
+
+export async function fetchRouteElevationProfile(path: LonLat[], signal: AbortSignal): Promise<RouteElevationPoint[]> {
+  const key = cacheKey(path)
+  const cached = elevationCache.get(key)
+  if (cached) return cached
+  const samples = routeSamples(path, 240, 50)
+  if (samples.length < 2) return []
+  const latitude = samples.map(({ point: [, lat] }) => lat.toFixed(5)).join(',')
+  const longitude = samples.map(({ point: [lng] }) => lng.toFixed(5)).join(',')
+  const response = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${latitude}&longitude=${longitude}`, { signal })
+  if (!response.ok) throw new Error(`elevation request ${response.status}`)
+  const data = await response.json() as { elevation?: number[] }
+  if (!data.elevation || data.elevation.length !== samples.length) throw new Error('elevation data unavailable')
+  const result = samples.map((sample, index) => ({ distanceMeters: sample.distance, elevationMeters: data.elevation![index] }))
+  elevationCache.set(key, result)
+  return result
 }
 
 export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal): Promise<RouteRestaurant[]> {

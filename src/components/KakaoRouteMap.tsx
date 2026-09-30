@@ -3,7 +3,8 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoOverlay } from '../services/kakaoMaps'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
-import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { NearbyBikeStation } from '../services/nearbyBikes'
+import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import { createRouteMotion } from '../services/routeMotion'
 import { createRouteTreeMarker } from './routeTreeMarker'
 import { createCyclistMarker } from './cyclistMarker'
@@ -76,13 +77,17 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
   bikeLanes: RouteBikeLane[]
   showBikeLanes: boolean
+  amenities: RouteAmenity[]
+  showAmenities: boolean
+  bikeStations: NearbyBikeStation[]
+  showBikeStations: boolean
   season: TourSeason
   showRiders: boolean
   routeConditions: RouteCondition[]
@@ -415,6 +420,46 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       conditionOverlaysRef.current = []
     }
   }, [locale, routeConditions, showRoadInfo, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    if (!showBikeStations) return
+    const overlays = bikeStations.map(station => {
+      const marker = document.createElement('span')
+      marker.className = 'tour-live-bike-marker'
+      const count = document.createElement('span')
+      count.textContent = station.available === null ? '–' : String(station.available)
+      marker.append(count)
+      marker.title = `${station.name} · ${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      marker.setAttribute('role', 'img')
+      marker.setAttribute('aria-label', marker.title)
+      return new api.CustomOverlay({ map, position: new api.LatLng(station.lat, station.lng), content: marker, xAnchor: .5, yAnchor: 1, zIndex: 9 })
+    })
+    return () => overlays.forEach(overlay => overlay.setMap(null))
+  }, [bikeStations, locale, showBikeStations, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    if (!showAmenities) return
+    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '⚙', water: '💧', toilet: 'WC', convenience: '24' }
+    const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
+      ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' }
+      : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' }
+    const overlays = amenities.map(amenity => {
+      const marker = document.createElement('span')
+      marker.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
+      marker.textContent = glyphs[amenity.kind]
+      marker.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
+      marker.setAttribute('role', 'img')
+      marker.setAttribute('aria-label', marker.title)
+      return new api.CustomOverlay({ map, position: new api.LatLng(amenity.lat, amenity.lng), content: marker, xAnchor: .5, yAnchor: .5, zIndex: 8 })
+    })
+    return () => overlays.forEach(overlay => overlay.setMap(null))
+  }, [amenities, locale, showAmenities, status])
 
   useEffect(() => {
     const map = mapRef.current

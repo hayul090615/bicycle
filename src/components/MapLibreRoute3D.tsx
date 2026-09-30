@@ -10,9 +10,9 @@ import { createFoodGuideMarker } from './foodGuideMarker'
 import { offsetRouteSample, sampleRouteAtIntervals } from '../utils/routeMapSamples'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
-import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
-import { createRouteMotion } from '../services/routeMotion'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
+import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import { createRouteMotion } from '../services/routeMotion'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl)
@@ -134,7 +134,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, weather, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -144,6 +144,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   pickupStation: NearbyBikeStation | null
   bikeLanes: RouteBikeLane[]
   showBikeLanes: boolean
+  amenities: RouteAmenity[]
+  showAmenities: boolean
+  bikeStations: NearbyBikeStation[]
+  showBikeStations: boolean
   season: TourSeason
   weather: MapWeather
   routeConditions: RouteCondition[]
@@ -428,6 +432,41 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   }, [])
 
   useEffect(() => { updateBuildingShadowsRef.current() }, [shadowAzimuth, sunElevation, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready' || !showBikeStations) return
+    const markers = bikeStations.map(station => {
+      const element = document.createElement('span')
+      element.className = 'tour-live-bike-marker'
+      const count = document.createElement('span')
+      count.textContent = station.available === null ? '–' : String(station.available)
+      element.append(count)
+      element.title = `${station.name} · ${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      element.setAttribute('role', 'img')
+      element.setAttribute('aria-label', element.title)
+      return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([station.lng, station.lat]).addTo(map)
+    })
+    return () => markers.forEach(marker => marker.remove())
+  }, [bikeStations, locale, showBikeStations, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready' || !showAmenities) return
+    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '⚙', water: '💧', toilet: 'WC', convenience: '24' }
+    const labels = locale === 'ko' ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '한강 편의점' }
+      : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' }
+    const markers = amenities.map(amenity => {
+      const element = document.createElement('span')
+      element.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
+      element.textContent = glyphs[amenity.kind]
+      element.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
+      element.setAttribute('role', 'img')
+      element.setAttribute('aria-label', element.title)
+      return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([amenity.lng, amenity.lat]).addTo(map)
+    })
+    return () => markers.forEach(marker => marker.remove())
+  }, [amenities, locale, showAmenities, status])
 
   useEffect(() => {
     const map = mapRef.current
