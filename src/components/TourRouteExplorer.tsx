@@ -181,6 +181,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [photoLoading, setPhotoLoading] = useState(false)
   const [view, setView] = useState<'city' | 'satellite' | 'map' | 'google' | 'kakao'>(() => hasKakaoMapsKey ? 'kakao' : 'city')
   const [roadviewOpen, setRoadviewOpen] = useState(false)
+  const [activeMapTool, setActiveMapTool] = useState<'routes' | 'course' | 'food' | 'bikeLanes' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | null>(null)
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [trackingLocation, setTrackingLocation] = useState(false)
   const [locating, setLocating] = useState(false)
@@ -724,13 +725,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <aside className="tour-map-control-rail" aria-label={text('Map controls', '지도 도구')}>
-          <button type="button" className="tour-map-rail-sidebar-toggle" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen(open => !open)}><span aria-hidden="true">☷</span>{text('Routes', '코스 목록')}</button>
+          <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={activeMapTool === 'routes'}
+            onClick={() => setActiveMapTool(current => current === 'routes' ? null : 'routes')}><span aria-hidden="true">☷</span>{text('Routes', '코스 목록')}</button>
           <nav className="tour-map-quick-filters" aria-label={text('Quick map layers', '빠른 지도 필터')}>
-            <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
-            <button type="button" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
-            <button type="button" aria-pressed={showBikeLanes} onClick={() => toggleMapLayer('bikeLanes')}><span aria-hidden="true">↗</span>{text('Bike path', '자전거도로')}</button>
-            <button type="button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}><span aria-hidden="true">◉</span>{text('CCTV', 'CCTV')}</button>
+            <button type="button" aria-pressed={showCourse} onClick={() => { toggleMapLayer('course'); setActiveMapTool('course') }}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
+            <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer('restaurants'); setActiveMapTool('food') }}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
+            <button type="button" aria-pressed={showBikeLanes} onClick={() => { toggleMapLayer('bikeLanes'); setActiveMapTool('bikeLanes') }}><span aria-hidden="true">↗</span>{text('Bike path', '자전거도로')}</button>
+            <button type="button" aria-pressed={showCctv} onClick={() => { toggleMapLayer('cctv'); setActiveMapTool('cctv') }}><span aria-hidden="true">◉</span>{text('CCTV', 'CCTV')}</button>
           </nav>
           <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
             <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
@@ -741,57 +742,22 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               {hasGoogleMapsKey && <option value="google">Google 3D</option>}
             </select>
           </label>
-          <button type="button" className="tour-map-3d-button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>
+          <button type="button" className="tour-map-3d-button" aria-pressed={view === 'city'} onClick={() => { chooseMapView('city'); setActiveMapTool('3d') }}>
             <span aria-hidden="true">3D</span>{text('3D city', '3D 도시')}
           </button>
           {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewOpen}
-            onClick={() => { setView('kakao'); setRoadviewOpen(true) }}>
+            onClick={() => { setActiveMapTool(null); setFoodGuideOpen(false); setView('kakao'); setRoadviewOpen(true) }}>
             <span aria-hidden="true">▣</span>{text('Road view', '로드뷰')}
           </button>}
-        <details className="tour-season-controls tour-map-settings">
-          <summary><span aria-hidden="true">⚙</span>{text('Map settings', '지도 설정')}<i aria-hidden="true">⌄</i></summary>
-          <div className="tour-map-settings-panel">
-            <strong>{text('Seasonal scenery', '계절 풍경')}</strong>
-            <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
-              {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
-                className={`tour-season-tab tour-season-tab--${option.id}`} aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
-            </div>
-            <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
-            <div className="tour-weather-setting">
-              <strong>{text('Weather mood', '날씨 표현')}</strong>
-              <div role="group" aria-label={text('Choose weather appearance', '날씨 표현 선택')}>
-                {([
-                  ['sunny', '☀️', 'Sun', '햇볕'],
-                  ['cloudy', '☁️', 'Cloudy', '흐림'],
-                  ['rainy', '🌧️', 'Rain', '비'],
-                ] as const).map(([id, icon, en, ko]) => <button key={id} type="button" aria-pressed={mapWeather === id}
-                  onClick={() => setMapWeather(id)}><span aria-hidden="true">{icon}</span>{text(en, ko)}</button>)}
-              </div>
-            </div>
-            <div className="tour-map-settings-actions">
-              <button type="button" className="tour-tree-focus" onClick={viewTrees}
-                title={text('Zoom to trees along this route in 3D', '이 코스의 나무가 있는 구간을 3D로 확대')}>
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v-7m-3 7h6M8 16a4 4 0 0 1-3-6 5 5 0 0 1 4-7 4 4 0 0 1 7 3 5 5 0 0 1 3 8 4 4 0 0 1-5 2" /></svg>
-                {text('View trees', '나무길 보기')}
-              </button>
-              <button type="button" className="tour-shadow-toggle" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>
-                <i aria-hidden="true" />{text('Building shadows', '건물 그림자')}<strong>{showShadows ? text('ON', '켜짐') : text('OFF', '꺼짐')}</strong>
-              </button>
-              <button type="button" className="tour-cctv-toggle tour-cctv-toggle--map" aria-pressed={showCctv}
-                aria-label={text(showCctv ? 'Hide public CCTV from the map' : 'Show public CCTV on the map', showCctv ? '지도에서 공공 CCTV 숨기기' : '지도에 공공 CCTV 표시하기')}
-                onClick={() => toggleMapLayer('cctv')}>
-                <span className="tour-cctv-dot" aria-hidden="true" /><span>{text('Public CCTV', '공공 CCTV')}</span>
-                <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</strong>
-                <i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
-              </button>
-            </div>
-          </div>
-        </details>
-        <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
+        <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === 'settings'} onClick={() => setActiveMapTool(current => current === 'settings' ? null : 'settings')}>
+          <span aria-hidden="true">⚙</span>{text('Settings', '설정')}
+        </button>
+        <button type="button" className="tour-map-locate" onClick={() => { locateNearestRoute(false); setActiveMapTool('location') }} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
           <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
         </button>
         <button type="button" className={`tour-food-guide-trigger${rideFoodPrompt?.routeId === route.id ? ' is-nearby' : ''}`}
           aria-expanded={foodGuideOpen} aria-controls="tour-food-guide-panel" onClick={() => {
+            setActiveMapTool(null)
             setFoodGuideOpen(open => !open)
             setMapLayers(current => ({ ...current, restaurants: true }))
           }}>
@@ -800,6 +766,81 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <i aria-hidden="true">{foodGuideOpen ? '−' : '+'}</i>
         </button>
         </aside>
+        {activeMapTool && <aside className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
+          <header className="tour-map-side-panel-header">
+            <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
+              : activeMapTool === 'course' ? text('Route display', '코스 표시')
+                : activeMapTool === 'food' ? text('Food along the way', '경로 주변 맛집')
+                  : activeMapTool === 'bikeLanes' ? text('Bike paths', '자전거도로')
+                    : activeMapTool === 'cctv' ? text('Public CCTV', '공공 CCTV')
+                      : activeMapTool === 'settings' ? text('Map settings', '지도 설정')
+                        : activeMapTool === 'location' ? text('Nearby bikes', '내 주변 따릉이')
+                          : activeMapTool === '3d' ? text('3D city view', '3D 도시 보기') : text('Map view', '지도 보기')}</strong></div>
+            <button type="button" onClick={() => setActiveMapTool(null)} aria-label={text('Close map panel', '지도 패널 닫기')}>×</button>
+          </header>
+          <div className="tour-map-side-panel-body">
+            {activeMapTool === 'routes' && <>
+              <div className="tour-map-panel-feature"><small>{text('SELECTED ROUTE', '선택한 코스')}</small><strong>{text(route.title, route.titleKo)}</strong>
+                <span>{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by bike`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</span></div>
+              <button type="button" className="tour-map-panel-action" onClick={() => { setActiveMapTool(null); setSidebarOpen(true) }}>{text('Open route list and rental stations', '코스 목록과 대여소 열기')} ↗</button>
+              <p>{text(route.summary, route.summaryKo)}</p>
+            </>}
+            {activeMapTool === 'course' && <>
+              <p>{text('Show the selected route and the path from your location.', '선택한 코스와 내 위치에서 출발하는 경로를 지도에 표시합니다.')}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}>{showCourse ? text('Hide route', '코스 숨기기') : text('Show route', '코스 표시')}</button>
+            </>}
+            {activeMapTool === 'food' && <>
+              <p>{text(`${routeRestaurants.length} nearby places found along this route.`, `경로 주변 맛집 ${routeRestaurants.length}곳을 찾았습니다.`)}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}>{showRestaurants ? text('Hide food markers', '맛집 표시 끄기') : text('Show food markers', '맛집 표시 켜기')}</button>
+              <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setFoodGuideOpen(true); setMapLayers(current => ({ ...current, restaurants: true })); setActiveMapTool(null) }}>{text('Open chef recommendations', '요리사 맛집 추천 열기')}</button>
+            </>}
+            {activeMapTool === 'bikeLanes' && <>
+              <p>{bikeLanesState?.status === 'loading' ? text('Loading bike paths…', '자전거도로를 불러오는 중…') : text(`${routeBikeLanes.length} mapped bike path segments near this route.`, `경로 주변 자전거도로 ${routeBikeLanes.length}개 구간을 찾았습니다.`)}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showBikeLanes} onClick={() => toggleMapLayer('bikeLanes')}>{showBikeLanes ? text('Hide bike paths', '자전거도로 숨기기') : text('Show bike paths', '자전거도로 표시')}</button>
+            </>}
+            {activeMapTool === 'cctv' && <>
+              <p>{text(`${cctvCameras.length.toLocaleString()} public CCTV locations are available.`, `공공 CCTV ${cctvCameras.length.toLocaleString()}곳 정보를 사용할 수 있습니다.`)}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>{showCctv ? text('Hide CCTV', 'CCTV 숨기기') : text('Show CCTV', 'CCTV 표시')}</button>
+            </>}
+            {activeMapTool === 'settings' && <>
+              <section className="tour-map-panel-section"><h3>{text('Map style', '지도 종류')}</h3>
+                <div className="tour-map-view-options">
+                  {hasKakaoMapsKey && <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseMapView('kakao')}>{text('Kakao street', '카카오 도로')}</button>}
+                  <button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>3D {text('City', '도시')}</button>
+                  <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('Satellite', '위성')}</button>
+                  <button type="button" aria-pressed={view === 'map'} onClick={() => chooseMapView('map')}>{text('Flat map', '평면')}</button>
+                  {hasGoogleMapsKey && <button type="button" aria-pressed={view === 'google'} onClick={() => chooseMapView('google')}>Google 3D</button>}
+                </div>
+              </section>
+              <section className="tour-map-panel-section"><h3>{text('Seasonal scenery', '계절 풍경')}</h3>
+                <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
+                  {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
+                    className={`tour-season-tab tour-season-tab--${option.id}`} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
+                </div><p className="tour-map-panel-note">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</p>
+              </section>
+              <section className="tour-map-panel-section"><h3>{text('Weather', '날씨 표현')}</h3>
+                <div className="tour-weather-setting"><div role="group" aria-label={text('Choose weather appearance', '날씨 표현 선택')}>
+                  {([['sunny', '☀️', 'Sun', '햇볕'], ['cloudy', '☁️', 'Cloudy', '흐림'], ['rainy', '🌧️', 'Rain', '비']] as const).map(([id, icon, en, ko]) =>
+                    <button key={id} type="button" aria-pressed={mapWeather === id} onClick={() => setMapWeather(id)}><span aria-hidden="true">{icon}</span>{text(en, ko)}</button>)}
+                </div></div>
+              </section>
+              <section className="tour-map-panel-section tour-map-panel-section--actions"><h3>{text('On the map', '지도에 표시')}</h3>
+                <button type="button" className="tour-map-panel-action" onClick={viewTrees}>{text('🌳 Show tree route', '🌳 나무길 보기')}</button>
+                <button type="button" className="tour-map-panel-action" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>{text('Building shadows', '건물 그림자')} · {showShadows ? text('On', '켜짐') : text('Off', '꺼짐')}</button>
+              </section>
+            </>}
+            {activeMapTool === 'location' && <>
+              <p>{userLocation ? text('Your current location is on the map.', '현재 위치를 지도에 표시했습니다.') : text('Allow location access to find the nearest rental station.', '가까운 대여소를 찾으려면 위치 접근을 허용해 주세요.')}</p>
+              <button type="button" className="tour-map-panel-action" onClick={() => locateNearestRoute(false)} disabled={locating}>{locating ? text('Finding your location…', '위치 확인 중…') : text('Find bikes near me', '내 주변 대여소 찾기')}</button>
+              {pickupStation && <div className="tour-map-panel-feature"><small>{text('NEAREST RENTAL STATION', '가까운 대여소')}</small><strong>{pickupStation.name}</strong><span>{pickupStation.available === null ? text('Live count unavailable', '실시간 잔여 수 확인 불가') : text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)}</span></div>}
+            </>}
+            {activeMapTool === '3d' && <>
+              <p>{text('Explore the route with raised buildings and the 3D camera controls.', '건물 입체 표현과 카메라 조작으로 코스를 살펴보세요.')}</p>
+              <div className="tour-map-view-options"><button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>{text('3D city', '3D 도시')}</button>
+                <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('2D satellite', '2D 위성')}</button></div>
+            </>}
+          </div>
+        </aside>}
         {pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
           <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
             ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)

@@ -2310,6 +2310,64 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   transform: translateY(-50%);
   backdrop-filter: blur(14px);
 }
+.tour-map-side-panel {
+  position: absolute;
+  z-index: 1310;
+  top: 0;
+  bottom: 0;
+  left: 5.65rem;
+  width: min(360px, calc(100vw - 6.2rem));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e5e7e2;
+  border-radius: 0 16px 16px 0;
+  color: #24362c;
+  background: #fff;
+  box-shadow: 12px 0 32px #14251c38;
+}
+.tour-map-side-panel-header { min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .8rem 1rem; border-bottom: 1px solid #e7e9e4; background: #fff; }
+.tour-map-side-panel-header > div { display: grid; gap: .25rem; }
+.tour-map-side-panel-header small { color: #829078; font-size: .55rem; font-weight: 850; letter-spacing: .12em; }
+.tour-map-side-panel-header strong { color: #253a2e; font-size: 1rem; }
+.tour-map-side-panel-header > button { width: 34px; height: 34px; border: 1px solid #e5e8e2; border-radius: 50%; color: #526155; background: #f8f9f5; font-size: 1.3rem; cursor: pointer; }
+.tour-map-side-panel-body { min-height: 0; display: grid; align-content: start; gap: .85rem; padding: 1rem; overflow-y: auto; overscroll-behavior: contain; }
+.tour-map-side-panel-body > p, .tour-map-panel-note { margin: 0; color: #68766b; font-size: .72rem; line-height: 1.55; }
+.tour-map-panel-feature { display: grid; gap: .35rem; padding: .85rem; border: 1px solid #e3e8dd; border-radius: 12px; background: #f8faf5; }
+.tour-map-panel-feature small { color: #8a956e; font-size: .53rem; font-weight: 850; letter-spacing: .1em; }
+.tour-map-panel-feature strong { color: #24382c; font-size: .9rem; }
+.tour-map-panel-feature span { color: #667368; font-size: .67rem; }
+.tour-map-panel-action { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: .45rem; padding: .55rem .7rem; border: 1px solid #0b855d; border-radius: 9px; color: #fff; background: #0b855d; font: 750 .7rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-map-panel-action:hover { background: #086e4c; }
+.tour-map-panel-action[aria-pressed='false'] { border-color: #dbe2d9; color: #415347; background: #f7f9f5; }
+.tour-map-panel-action--quiet { border-color: #dce4d7; color: #345242; background: #f6f8f2; }
+.tour-map-panel-section { display: grid; gap: .5rem; padding-bottom: .8rem; border-bottom: 1px solid #edf0e9; }
+.tour-map-panel-section h3 { margin: 0; color: #31473a; font-size: .75rem; }
+.tour-map-view-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.tour-map-view-options button { min-height: 38px; padding: .42rem .5rem; border: 1px solid #dfe5dc; border-radius: 8px; color: #4d5d50; background: #fafbf8; font: 700 .64rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-map-view-options button[aria-pressed='true'] { border-color: #0b855d; color: #fff; background: #0b855d; }
+.tour-map-side-panel .tour-season-picker { display: flex; width: 100%; gap: .22rem; padding: .22rem; border: 1px solid #e2e7dc; border-radius: 10px; background: #f7f8f3; }
+.tour-map-side-panel .tour-season-picker button { min-width: 0; min-height: 38px; flex: 1 1 0; padding: .4rem .32rem; border-radius: 7px; font-size: .64rem; }
+.tour-map-side-panel .tour-weather-setting > div { display: flex; flex-wrap: wrap; gap: .35rem; }
+.tour-map-side-panel .tour-weather-setting button { min-height: 36px; flex: 1 1 0; justify-content: center; border-radius: 9px; font-size: .63rem; }
+.tour-map-settings-button { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .16rem; padding: .32rem .12rem; border: 1px solid transparent; border-radius: 11px; color: #31443a; background: transparent; font: 750 .56rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-map-settings-button > span { color: #158a62; font-size: 1.2rem; }
+.tour-map-settings-button[aria-expanded='true'] { color: #fff; background: #0b855d; }
+.tour-map-settings-button[aria-expanded='true'] > span { color: #fff; }
+.tour-screen--dark .tour-map-side-panel { border-color: #3d5145; color: #e5ede4; background: #1c2b23; }
+.tour-screen--dark .tour-map-side-panel-header { border-color: #3d5145; background: #1c2b23; }
+.tour-screen--dark .tour-map-side-panel-header strong, .tour-screen--dark .tour-map-panel-section h3 { color: #e4ede2; }
+.tour-screen--dark .tour-map-side-panel-header > button { border-color: #43564a; color: #e1e9df; background: #293b30; }
+.tour-screen--dark .tour-map-side-panel-body > p, .tour-screen--dark .tour-map-panel-note, .tour-screen--dark .tour-map-panel-feature span { color: #c0ccbd; }
+.tour-screen--dark .tour-map-panel-feature { border-color: #3d5145; background: #25362c; }
+.tour-screen--dark .tour-map-panel-feature strong { color: #edf4e9; }
+.tour-screen--dark .tour-map-panel-action[aria-pressed='false'], .tour-screen--dark .tour-map-panel-action--quiet { border-color: #43584a; color: #e2ebdf; background: #2a3b30; }
+.tour-screen--dark .tour-map-panel-section { border-color: #3b4d41; }
+.tour-screen--dark .tour-map-view-options button { border-color: #425549; color: #dce7da; background: #26372d; }
+.tour-screen--dark .tour-map-view-options button[aria-pressed='true'] { border-color: #c8f45c; color: #16251c; background: #c8f45c; }
+.tour-screen--dark .tour-map-side-panel .tour-season-picker { border-color: #415447; background: #25372c; }
+.tour-screen--dark .tour-map-settings-button[aria-expanded='true'] { color: #16251c; background: #c8f45c; }
+.tour-screen--dark .tour-map-settings-button[aria-expanded='true'] > span { color: #16251c; }
 .tour-map-rail-sidebar-toggle { min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .16rem; padding: .32rem .1rem; border: 0; border-radius: 11px; color: #31443a; background: #f1f5ef; font: 750 .56rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
 .tour-map-rail-sidebar-toggle > span { color: #158a62; font-size: 1.25rem; line-height: 1; }
 .tour-map-rail-sidebar-toggle[aria-expanded='true'] { color: #fff; background: #0b855d; }
@@ -2463,7 +2521,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-map-control-rail .tour-food-guide-avatar { width: 27px; height: 27px; flex-basis: 27px; }
   .tour-map-control-rail .tour-map-settings > summary { min-height: 45px; }
   .tour-map-control-rail .tour-map-mode-select select { font-size: .51rem; }
-  .tour-map-control-rail .tour-map-settings-panel { left: calc(100% + .4rem); width: min(275px, calc(100vw - 82px)); max-height: calc(100% - .5rem); }
+  .tour-map-side-panel { left: 4.7rem; width: min(360px, calc(100vw - 5.2rem)); border-radius: 0 14px 14px 0; }
   .tour-map-control-rail .tour-food-guide-trigger strong { font-size: .51rem; }
   .tour-map-stage > .tour-food-guide-panel { left: 4.7rem; top: auto; bottom: 1rem; width: min(350px, calc(100% - 5.2rem)); transform: none; }
   .tour-roadview-caption { top: .45rem; left: .45rem; font-size: .63rem; }
