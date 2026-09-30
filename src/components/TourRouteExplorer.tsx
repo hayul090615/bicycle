@@ -741,6 +741,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               {hasGoogleMapsKey && <option value="google">Google 3D</option>}
             </select>
           </label>
+          <button type="button" className="tour-map-3d-button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>
+            <span aria-hidden="true">3D</span>{text('3D city', '3D 도시')}
+          </button>
           {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewOpen}
             onClick={() => { setView('kakao'); setRoadviewOpen(true) }}>
             <span aria-hidden="true">▣</span>{text('Road view', '로드뷰')}

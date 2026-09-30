@@ -2376,6 +2376,24 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   font: 750 .56rem 'DM Sans', 'Noto Sans KR', sans-serif;
   cursor: pointer;
 }
+.tour-map-control-rail .tour-map-3d-button {
+  min-height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .16rem;
+  padding: .32rem .12rem;
+  border: 1px solid #dfe8e0;
+  border-radius: 11px;
+  color: #31443a;
+  background: #f6f8f3;
+  font: 750 .55rem 'DM Sans', 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+}
+.tour-map-control-rail .tour-map-3d-button > span { color: #158a62; font-size: 1.05rem; font-weight: 900; line-height: 1; }
+.tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] { border-color: #0b855d; color: #fff; background: #0b855d; }
+.tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span { color: #fff; }
 .tour-map-control-rail .tour-roadview-toggle:hover, .tour-map-control-rail .tour-map-locate:hover { background: #f1f5ef; }
 .tour-map-control-rail .tour-roadview-toggle > span, .tour-map-control-rail .tour-map-locate > span { color: #158a62; font-size: 1.24rem; }
 .tour-map-control-rail .tour-food-guide-trigger { position: static; min-width: 0; display: flex; flex-direction: column; gap: .18rem; padding: .35rem .12rem; border: 1px solid transparent; border-radius: 11px; color: #31443a; background: transparent; box-shadow: none; text-align: center; transform: none; }
@@ -2413,6 +2431,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-map-rail-sidebar-toggle[aria-expanded='true'] > span { color: #15251c; }
 .tour-screen--dark .tour-map-control-rail .tour-food-guide-trigger strong, .tour-screen--dark .tour-map-control-rail .tour-map-locate { color: #e2e9df; }
 .tour-screen--dark .tour-map-control-rail .tour-map-locate { border-color: #394d43; background: #26392f; }
+.tour-screen--dark .tour-map-control-rail .tour-map-3d-button { border-color: #394d43; color: #e2e9df; background: #26392f; }
+.tour-screen--dark .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] { border-color: #c8f45c; color: #16251c; background: #c8f45c; }
+.tour-screen--dark .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span { color: #16251c; }
 .tour-screen--dark .tour-map-control-rail .tour-food-guide-trigger.is-nearby { border-color: #7a9148; background: #2a3e2c; }
 .tour-screen--dark .tour-map-quick-filters button { color: #e2e9df; }
 .tour-screen--dark .tour-map-quick-filters button:hover { background: #2a3e32; }
@@ -2437,6 +2458,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-map-rail-sidebar-toggle { min-height: 44px; font-size: .5rem; }
   .tour-map-quick-filters button { min-height: 46px; font-size: .52rem; }
   .tour-map-control-rail .tour-roadview-toggle, .tour-map-control-rail .tour-map-locate { min-height: 44px; font-size: .5rem; }
+  .tour-map-control-rail .tour-map-3d-button { min-height: 44px; font-size: .5rem; }
   .tour-map-control-rail .tour-food-guide-trigger { padding: .25rem .1rem; }
   .tour-map-control-rail .tour-food-guide-avatar { width: 27px; height: 27px; flex-basis: 27px; }
   .tour-map-control-rail .tour-map-settings > summary { min-height: 45px; }
