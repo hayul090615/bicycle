@@ -1395,6 +1395,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-cctv-toggle strong { margin-left: auto; color: #354d3b; }
 .tour-cctv-toggle i { color: #748071; font-size: .6rem; font-style: normal; font-weight: 800; }
 .tour-cctv-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #7862a9; box-shadow: 0 0 0 3px #7862a928; }
+.tour-cctv-toggle--map { width: auto; min-height: 31px; align-self: flex-start; padding: .32rem .5rem; border-color: #d7d8d2; border-radius: 5px; background: #fffffff2; box-shadow: 0 2px 7px #14251c20; font-size: .62rem; pointer-events: auto; }
+.tour-cctv-toggle--map[aria-pressed='true'] { border-color: #7963a8; color: #4e3b78; background: #f0ecf8; }
+.tour-cctv-toggle--map[aria-pressed='false'] .tour-cctv-dot { background: #92978e; box-shadow: 0 0 0 3px #92978e24; }
+.tour-cctv-toggle--map strong { margin-left: .25rem; color: #594583; }
+.tour-cctv-toggle--map i { color: #71618b; }
 .tour-cctv-status, .tour-cctv-source { margin: -.15rem 0 0; color: #727568; font-size: .62rem; line-height: 1.5; }
 .tour-cctv-source { color: #596b54; text-underline-offset: 2px; }
 .tour-my-map { display: grid; gap: .5rem; margin-top: .65rem; padding: .68rem; border: 1px solid #cdd8ce; border-radius: 6px; background: #f7f8f4; }
@@ -1410,6 +1415,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-my-map-layers .tour-bike-lane-label::before { width: 13px; height: 3px; display: inline-block; margin: 0 .3rem .16rem 0; border-radius: 2px; background: #df3b3b; content: ''; }
 .tour-my-map-layers label small { margin-left: auto; color: #778379; font: 700 .58rem 'DM Sans', 'Noto Sans KR', sans-serif; }
 .tour-my-map-layers label:has(input:checked) { border-color: #9fcbb2; background: #edf6ef; }
+.tour-my-map-cctv-button { min-width: 0; min-height: 34px; display: flex; align-items: center; gap: .38rem; padding: .35rem .42rem; border: 1px solid #e0e5dd; border-radius: 4px; color: #46554a; background: #fff; font: inherit; font-size: .65rem; text-align: left; cursor: pointer; }
+.tour-my-map-cctv-button[aria-pressed='true'] { border-color: #b8a9d3; color: #55417d; background: #f2eff8; }
+.tour-my-map-cctv-button > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-my-map-cctv-button small { margin-left: auto; color: #778379; font: 700 .58rem 'DM Sans', 'Noto Sans KR', sans-serif; }
+.tour-my-map-cctv-button i { color: #7b718a; font-size: .52rem; font-style: normal; font-weight: 800; }
 .tour-my-map .tour-cctv-status { margin: 0; }
 .tour-my-map .tour-cctv-source { margin: 0; }
 .tour-cctv-map-marker { width: 25px; height: 25px; display: grid; place-items: center; padding: 0; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #7155a6; box-shadow: 0 1px 7px #18132688; font: 800 .59rem 'DM Sans', sans-serif; cursor: pointer; }
@@ -1786,6 +1796,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-my-map > summary span, .tour-screen--dark .tour-my-map-layers label small { color: #b4c4b6; }
 .tour-screen--dark .tour-my-map-layers label { color: #dce8e2; border-color: #405147; background: #1d2b25; }
 .tour-screen--dark .tour-my-map-layers label:has(input:checked) { border-color: #63a982; background: #294537; }
+.tour-screen--dark .tour-my-map-cctv-button { color: #dce8e2; border-color: #405147; background: #1d2b25; }
+.tour-screen--dark .tour-my-map-cctv-button[aria-pressed='true'] { color: #ece4ff; border-color: #806cae; background: #403356; }
+.tour-screen--dark .tour-my-map-cctv-button small { color: #bec6c0; }
+.tour-screen--dark .tour-cctv-toggle--map { color: #dce8e2; border-color: #526157; background: #1c2c24f2; }
+.tour-screen--dark .tour-cctv-toggle--map[aria-pressed='true'] { color: #f1eaff; border-color: #a493ce; background: #44385b; }
+.tour-screen--dark .tour-cctv-toggle--map strong, .tour-screen--dark .tour-cctv-toggle--map i { color: #d4c6f5; }
 .tour-screen--dark .tour-bike-time strong { color: #b5f3ce; }
 .tour-screen--dark .tour-bike-time small { color: #bdd5c3; }
 .tour-screen--dark .tour-more-details > summary strong, .tour-screen--dark .tour-safety-details > summary strong { color: #eef6ef; }
@@ -1912,16 +1928,45 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map-stock-overlay > div { min-width: 0; display: grid; gap: .12rem; }
 .tour-map-stock-overlay strong { color: #087653; font-size: .7rem; }
 .tour-map-stock-overlay small { overflow: hidden; color: #64786d; font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
-.tour-map-tree { position: relative; display: block; width: 25px; height: 34px; filter: drop-shadow(1px 2px 2px #17261c65); pointer-events: none; }
-.tour-map-tree i { position: absolute; z-index: 1; bottom: 0; left: 46%; width: 8%; height: 43%; border-radius: 3px 3px 1px 1px; background: #76563d; }
-.tour-map-tree b { position: absolute; top: 5%; left: 10%; width: 80%; height: 72%; border-radius: 54% 48% 50% 50%; background: var(--map-tree-leaves, #668b64); box-shadow: -5px 5px 0 -2px var(--map-tree-leaves, #668b64), 5px 4px 0 -2px var(--map-tree-leaves, #668b64), 0 -4px 0 -2px var(--map-tree-light, #84a67c); }
-.tour-map-tree em { position: absolute; z-index: 1; top: 19%; left: 30%; width: 22%; height: 19%; border-radius: 50%; background: var(--map-tree-light, #84a67c); opacity: .84; }
-.tour-map-tree--spring { --map-tree-leaves: #9a7777; --map-tree-light: #c79aa8; }
-.tour-map-tree--summer { --map-tree-leaves: #427958; --map-tree-light: #7b9b62; }
-.tour-map-tree--autumn { --map-tree-leaves: #a45f37; --map-tree-light: #d29348; }
-.tour-map-tree--winter { --map-tree-leaves: #66867e; --map-tree-light: #a8c1bc; }
-.tour-map-tree--winter b { top: 0; left: 15%; width: 70%; height: 74%; border-radius: 0; clip-path: polygon(50% 0, 100% 42%, 77% 42%, 100% 72%, 71% 72%, 91% 100%, 9% 100%, 29% 72%, 0 72%, 23% 42%, 0 42%); }
-.tour-map-tree--winter em { display: none; }
+.tour-map-tree { position: relative; display: block; width: 38px; height: 56px; overflow: visible; transform-origin: 50% 100%; filter: drop-shadow(1px 3px 3px #14201678); pointer-events: none; }
+.tour-map-tree-shadow { position: absolute; z-index: 0; bottom: 1%; left: 12%; width: 76%; height: 11%; border-radius: 50%; background: radial-gradient(ellipse, #101a1680 0%, #17221c50 46%, transparent 76%); filter: blur(1.5px); }
+.tour-map-tree-sprite { position: absolute; z-index: 5; inset: 0; display: block; background-image: var(--tree-sprite); background-position: center bottom; background-repeat: no-repeat; background-size: contain; filter: brightness(.88) saturate(.86); }
+.tour-map-tree--variation-1 .tour-map-tree-sprite { transform: scaleX(-1); }
+.tour-map-tree-sprite::after { position: absolute; inset: 1% 0 27%; display: block; border-radius: 48% 52% 45% 45%; opacity: 0; content: ''; mix-blend-mode: color; clip-path: ellipse(58% 52% at 50% 43%); }
+.tour-map-tree--spring .tour-map-tree-sprite::after { background: #dc8cac; opacity: .64; }
+.tour-map-tree--autumn .tour-map-tree-sprite::after { background: #ec9b35; opacity: .48; }
+.tour-map-tree:not(.tour-map-tree--winter) .tour-map-tree-trunk,
+.tour-map-tree:not(.tour-map-tree--winter) .tour-map-tree-branch,
+.tour-map-tree:not(.tour-map-tree--winter) .tour-map-tree-crown,
+.tour-map-tree:not(.tour-map-tree--winter) .tour-map-tree-leaf-cluster { display: none; }
+.tour-map-tree-trunk { position: absolute; z-index: 2; bottom: 5%; left: 44%; width: 13%; height: 40%; border-radius: 28% 28% 8% 8%; clip-path: polygon(35% 0, 66% 0, 100% 100%, 0 100%); background: linear-gradient(90deg, #523d2d 0%, #9a7048 33%, #705039 70%, #463628 100%); }
+.tour-map-tree-branch { position: absolute; z-index: 1; bottom: 24%; left: 48%; width: 5%; height: 34%; border-radius: 5px; background: linear-gradient(90deg, #59402d, #a47a4e 55%, #503a2b); transform-origin: 50% 100%; }
+.tour-map-tree-branch--left { transform: rotate(-48deg); }
+.tour-map-tree-branch--right { transform: rotate(44deg); }
+.tour-map-tree-branch--upper-left { bottom: 37%; height: 26%; transform: rotate(-29deg); }
+.tour-map-tree-branch--upper-right { bottom: 37%; height: 24%; transform: rotate(31deg); }
+.tour-map-tree-branch::before, .tour-map-tree-branch::after { position: absolute; bottom: 48%; left: -5%; width: 62%; height: 5%; border-radius: 3px; background: inherit; content: ''; transform-origin: 100% 50%; }
+.tour-map-tree-branch::before { transform: rotate(-43deg); }
+.tour-map-tree-branch::after { transform: rotate(42deg); }
+.tour-map-tree-crown { position: absolute; z-index: 2; display: block; border-radius: 49% 51% 46% 54%; }
+.tour-map-tree-crown--rear { top: 4%; left: 7%; width: 86%; height: 62%; background: radial-gradient(ellipse at 37% 25%, var(--map-tree-leaf-light) 0%, var(--map-tree-leaf) 40%, var(--map-tree-leaf-shadow) 100%); box-shadow: 0 2px 5px #1d2e1f50; }
+.tour-map-tree-crown--main { z-index: 3; top: 12%; left: 15%; width: 70%; height: 50%; background: radial-gradient(ellipse at 34% 22%, #ffffff55 0%, transparent 28%), radial-gradient(ellipse at 48% 43%, var(--map-tree-leaf-light) 0%, var(--map-tree-leaf) 49%, var(--map-tree-leaf-shadow) 100%); box-shadow: inset -3px -4px 7px #18271942, inset 2px 2px 5px #ffffff40; }
+.tour-map-tree-crown--main::after { position: absolute; inset: 8% 10%; border-radius: inherit; background-image: radial-gradient(ellipse at 17% 30%, #fff8 0 1px, transparent 2px), radial-gradient(ellipse at 47% 65%, #12281735 0 1px, transparent 2px), radial-gradient(ellipse at 76% 35%, #fff6 0 1px, transparent 2px); background-size: 9px 8px, 11px 10px, 13px 11px; content: ''; }
+.tour-map-tree-leaf-cluster { position: absolute; z-index: 4; display: block; width: 34%; height: 27%; border-radius: 50%; background: radial-gradient(ellipse at 34% 27%, var(--map-tree-leaf-light) 0%, var(--map-tree-leaf) 52%, var(--map-tree-leaf-shadow) 100%); box-shadow: inset -2px -2px 3px #18271938, inset 1px 1px 3px #ffffff40; }
+.tour-map-tree-leaf-cluster--1 { top: 8%; left: 31%; width: 39%; height: 30%; }
+.tour-map-tree-leaf-cluster--2 { top: 20%; left: 3%; }
+.tour-map-tree-leaf-cluster--3 { top: 22%; right: 1%; width: 36%; height: 30%; }
+.tour-map-tree-leaf-cluster--4 { top: 37%; left: 9%; width: 38%; height: 26%; }
+.tour-map-tree-leaf-cluster--5 { top: 39%; right: 7%; width: 37%; height: 26%; }
+.tour-map-tree-leaf-cluster--6 { top: 28%; left: 34%; width: 34%; height: 28%; }
+.tour-map-tree-leaf-cluster--7 { top: 16%; left: 43%; width: 31%; height: 25%; }
+.tour-map-tree--spring { --map-tree-leaf-dark: #77624d; --map-tree-leaf-shadow: #806252; --map-tree-leaf: #b47e87; --map-tree-leaf-light: #e7b8bf; }
+.tour-map-tree--summer { --map-tree-leaf-dark: #244c32; --map-tree-leaf-shadow: #28543a; --map-tree-leaf: #4e854e; --map-tree-leaf-light: #a3bd70; }
+.tour-map-tree--autumn { --map-tree-leaf-dark: #743f28; --map-tree-leaf-shadow: #874529; --map-tree-leaf: #b66b34; --map-tree-leaf-light: #e1a04c; }
+.tour-map-tree--winter { --map-tree-leaf-dark: #503e31; --map-tree-leaf-shadow: #503e31; --map-tree-leaf: #503e31; --map-tree-leaf-light: #8d7052; }
+.tour-map-tree--winter .tour-map-tree-sprite, .tour-map-tree--winter .tour-map-tree-crown, .tour-map-tree--winter .tour-map-tree-leaf-cluster { display: none; }
+.tour-map-tree--winter .tour-map-tree-branch { background: linear-gradient(90deg, #4d4034, #876949 55%, #534333); }
+.kakao-route-map .tour-map-tree { width: 30px; height: 44px; }
 .tour-ride-food-prompt { position: absolute; z-index: 1210; right: .85rem; bottom: 8.2rem; width: min(340px, calc(100% - 1.7rem)); display: grid; gap: .38rem; padding: .9rem; border: 1px solid #c8d8ce; border-radius: 9px; color: #263f32; background: #fffdf7f5; box-shadow: 0 8px 26px #16281e35; backdrop-filter: blur(9px); }
 .tour-ride-food-prompt-close { position: absolute; top: .35rem; right: .45rem; width: 27px; height: 27px; border: 0; border-radius: 50%; color: #607269; background: transparent; font: 1.15rem/1 'DM Sans', sans-serif; cursor: pointer; }
 .tour-ride-food-prompt-kicker { color: #78836f; font: 800 .57rem 'DM Sans', 'Noto Sans KR', sans-serif; letter-spacing: .1em; }

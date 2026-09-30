@@ -21,12 +21,17 @@ type Coordinates = { lat: number; lng: number; heading?: number }
 type RotationRequest = { direction: 'left' | 'right' | 'up' | 'down'; serial: number }
 type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | 'bikeLanes'
 type MapLayers = Record<MapLayerKey, boolean>
-const DEFAULT_MAP_LAYERS: MapLayers = { course: true, restaurants: false, cctv: true, roadInfo: true, riders: true, bikeLanes: true }
+const DEFAULT_MAP_LAYERS: MapLayers = { course: true, restaurants: false, cctv: false, roadInfo: true, riders: true, bikeLanes: true }
 
 function readMapLayers(): MapLayers {
   try {
-    const saved = localStorage.getItem('seoul-bike-map-layers-v1')
-    if (!saved) return DEFAULT_MAP_LAYERS
+    const saved = localStorage.getItem('seoul-bike-map-layers-v2')
+    if (!saved) {
+      const previous = localStorage.getItem('seoul-bike-map-layers-v1')
+      if (!previous) return DEFAULT_MAP_LAYERS
+      const migrated = JSON.parse(previous) as Partial<MapLayers>
+      return { ...DEFAULT_MAP_LAYERS, ...migrated, cctv: false }
+    }
     const parsed = JSON.parse(saved) as Partial<MapLayers>
     return Object.fromEntries(Object.keys(DEFAULT_MAP_LAYERS).map(key => [
       key,
@@ -376,7 +381,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return () => { active = false }
   }, [])
   useEffect(() => {
-    try { localStorage.setItem('seoul-bike-map-layers-v1', JSON.stringify(mapLayers)) } catch { /* Map controls remain available without storage. */ }
+    try { localStorage.setItem('seoul-bike-map-layers-v2', JSON.stringify(mapLayers)) } catch { /* Map controls remain available without storage. */ }
   }, [mapLayers])
   useEffect(() => {
     if (!trackingLocation || !navigator.geolocation) return
@@ -671,6 +676,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
             {view === 'city' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
           </div>
+          <button type="button" className="tour-cctv-toggle tour-cctv-toggle--map" aria-pressed={showCctv}
+            aria-label={text(showCctv ? 'Hide public CCTV from the map' : 'Show public CCTV on the map', showCctv ? '지도에서 공공 CCTV 숨기기' : '지도에 공공 CCTV 표시하기')}
+            onClick={() => toggleMapLayer('cctv')}>
+            <span className="tour-cctv-dot" aria-hidden="true" />
+            <span>{text('Public CCTV', '공공 CCTV')}</span>
+            <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</strong>
+            <i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
+          </button>
         </div>
         <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
           <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
@@ -808,7 +821,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <label><input type="checkbox" checked={showCourse} onChange={() => toggleMapLayer('course')} /><span>{text('Tour route', '관광 코스')}</span></label>
             <label><input type="checkbox" checked={showBikeLanes} onChange={() => toggleMapLayer('bikeLanes')} /><span className="tour-bike-lane-label">{text('Mapped bike roads', '자전거도로')}</span><small>{bikeLanesState?.status === 'loading' ? '…' : routeBikeLanes.length || ''}</small></label>
             <label><input type="checkbox" checked={showRestaurants} onChange={() => toggleMapLayer('restaurants')} /><span>{text('Restaurants', '맛집')}</span><small>{activeRoutePlaces?.status === 'loading' ? '…' : routeRestaurants.length || ''}</small></label>
-            <label><input type="checkbox" checked={showCctv} onChange={() => toggleMapLayer('cctv')} /><span>{text('CCTV near route', '경로 주변 CCTV')}</span><small>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</small></label>
+            <button type="button" className="tour-my-map-cctv-button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>
+              <span className="tour-cctv-dot" aria-hidden="true" /><span>{text('CCTV near route', '경로 주변 CCTV')}</span>
+              <small>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</small><i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
+            </button>
             <label><input type="checkbox" checked={showRoadInfo} onChange={() => toggleMapLayer('roadInfo')} /><span>{text('Signals & slopes', '신호등·오르막·내리막')}</span><small>{routeConditions.length || ''}</small></label>
             <label><input type="checkbox" checked={showRiders} onChange={() => toggleMapLayer('riders')} /><span>{text('AI riders', 'AI 라이더')}</span></label>
           </div>

@@ -5,6 +5,7 @@ import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import riderSpriteUrl from '../assets/map-riders.png'
+import { createRouteTreeMarker } from './routeTreeMarker'
 
 type MapPoint = { lat: number; lng: number }
 
@@ -290,12 +291,9 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     sceneryOverlaysRef.current = []
     if (!showCourse) return
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
-    const treeSamples = routeSamples(path, 310, 13)
-    treeSamples.forEach(point => {
-      const tree = document.createElement('span')
-      tree.className = `tour-map-tree tour-map-tree--${season}`
-      tree.setAttribute('aria-hidden', 'true')
-      tree.append(document.createElement('i'), document.createElement('b'), document.createElement('em'))
+    const treeSamples = routeSamples(path, 240, 10)
+    treeSamples.forEach((point, index) => {
+      const tree = createRouteTreeMarker(season, locale, index)
       sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: tree, xAnchor: .5, yAnchor: 1, zIndex: 3 }))
     })
     if (showRiders) {

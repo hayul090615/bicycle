@@ -4,6 +4,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker, SkySpecification } from 'maplibre-gl'
 import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
+import { createRouteTreeMarker } from './routeTreeMarker'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
@@ -475,18 +476,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
         })
       }
-      const treeCount = Math.max(7, Math.min(18, Math.floor(routeLength / 500)))
+      // Keep trees along the full ride, alternating between the two road sides.
+      const treeCount = Math.max(12, Math.min(180, Math.ceil(routeLength / 100)))
       treeMarkersRef.current = samplePathWithBearing(sceneryPath, treeCount).map(({ point, bearing }, index) => {
-        const element = document.createElement('span')
-        element.className = `tour-map-tree tour-map-tree--${season}`
-        element.setAttribute('role', 'img')
-        element.setAttribute('aria-label', locale === 'ko' ? '자전거 길 주변의 계절 나무' : 'Seasonal tree beside the route')
-        element.title = locale === 'ko' ? '자전거 코스 주변에 배치한 계절 나무' : 'Seasonal tree scenery near the cycling route'
-        const trunk = document.createElement('i')
-        const crown = document.createElement('b')
-        const crownHighlight = document.createElement('em')
-        element.append(trunk, crown, crownHighlight)
-        const offset = index % 2 === 0 ? 13 + index % 3 * 3 : -(13 + index % 3 * 3)
+        const element = createRouteTreeMarker(season, locale, index)
+        const offset = index % 2 === 0 ? 9 + index % 3 * 2 : -(9 + index % 3 * 2)
         return new maplibregl.Marker({ element, anchor: 'bottom' })
           .setLngLat(offsetFromRoute(point, bearing, offset))
           .addTo(map)
@@ -513,6 +507,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         const isBlocked = (marker: MapLibreMarker) => {
           if (!hasBuildings) return false
           const pixel = map.project(marker.getLngLat())
+          const { width, height } = map.getContainer().getBoundingClientRect()
+          if (pixel.x < 0 || pixel.y < 0 || pixel.x > width || pixel.y > height) return true
           return map.queryRenderedFeatures(pixel, { layers: ['building-3d'] }).length > 0
         }
         peopleMarkersRef.current.forEach(marker => {
@@ -523,10 +519,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           marker.getElement().style.display = visible ? '' : 'none'
         })
         treeMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 12.5 && !(zoom >= 16 && isBlocked(marker))
-          const scale = Math.max(18, Math.min(32, 22 + (zoom - 13) * 3))
+          const visible = zoom >= 15.5 && !(zoom >= 16 && isBlocked(marker))
+          const scale = Math.max(25, Math.min(42, 30 + (zoom - 14) * 4))
           marker.getElement().style.width = `${scale}px`
-          marker.getElement().style.height = `${scale * 1.35}px`
+          marker.getElement().style.height = `${scale * 1.48}px`
           marker.getElement().style.display = visible ? '' : 'none'
         })
         conditionMarkersRef.current.forEach(marker => {
