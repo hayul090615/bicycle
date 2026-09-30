@@ -2124,28 +2124,56 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 
 /* Fewer map buttons up top; let the map itself carry the page. */
-.tour-map-mode-select { min-width: 164px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .48rem; padding: .32rem .5rem .32rem .65rem; border: 1px solid #e2ddcf; border-radius: 5px; color: #88774f; background: #fffdf7; }
+.tour-map-mode-select { min-width: 164px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .48rem; padding: .32rem .5rem .32rem .65rem; border: 1px solid #e2ddcf; border-radius: 12px; color: #88774f; background: #fffdf7; }
 .tour-map-mode-select > span { color: #8e7b50; font-size: .58rem; font-weight: 800; letter-spacing: .07em; white-space: nowrap; }
-.tour-map-mode-select select { width: 100%; min-width: 0; padding: .28rem 1.2rem .28rem .1rem; border: 0; outline: 0; color: #263e32; background: transparent; font: 750 .67rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-map-mode-select select { width: 100%; min-width: 0; padding: .28rem 1.2rem .28rem .1rem; border: 0; outline: 0; color: #263e32; color-scheme: light; background: transparent; font: 750 .67rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-map-mode-select select option { color: #1d3328; background: #fff; font-weight: 650; }
 .tour-map-mode-select:focus-within { border-color: #b89b5e; box-shadow: 0 0 0 3px #d8c48a35; }
 .tour-screen--dark .tour-map-mode-select { border-color: #526151; background: #1f322a; }
 .tour-screen--dark .tour-map-mode-select > span { color: #cfb778; }
-.tour-screen--dark .tour-map-mode-select select { color: #e9eee4; }
-.tour-explorer-grid { height: max(980px, calc(100vh - 72px)); min-height: 980px; }
+.tour-screen--dark .tour-map-mode-select select { color: #e9eee4; color-scheme: light; }
+.tour-screen--dark .tour-map-mode-select select option { color: #1d3328; background: #fff; }
+.tour-explorer-grid { height: calc(100vh - 72px); min-height: 610px; }
 .tour-earth-preview { height: 100%; min-height: 0; }
 .tour-map-quick-guide { min-height: 30px; padding-top: .18rem; padding-bottom: .18rem; }
 .tour-map-rotate-controls { top: 4rem; right: .7rem; left: auto; transform: none; }
 .tour-map-rotate-controls--tilt { top: 7.7rem; }
+.tour-screen .tour-topbar { border-color: #e8e8df; background: #fbfaf5; }
+.tour-screen--dark .tour-topbar { border-color: #293a34; background: #111d19; }
+.tour-ride-toolbar { min-height: 54px; }
+.tour-ride-toolbar .tour-card-kicker { color: #869755; font-size: .56rem; letter-spacing: .13em; }
+.tour-sidebar-toggle { min-height: 38px; padding: .45rem .78rem; border: 0; border-radius: 999px; color: #19251f; background: #c8f45c; box-shadow: 0 4px 14px #17271d2c; font-size: .66rem; }
+.tour-sidebar-toggle:hover { color: #111a15; background: #d8ff78; transform: translateY(-1px); }
+.tour-map-mode-select { border-color: #d8dece; background: #fff; box-shadow: 0 2px 8px #19261c12; }
+.tour-screen--dark .tour-map-mode-select { border-color: #33463d; background: #1d2d26; box-shadow: 0 3px 12px #0003; }
+.tour-map-settings > summary { border-radius: 999px; padding-right: .85rem; padding-left: .85rem; }
+.tour-map-settings[open] > summary { border-radius: 12px 12px 0 0; }
+.tour-map-quick-guide { border-radius: 0 0 10px 10px; }
+.tour-map-quick-guide b { border-color: #d0ef73; color: #27371c; background: #d8f78a; }
+.tour-screen--dark .tour-map-quick-guide b { border-color: #c8f45c; color: #19251c; background: #c8f45c; }
+.tour-screen--dark .tour-sidebar-toggle { color: #16221b; background: #c8f45c; }
+.tour-screen--dark .tour-sidebar-toggle:hover { background: #d8ff78; }
+.tour-map-person { filter: drop-shadow(0 2px 2px #0a161488); }
+.tour-map-person svg { overflow: visible; }
+.tour-map-mode-select select { color-scheme: light !important; }
+.tour-map-mode-select select option { color: #1d3328 !important; background-color: #fff !important; }
+.tour-screen--dark .tour-map-mode-select select option { color: #1d3328 !important; background-color: #fff !important; }
+.tour-my-map { border-radius: 14px; box-shadow: 0 8px 20px #18271b10; }
+.tour-my-map-layers label, .tour-my-map-cctv-button { border-radius: 10px; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.tour-my-map-layers label:has(input:checked) { color: #23351d; border-color: #b7d477; background: #f0f8df; }
+.tour-my-map-layers input { accent-color: #8fc53f; }
+.tour-screen--dark .tour-my-map-layers label:has(input:checked) { color: #eff8e1; border-color: #86a84d; background: #30432c; }
+.tour-map-settings-panel { border-radius: 0 14px 14px 14px; box-shadow: 0 16px 42px #0a1b1230; }
 @media (max-width: 900px) {
-  .tour-explorer-grid { height: auto; min-height: 0; grid-template-rows: minmax(760px, 88vh) auto; }
-  .tour-earth-preview { height: max(88vh, 760px); min-height: 760px; }
+  .tour-explorer-grid { height: min(88vh, 900px); min-height: 580px; grid-template-rows: none; }
+  .tour-earth-preview { height: 100%; min-height: 0; }
 }
 @media (max-width: 700px) {
   .tour-map-mode-select { min-width: 128px; gap: .25rem; padding: .24rem .34rem; }
   .tour-map-mode-select > span { font-size: .49rem; }
   .tour-map-mode-select select { font-size: .58rem; }
-  .tour-explorer-grid { grid-template-rows: minmax(760px, 88vh) auto; }
-  .tour-earth-preview { height: max(88vh, 760px); min-height: 760px; }
+  .tour-explorer-grid { height: min(82vh, 760px); min-height: 520px; grid-template-rows: none; }
+  .tour-earth-preview { height: 100%; min-height: 0; }
   .tour-map-rotate-controls { top: 3.5rem; right: .35rem; left: auto; width: 100px; height: 100px; transform: none; }
   .tour-map-rotate-controls--tilt { top: 7rem; }
 }

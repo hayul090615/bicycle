@@ -179,7 +179,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     if (showCourse && sceneryPath.length >= 2) {
       const distance = sceneryPath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
         (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
-      const positions = sampleRiderPositions(sceneryPath, Math.max(1, Math.ceil(distance / 55)))
+      const positions = sampleRiderPositions(sceneryPath, Math.max(1, Math.ceil(distance / 260)))
       treeMarkersRef.current = positions.map(([lng, lat], index) => {
         const marker = new library.Marker3DElement({
           position: { lat, lng },
@@ -194,7 +194,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
         const template = document.createElement('template')
         template.content.append(icon)
         marker.append(template)
-        marker.style.display = map.range <= 12000 ? '' : 'none'
+        marker.style.display = map.range <= 25000 ? '' : 'none'
         map.append(marker)
         return marker
       })
@@ -205,7 +205,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     const riderIcons: HTMLElement[] = []
     if (showRiders && motion) {
       const distance = motion.lengthMeters
-      const count = Math.max(2, Math.min(7, Math.floor(distance / 1800)))
+      const count = Math.max(8, Math.min(14, Math.round(distance / 1400)))
       const riderPositions = sampleRiderPositions(sceneryPath, count)
       peopleMarkersRef.current = riderPositions.map(([lng, lat], index) => {
         const marker = new library.Marker3DElement({
@@ -213,14 +213,14 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
           drawsWhenOccluded: false, sizePreserved: false,
         })
         const icon = createCyclistMarker(index, locale)
-        icon.style.width = '48px'
-        icon.style.height = '70px'
+        icon.style.width = '54px'
+        icon.style.height = '78px'
         icon.style.setProperty('--rider-heading', '90deg')
         riderIcons.push(icon)
         const template = document.createElement('template')
         template.content.append(icon)
         marker.append(template)
-        marker.style.display = map.range <= 4500 ? '' : 'none'
+        marker.style.display = map.range <= 25000 ? '' : 'none'
         map.append(marker)
         return marker
       })
@@ -242,7 +242,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
       riderFrame = window.requestAnimationFrame(moveRiders)
     }
     const updateTreeVisibility = () => treeMarkersRef.current.forEach(marker => {
-      marker.style.display = map.range <= 12000 ? '' : 'none'
+      marker.style.display = map.range <= 25000 ? '' : 'none'
       marker.classList.toggle('is-close-view', map.range <= 4000)
     })
     map.addEventListener('gmp-rangechange', updateTreeVisibility)
@@ -261,7 +261,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     const map = mapRef.current
     if (!map || status !== 'ready') return
     const updatePeopleVisibility = () => peopleMarkersRef.current.forEach(marker => {
-      marker.style.display = map.range <= 4500 ? '' : 'none'
+      marker.style.display = map.range <= 25000 ? '' : 'none'
     })
     map.addEventListener('gmp-rangechange', updatePeopleVisibility)
     updatePeopleVisibility()

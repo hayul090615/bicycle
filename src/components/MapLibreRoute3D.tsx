@@ -190,7 +190,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const treePositions = useMemo(() => {
     const length = linePoints.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
       (point[0] - linePoints[index - 1][0]) * 88_000, (point[1] - linePoints[index - 1][1]) * 111_000), 0)
-    return samplePathWithBearing(linePoints, Math.max(1, Math.ceil(length / 55)))
+    return samplePathWithBearing(linePoints, Math.max(1, Math.ceil(length / 260)))
       .map(({ point, bearing }, index) => {
         const offset = (index % 2 === 0 ? 1 : -1) * (9 + index % 3 * 2)
         return { point: offsetFromRoute(point, bearing, offset), bearing }
@@ -493,7 +493,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       const routeLength = sceneryPath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
         (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
       if (showRiders) {
-        const riderCount = Math.max(3, Math.min(8, Math.floor(routeLength / 2200)))
+        const riderCount = Math.max(8, Math.min(14, Math.round(routeLength / 1400)))
         peopleMarkersRef.current = samplePath(sceneryPath, riderCount).map(([lng, lat], index) => {
           const element = createCyclistMarker(index, locale)
           return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
@@ -549,14 +549,14 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           return map.queryRenderedFeatures(pixel, { layers: ['building-3d'] }).length > 0
         }
         peopleMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 13.2 && !(zoom >= 16 && isBlocked(marker))
-          const scale = Math.max(19, Math.min(42, 24 + (zoom - 14) * 5))
+          const visible = zoom >= 11.5 && !(zoom >= 16 && isBlocked(marker))
+          const scale = Math.max(25, Math.min(46, 30 + (zoom - 14) * 4))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.85}px`
           marker.getElement().style.display = visible ? '' : 'none'
         })
         treeMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 13.2 && !(zoom >= 16 && isBlocked(marker))
+          const visible = zoom >= 12.8 && !(zoom >= 16 && isBlocked(marker))
           const scale = Math.max(19, Math.min(36, 22 + (zoom - 14) * 3))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.48}px`

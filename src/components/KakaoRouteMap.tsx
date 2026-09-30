@@ -293,7 +293,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     sceneryOverlaysRef.current = []
     if (!showCourse) return
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
-    const treeSamples = routeSamples(path, 55, 10)
+    const treeSamples = routeSamples(path, 260, 10)
     const treeElements: HTMLButtonElement[] = []
     const riderOverlays: Array<{ overlay: KakaoOverlay; phase: number; person: HTMLElement }> = []
     let riderFrame = 0
@@ -309,12 +309,14 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       const lonLatPath = path.map(point => [point.lng, point.lat] as LonLat)
       const motion = createRouteMotion(lonLatPath)
       const routeLength = motion?.lengthMeters ?? 0
-      const riderCount = Math.max(3, Math.min(8, Math.floor(routeLength / 2200)))
+      const riderCount = Math.max(8, Math.min(14, Math.round(routeLength / 1400)))
       Array.from({ length: riderCount }, (_, index) => {
         const position = motion?.pointAt(index / riderCount).point
         return position ? { lat: position[1], lng: position[0] } : null
       }).filter((point): point is MapPoint => point !== null).forEach((point, index) => {
         const person = createCyclistMarker(index, locale)
+        person.style.width = '38px'
+        person.style.height = '60px'
         const overlay = new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: person, xAnchor: .5, yAnchor: 1, zIndex: 4 })
         sceneryOverlaysRef.current.push(overlay)
         riderOverlays.push({ overlay, phase: index / riderCount, person })
