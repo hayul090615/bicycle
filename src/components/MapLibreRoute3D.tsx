@@ -42,6 +42,52 @@ function samplePath(path: LonLat[], count: number): LonLat[] {
   })
 }
 
+function samplePathWithBearing(path: LonLat[], count: number): Array<{ point: LonLat; bearing: number }> {
+  if (path.length < 2 || count < 1) return []
+  const segmentLengths: number[] = []
+  let total = 0
+  for (let index = 1; index < path.length; index++) {
+    const [startLng, startLat] = path[index - 1]
+    const [endLng, endLat] = path[index]
+    const length = Math.hypot((endLng - startLng) * 88_000, (endLat - startLat) * 111_000)
+    segmentLengths.push(length)
+    total += length
+  }
+  if (!total) return []
+  return Array.from({ length: count }, (_, step) => {
+    let remaining = total * (step + 1) / (count + 1)
+    let segment = 0
+    while (segment < segmentLengths.length - 1 && remaining > segmentLengths[segment]) {
+      remaining -= segmentLengths[segment]
+      segment++
+    }
+    const [startLng, startLat] = path[segment]
+    const [endLng, endLat] = path[segment + 1]
+    const length = Math.max(1, segmentLengths[segment])
+    const ratio = remaining / length
+    const point: LonLat = [startLng + (endLng - startLng) * ratio, startLat + (endLat - startLat) * ratio]
+    const meanLat = (startLat + endLat) / 2 * Math.PI / 180
+    const bearing = (Math.atan2((endLng - startLng) * Math.cos(meanLat), endLat - startLat) * 180 / Math.PI + 360) % 360
+    return { point, bearing }
+  })
+}
+
+function offsetFromRoute([lng, lat]: LonLat, bearing: number, meters: number): LonLat {
+  const side = (bearing + 90) * Math.PI / 180
+  const latitude = lat + Math.cos(side) * meters / 111_000
+  const longitude = lng + Math.sin(side) * meters / (111_000 * Math.cos(lat * Math.PI / 180))
+  return [longitude, latitude]
+}
+
+function bearingToDestination(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
+  const latitude1 = start.lat * Math.PI / 180
+  const latitude2 = end.lat * Math.PI / 180
+  const longitudeDelta = (end.lng - start.lng) * Math.PI / 180
+  const y = Math.sin(longitudeDelta) * Math.cos(latitude2)
+  const x = Math.cos(latitude1) * Math.sin(latitude2) - Math.sin(latitude1) * Math.cos(latitude2) * Math.cos(longitudeDelta)
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
+}
+
 function getFeatureRings(feature: MapGeoJSONFeature): number[][][] {
   if (feature.geometry.type === 'Polygon') return [feature.geometry.coordinates[0] as number[][]]
   if (feature.geometry.type === 'MultiPolygon') return feature.geometry.coordinates.map(polygon => polygon[0] as number[][])
@@ -71,7 +117,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
 }
 
 export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
-  viewMode: 'city' | 'map'
+  viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
@@ -90,7 +136,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   cctvCameras: PublicCamera[]
   showCctv: boolean
   locationFocusRequest: number
-  rotationRequest: { direction: 'left' | 'right'; serial: number } | null
+  rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number } | null
   selectedStop: number | null
@@ -104,6 +150,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
   const peopleMarkersRef = useRef<MapLibreMarker[]>([])
+  const treeMarkersRef = useRef<MapLibreMarker[]>([])
   const conditionMarkersRef = useRef<MapLibreMarker[]>([])
   const restaurantMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
@@ -115,11 +162,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const sunElevationRef = useRef(sunElevation)
   const updateBuildingShadowsRef = useRef<() => void>(() => {})
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [satellite, setSatellite] = useState(() => viewMode === 'city')
+  const [satellite, setSatellite] = useState(() => viewMode !== 'map')
   shadowAzimuthRef.current = shadowAzimuth
   sunElevationRef.current = sunElevation
   const initialCenter = useRef<maplibregl.LngLatLike | null>(null)
-  const isFlatMap = viewMode === 'map'
+  const is3DView = viewMode === 'city'
+  const isFlatMap = !is3DView
+  const showSatellite = viewMode === 'satellite' || (viewMode === 'city' && satellite)
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
@@ -139,8 +188,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       style: STYLE_URL,
       center: initialCenter.current ?? [points[0].lng, points[0].lat],
       zoom: 14,
-      pitch: isFlatMap ? 0 : 64,
-      bearing: isFlatMap ? 0 : -10,
+      pitch: is3DView ? 64 : 0,
+      bearing: is3DView ? -10 : 0,
       maxPitch: 75,
       attributionControl: {},
       canvasContextAttributes: { antialias: true },
@@ -150,7 +199,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       if (!map.isStyleLoaded() || !map.getLayer('building-3d')) return
       const source = map.getSource('tour-building-shadows') as GeoJSONSource | undefined
       if (!source) return
-      const features = sunElevationRef.current > 0
+      const features = is3DView && sunElevationRef.current > 0
         ? map.queryRenderedFeatures({ layers: ['building-3d'] })
         : []
       const data = makeBuildingShadows(features, sunElevationRef.current, shadowAzimuthRef.current)
@@ -163,7 +212,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     updateBuildingShadowsRef.current = updateBuildingShadows
     map.on('idle', updateBuildingShadows)
     map.on('moveend', updateBuildingShadows)
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: !isFlatMap }), 'top-right')
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: is3DView }), 'top-right')
     const fail = () => {
       if (disposed || failed) return
       failed = true
@@ -172,6 +221,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       markersRef.current = []
       peopleMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
+      treeMarkersRef.current.forEach(marker => marker.remove())
+      treeMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -204,11 +255,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           id: 'tour-imagery',
           type: 'raster',
           source: 'tour-imagery',
-          layout: { visibility: isFlatMap ? 'none' : 'visible' },
+          layout: { visibility: showSatellite ? 'visible' : 'none' },
           paint: { 'raster-opacity': 1, 'raster-fade-duration': 250 },
         }, 'park')
         const layers = map.getStyle().layers
-        if (!isFlatMap) {
+        if (showSatellite) {
           for (const layer of layers) {
             const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined
             if (layer.id === 'background' || layer.id === 'natural_earth' || (layer.type === 'fill' && SATELLITE_SURFACES.has(sourceLayer ?? ''))) {
@@ -243,6 +294,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
             'line-opacity': 0.96,
           },
         }
+        if (map.getLayer('building-3d')) map.setLayoutProperty('building-3d', 'visibility', is3DView ? 'visible' : 'none')
         const accessCasing = { id: 'tour-access-casing', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
           paint: { 'line-color': '#fffdf5', 'line-width': 10, 'line-opacity': .98 } }
@@ -266,12 +318,14 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           id: 'tour-building-shadow-fill',
           type: 'fill' as const,
           source: 'tour-building-shadows',
+          layout: { visibility: is3DView ? 'visible' as const : 'none' as const },
           paint: { 'fill-color': '#24362f', 'fill-opacity': 0.36, 'fill-antialias': true },
         }
         const shadowOutline = {
           id: 'tour-building-shadow-outline',
           type: 'line' as const,
           source: 'tour-building-shadows',
+          layout: { visibility: is3DView ? 'visible' as const : 'none' as const },
           paint: { 'line-color': '#162820', 'line-width': 1.15, 'line-opacity': 0.78 },
         }
         if (buildingLayer) {
@@ -319,6 +373,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       cctvMarkersRef.current = []
       peopleMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
+      treeMarkersRef.current.forEach(marker => marker.remove())
+      treeMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -385,21 +441,42 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     const map = mapRef.current
     if (!map || status !== 'ready') return
     peopleMarkersRef.current.forEach(marker => marker.remove())
+    treeMarkersRef.current.forEach(marker => marker.remove())
     conditionMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
+    treeMarkersRef.current = []
     conditionMarkersRef.current = []
-    if (showRiders && !isFlatMap && routePath && routePath.length >= 2) {
-      const routeLength = routePath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
-        (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
-      const riderCount = Math.max(2, Math.min(7, Math.floor(routeLength / 1800)))
-      peopleMarkersRef.current = samplePath(routePath, riderCount).map(([lng, lat], index) => {
+    const sceneryPath = routePath && routePath.length >= 2 ? routePath : linePoints
+    if (is3DView && sceneryPath.length >= 2) {
+      const routeLength = sceneryPath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
+        (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
+      if (showRiders) {
+        const riderCount = Math.max(2, Math.min(7, Math.floor(routeLength / 1800)))
+        peopleMarkersRef.current = samplePath(sceneryPath, riderCount).map(([lng, lat], index) => {
+          const element = document.createElement('span')
+          element.className = `tour-map-person tour-map-person--${index % 3}`
+          element.style.backgroundImage = `url("${riderSpriteUrl}")`
+          element.setAttribute('role', 'img')
+          element.setAttribute('aria-label', locale === 'ko' ? 'AI로 만든 따릉이 이용자 이미지' : 'AI-generated illustrative rider')
+          element.title = locale === 'ko' ? 'AI 생성 이미지 · 실제 이용자 아님' : 'AI generated · illustrative, not a live person'
+          return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
+        })
+      }
+      const treeCount = Math.max(6, Math.min(28, Math.floor(routeLength / 280)))
+      treeMarkersRef.current = samplePathWithBearing(sceneryPath, treeCount).map(({ point, bearing }, index) => {
         const element = document.createElement('span')
-        element.className = `tour-map-person tour-map-person--${index % 3}`
-        element.style.backgroundImage = `url("${riderSpriteUrl}")`
+        element.className = `tour-map-tree tour-map-tree--${season}`
         element.setAttribute('role', 'img')
-        element.setAttribute('aria-label', locale === 'ko' ? 'AI로 만든 따릉이 이용자 이미지' : 'AI-generated illustrative rider')
-        element.title = locale === 'ko' ? 'AI 생성 이미지 · 실제 이용자 아님' : 'AI generated · illustrative, not a live person'
-        return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
+        element.setAttribute('aria-label', locale === 'ko' ? '자전거 길 옆 계절 나무' : 'Seasonal tree beside the route')
+        element.title = locale === 'ko' ? '코스 주변 나무 풍경' : 'Tree scenery near the cycling route'
+        const trunk = document.createElement('i')
+        const crown = document.createElement('b')
+        const crownHighlight = document.createElement('em')
+        element.append(trunk, crown, crownHighlight)
+        const offset = index % 2 === 0 ? 13 + index % 3 * 3 : -(13 + index % 3 * 3)
+        return new maplibregl.Marker({ element, anchor: 'bottom' })
+          .setLngLat(offsetFromRoute(point, bearing, offset))
+          .addTo(map)
       })
     }
     conditionMarkersRef.current = showRoadInfo ? routeConditions.map(condition => {
@@ -419,17 +496,24 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         const zoom = map.getZoom()
-        const hasBuildings = !isFlatMap && Boolean(map.getLayer('building-3d'))
+        const hasBuildings = is3DView && Boolean(map.getLayer('building-3d'))
         const isBlocked = (marker: MapLibreMarker) => {
           if (!hasBuildings) return false
           const pixel = map.project(marker.getLngLat())
           return map.queryRenderedFeatures(pixel, { layers: ['building-3d'] }).length > 0
         }
         peopleMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 16.9 && !isBlocked(marker)
-          const scale = Math.max(24, Math.min(50, 24 + (zoom - 16.9) * 15))
+          const visible = zoom >= 16.2 && !isBlocked(marker)
+          const scale = Math.max(22, Math.min(48, 24 + (zoom - 16.2) * 15))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.85}px`
+          marker.getElement().style.display = visible ? '' : 'none'
+        })
+        treeMarkersRef.current.forEach(marker => {
+          const visible = zoom >= 15.7 && !isBlocked(marker)
+          const scale = Math.max(22, Math.min(34, 25 + (zoom - 15.7) * 5))
+          marker.getElement().style.width = `${scale}px`
+          marker.getElement().style.height = `${scale * 1.35}px`
           marker.getElement().style.display = visible ? '' : 'none'
         })
         conditionMarkersRef.current.forEach(marker => {
@@ -450,11 +534,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       map.off('move', updateVisibility)
       map.off('idle', updateVisibility)
       peopleMarkersRef.current.forEach(marker => marker.remove())
+      treeMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
+      treeMarkersRef.current = []
       conditionMarkersRef.current = []
     }
-  }, [isFlatMap, linePoints, locale, routeConditions, routePath, showRiders, showRoadInfo, status])
+  }, [is3DView, linePoints, locale, routeConditions, routePath, season, showRiders, showRoadInfo, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -479,7 +565,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (!pickupStation) return
     const element = document.createElement('div')
     element.className = 'tour-pickup-marker'
-    element.textContent = '🚲'
+    const icon = document.createElement('span')
+    icon.textContent = '🚲'
+    const count = document.createElement('b')
+    count.textContent = pickupStation.available === null ? '—' : String(pickupStation.available)
+    element.append(icon, count)
     const label = locale === 'ko' ? `${pickupStation.name} · 대여 가능 ${pickupStation.available ?? '확인 전'}대` : `${pickupStation.name} · ${pickupStation.available ?? 'unknown'} bikes available`
     element.setAttribute('role', 'img')
     element.setAttribute('aria-label', label)
@@ -556,15 +646,18 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     const map = mapRef.current
     if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
-    map.flyTo({
-      center: [userLocation.lng, userLocation.lat],
-      zoom: 16,
-      pitch: isFlatMap ? 0 : 62,
-      bearing: isFlatMap ? 0 : -12,
-      duration: 600,
+    const destination = points[selectedStop ?? points.length - 1]
+    const bounds = new maplibregl.LngLatBounds([userLocation.lng, userLocation.lat], [destination.lng, destination.lat])
+    ;[...(walkPath ?? []), ...(accessPath ?? [])].forEach(point => bounds.extend(point))
+    map.fitBounds(bounds, {
+      padding: { top: 88, right: 88, bottom: 88, left: 88 },
+      maxZoom: 16,
+      pitch: is3DView ? 62 : 0,
+      bearing: is3DView ? bearingToDestination(userLocation, destination) : 0,
+      duration: 720,
       essential: false,
     })
-  }, [isFlatMap, locationFocusRequest, status, userLocation])
+  }, [accessPath, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
@@ -711,22 +804,31 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready' || !rotationRequest) return
+    if (rotationRequest.direction === 'up' || rotationRequest.direction === 'down') {
+      if (is3DView) {
+        const pitch = Math.max(18, Math.min(75, map.getPitch() + (rotationRequest.direction === 'up' ? 9 : -9)))
+        map.easeTo({ pitch, duration: 420 })
+      } else {
+        map.panBy([0, rotationRequest.direction === 'up' ? -120 : 120], { duration: 350 })
+      }
+      return
+    }
     const turn = rotationRequest.direction === 'left' ? -32 : 32
     const bearing = ((map.getBearing() + turn) % 360 + 360) % 360
     map.rotateTo(bearing, { duration: 420 })
-  }, [rotationRequest, status])
+  }, [is3DView, rotationRequest, status])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready' || !map.getLayer('tour-imagery')) return
-    map.setLayoutProperty('tour-imagery', 'visibility', satellite ? 'visible' : 'none')
+    map.setLayoutProperty('tour-imagery', 'visibility', showSatellite ? 'visible' : 'none')
     map.getStyle().layers.forEach(layer => {
       const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined
       if (layer.id === 'background' || layer.id === 'natural_earth' || (layer.type === 'fill' && SATELLITE_SURFACES.has(sourceLayer ?? ''))) {
-        map.setLayoutProperty(layer.id, 'visibility', satellite ? 'none' : 'visible')
+        map.setLayoutProperty(layer.id, 'visibility', showSatellite ? 'none' : 'visible')
       }
     })
-  }, [satellite, status])
+  }, [showSatellite, status])
 
   if (status === 'error') return <>
     <p className="tour-earth-notice" role="status">{locale === 'ko'
@@ -735,14 +837,18 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     <div className="tour-map-error-fallback">{fallback}</div>
   </>
 
-  return <div className={`tour-maplibre-3d tour-scene-${season}${isFlatMap ? ' tour-maplibre-2d' : ''}`}>
+  const mapModeLabel = viewMode === 'city' ? (locale === 'ko' ? '위성 3D 지도' : '3D aerial map')
+    : viewMode === 'satellite' ? (locale === 'ko' ? '2D 위성 지도' : '2D satellite map')
+      : (locale === 'ko' ? '평면 지도' : 'Flat map')
+
+  return <div className={`tour-maplibre-3d tour-scene-${season}${isFlatMap ? ' tour-maplibre-2d' : ''}${viewMode === 'satellite' ? ' tour-maplibre-satellite' : ''}`}>
     {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
-    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={locale === 'ko' ? `${route.titleKo} ${isFlatMap ? '2D 지도' : '위성 3D 지도'}` : `${route.title} ${isFlatMap ? '2D map' : '3D aerial map'}`} />
+    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={`${locale === 'ko' ? route.titleKo : route.title} ${mapModeLabel}`} />
     {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
       {locale === 'ko' ? '위성 사진' : 'Satellite'}
     </button>}
     {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko'
-      ? isFlatMap ? '일반 지도를 불러오는 중…' : '도시 3D 지도를 불러오는 중…'
-      : isFlatMap ? 'Loading the street map…' : 'Loading the 3D city map…'}</p>}
+      ? viewMode === 'city' ? '도시 3D 지도를 불러오는 중…' : viewMode === 'satellite' ? '2D 위성 지도를 불러오는 중…' : '평면 지도를 불러오는 중…'
+      : viewMode === 'city' ? 'Loading the 3D city map…' : viewMode === 'satellite' ? 'Loading the 2D satellite map…' : 'Loading the flat map…'}</p>}
   </div>
 }

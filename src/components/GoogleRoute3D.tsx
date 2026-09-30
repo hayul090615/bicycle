@@ -6,6 +6,15 @@ import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
 import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import riderSpriteUrl from '../assets/map-riders.png'
 
+function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
+  const latitude1 = start.lat * Math.PI / 180
+  const latitude2 = end.lat * Math.PI / 180
+  const longitudeDelta = (end.lng - start.lng) * Math.PI / 180
+  const y = Math.sin(longitudeDelta) * Math.cos(latitude2)
+  const x = Math.cos(latitude1) * Math.sin(latitude2) - Math.sin(latitude1) * Math.cos(latitude2) * Math.cos(longitudeDelta)
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
+}
+
 function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   if (path.length < 2) return []
   const distances = [0]
@@ -66,7 +75,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
   showCctv: boolean
   cctvCameras: PublicCamera[]
   locationFocusRequest: number
-  rotationRequest: { direction: 'left' | 'right'; serial: number } | null
+  rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   userLocation: { lat: number; lng: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
   fallback: ReactNode
@@ -359,20 +368,24 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
     const map = mapRef.current
     if (!map || status !== 'ready' || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
-    const focusCamera: Camera3D = { center: { ...userLocation, altitude: 40 }, range: 1_400, tilt: 60, heading: map.heading }
+    const destination = getTouristStation(route.stops[selectedStop ?? route.stops.length - 1].stationId)
+    const focusCamera: Camera3D = {
+      center: { ...userLocation, altitude: 40 },
+      range: Math.max(1_400, Math.min(12_000, Math.hypot((destination.lng - userLocation.lng) * 88_000, (destination.lat - userLocation.lat) * 111_000) * .82)),
+      tilt: 60,
+      heading: bearingBetween(userLocation, destination),
+    }
     map.stopCameraAnimation()
     map.flyCameraTo({ endCamera: focusCamera, durationMillis: 600 })
-  }, [locationFocusRequest, status, userLocation])
+  }, [locationFocusRequest, route, selectedStop, status, userLocation])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready' || !rotationRequest) return
     const current = rotatedCameraRef.current
-    const turn = rotationRequest.direction === 'left' ? -32 : 32
-    const endCamera: Camera3D = {
-      ...current,
-      heading: ((current.heading + turn) % 360 + 360) % 360,
-    }
+    const endCamera: Camera3D = rotationRequest.direction === 'up' || rotationRequest.direction === 'down'
+      ? { ...current, tilt: Math.max(0, Math.min(75, current.tilt + (rotationRequest.direction === 'up' ? 10 : -10))) }
+      : { ...current, heading: ((current.heading + (rotationRequest.direction === 'left' ? -32 : 32)) % 360 + 360) % 360 }
     rotatedCameraRef.current = endCamera
     map.stopCameraAnimation()
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) Object.assign(map, endCamera)
