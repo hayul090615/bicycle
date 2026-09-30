@@ -27,6 +27,29 @@ function makeTypingName(name: string) {
     .replace(/[^\p{L}\p{N}]/gu, '')
 }
 
+function makeDetailedTypingName(name: string) {
+  return name
+    .replace(/\([^)]*\)/gu, '')
+    .replace(/\s+/gu, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+}
+
+function makeDistrictTypingNames(stations: BikeStation[]) {
+  const shortNames = stations.map((station) => makeTypingName(station.name))
+  const shortNameCounts = new Map<string, number>()
+  shortNames.forEach((name) => shortNameCounts.set(name, (shortNameCounts.get(name) ?? 0) + 1))
+
+  const usedNames = new Set<string>()
+  return new Map(stations.map((station, index) => {
+    const shortName = shortNames[index]
+    const detailedName = makeDetailedTypingName(station.name)
+    let typingName = (shortNameCounts.get(shortName) ?? 0) > 1 ? detailedName : shortName
+    if (usedNames.has(typingName)) typingName = `${detailedName}${station.id}`
+    usedNames.add(typingName)
+    return [station.id, typingName]
+  }))
+}
+
 function isPointInRing(lng: number, lat: number, ring: [number, number][]) {
   let inside = false
   for (let current = 0, previous = ring.length - 1; current < ring.length; previous = current, current += 1) {
@@ -103,11 +126,11 @@ function pickNearbyRoute(stations: BikeStation[], count = stations.length, seed:
   return route.length <= 40 ? uncrossRoute(route, seed.length) : route
 }
 
-function toCourseStation(station: BikeStation, index: number): Station {
+function toCourseStation(station: BikeStation, index: number, typingName: string): Station {
   return {
     ...station,
     name: `${station.id}. ${station.name}`,
-    typingName: makeTypingName(station.name),
+    typingName,
     x: 8 + index * 17,
     y: 12 + index * 7,
   }
@@ -122,6 +145,7 @@ export function createDistrictCourse(district: SeoulDistrict, playedStationIds: 
   const stationPool = unplayedStations.length >= 2 ? unplayedStations : districtStations
   const stationsPerCourse = Math.ceil(districtStations.length / 2)
   const selectedStations = pickNearbyRoute(stationPool, Math.min(stationsPerCourse, stationPool.length))
+  const typingNames = makeDistrictTypingNames(districtStations)
   const coursePart = playedStationIds.length > 0 && unplayedStations.length < districtStations.length ? 2 : 1
   return {
     district,
@@ -131,7 +155,7 @@ export function createDistrictCourse(district: SeoulDistrict, playedStationIds: 
     isSample: false,
     source: stationData.source,
     sourceDate: stationData.sourceDate,
-    stations: selectedStations.map(toCourseStation),
+    stations: selectedStations.map((station, index) => toCourseStation(station, index, typingNames.get(station.id) ?? makeDetailedTypingName(station.name))),
   }
 }
 

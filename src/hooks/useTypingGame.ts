@@ -129,7 +129,9 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     inputLengthRef.current = nextInputLength
     const target = nextStation.typingName ?? nextStation.name
     if (sanitizedValue === lastCompletedValueRef.current && sanitizedValue !== target) {
-      setInput('')
+      // A completed Hangul composition can dispatch one last change event after
+      // the station has already advanced. Ignore that stale value without
+      // clearing input the player may have started for the new station.
       return
     }
     const nextAnalysis = analyzeInput(sanitizedValue, target)

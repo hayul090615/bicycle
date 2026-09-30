@@ -45,7 +45,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult }: { course: Di
           <span><i className="station-card-icon station-card-icon--current" aria-hidden="true">●</i>현재 대여소</span><strong>{game.currentStation.name}</strong>
         </div>
         <div className="game-typing-area">
-          {game.nextStation && <TypingInput ref={inputRef} target={game.targetText} value={game.input} analysis={game.analysis}
+          {game.nextStation && <TypingInput key={game.stationIndex} ref={inputRef} target={game.targetText} value={game.input} analysis={game.analysis}
             disabled={game.status !== 'playing'} timerStarted={game.hasStartedTyping} onValueChange={game.updateInput} onCompositionCommit={game.commitComposition}
             onSubmitAttempt={game.submitInput} />}
         </div>
