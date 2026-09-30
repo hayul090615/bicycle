@@ -211,6 +211,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       zoom: 14,
       pitch: is3DView ? 64 : 0,
       bearing: is3DView ? -10 : 0,
+      maxZoom: 23,
       maxPitch: 75,
       attributionControl: {},
       canvasContextAttributes: { antialias: true },
@@ -270,7 +271,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           type: 'raster',
           tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
           tileSize: 256,
-          maxzoom: 19,
+          maxzoom: 23,
           attribution: IMAGERY_ATTRIBUTION,
         })
         map.addLayer({
@@ -278,7 +279,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           type: 'raster',
           source: 'tour-imagery',
           layout: { visibility: showSatellite ? 'visible' : 'none' },
-          paint: { 'raster-opacity': 1, 'raster-fade-duration': 250 },
+          paint: { 'raster-opacity': 1, 'raster-fade-duration': 100 },
         }, 'park')
         const layers = map.getStyle().layers
         if (showSatellite) {
