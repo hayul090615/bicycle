@@ -4,12 +4,12 @@ import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type 
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
-import riderSpriteUrl from '../assets/map-riders.png'
 import { createRouteTreeMarker } from './routeTreeMarker'
+import { createCyclistMarker } from './cyclistMarker'
 
 type MapPoint = { lat: number; lng: number }
 
-function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number) {
+function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number, maximum = 220) {
   if (path.length < 2) return []
   const segmentLengths = path.slice(1).map((point, index) => {
     const previous = path[index]
@@ -39,6 +39,7 @@ function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number) {
     const lat = from.lat + (north * ratio + Math.cos(sideRadians) * offsetMeters) / 111_000
     const lng = from.lng + (east * ratio + Math.sin(sideRadians) * offsetMeters) / (111_000 * Math.max(.2, Math.cos(meanLatitude)))
     samples.push({ lat, lng })
+    if (samples.length >= maximum) break
   }
   return samples
 }
@@ -292,22 +293,24 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     sceneryOverlaysRef.current = []
     if (!showCourse) return
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
-    const treeSamples = routeSamples(path, 240, 10)
+    const treeSamples = routeSamples(path, 95, 10, 220)
+    const treeElements: HTMLButtonElement[] = []
     treeSamples.forEach((point, index) => {
       const tree = createRouteTreeMarker(season, locale, index, () => onFocusTree([point.lng, point.lat]))
+      treeElements.push(tree)
       sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: tree, xAnchor: .5, yAnchor: 1, zIndex: 3 }))
     })
+    const updateLeafMotion = () => treeElements.forEach(tree => tree.classList.toggle('is-close-view', map.getLevel() <= 4))
+    api.addListener(map, 'zoom_changed', updateLeafMotion)
+    updateLeafMotion()
     if (showRiders) {
       routeSamples(path, 760, 9).forEach((point, index) => {
-        const person = document.createElement('span')
-        person.className = `tour-map-person tour-map-person--${index % 3}`
-        person.style.backgroundImage = `url("${riderSpriteUrl}")`
-        person.setAttribute('role', 'img')
-        person.setAttribute('aria-label', locale === 'ko' ? '자전거 도로의 라이더' : 'Cyclist on the route')
+        const person = createCyclistMarker(index, locale)
         sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: person, xAnchor: .5, yAnchor: 1, zIndex: 4 }))
       })
     }
     return () => {
+      api.removeListener(map, 'zoom_changed', updateLeafMotion)
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []
     }

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
+import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
 import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
-import riderSpriteUrl from '../assets/map-riders.png'
+import { createCyclistMarker } from './cyclistMarker'
+import { createRouteTreeMarker } from './routeTreeMarker'
 
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
@@ -35,37 +36,11 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
-let riderImageSourcesPromise: Promise<string[]> | undefined
-function loadRiderImageSources(): Promise<string[]> {
-  if (riderImageSourcesPromise) return riderImageSourcesPromise
-  riderImageSourcesPromise = new Promise((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => {
-      const panelWidth = image.naturalWidth / 3
-      const panelHeight = image.naturalHeight
-      const width = 128
-      const height = Math.round(width * panelHeight / panelWidth)
-      const sources = Array.from({ length: 3 }, (_, index) => {
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const context = canvas.getContext('2d')
-        if (!context) throw new Error('Could not prepare the rider image')
-        context.drawImage(image, panelWidth * index, 0, panelWidth, panelHeight, 0, 0, width, height)
-        return canvas.toDataURL('image/png')
-      })
-      resolve(sources)
-    }
-    image.onerror = () => reject(new Error('Could not load the rider image'))
-    image.src = riderSpriteUrl
-  })
-  return riderImageSourcesPromise
-}
-
-export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, routePath, accessPath, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
+  season: TourSeason
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
@@ -87,6 +62,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
   const accessLineRef = useRef<HTMLElement | null>(null)
   const markersRef = useRef<HTMLElement[]>([])
   const peopleMarkersRef = useRef<HTMLElement[]>([])
+  const treeMarkersRef = useRef<HTMLElement[]>([])
   const conditionMarkersRef = useRef<HTMLElement[]>([])
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
@@ -100,7 +76,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
   }), [route])
   const linePoints = useMemo(() => routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [routePath, points])
   const camera = useMemo<Camera3D>(() => {
-    if (selectedStop !== null) return { center: { ...points[selectedStop], altitude: 40 }, range: 1600, tilt: 60, heading: 0 }
+    if (selectedStop !== null) return { center: { ...points[selectedStop], altitude: 40 }, range: 1600, tilt: 46, heading: 0 }
     const frame = accessPath && accessPath.length >= 2 ? [...points, ...accessPath.map(([lng, lat]) => ({ lat, lng }))] : points
     const lats = frame.map(point => point.lat), lngs = frame.map(point => point.lng)
     const south = Math.min(...lats), north = Math.max(...lats), west = Math.min(...lngs), east = Math.max(...lngs)
@@ -153,6 +129,8 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
       markersRef.current = []
       peopleMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
+      treeMarkersRef.current.forEach(marker => marker.remove())
+      treeMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -191,40 +169,68 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
       map.append(marker)
       return marker
     }) : []
+    treeMarkersRef.current.forEach(marker => marker.remove())
+    treeMarkersRef.current = []
+    if (showCourse && routePath && routePath.length >= 2) {
+      const distance = routePath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
+        (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
+      const positions = sampleRiderPositions(routePath, Math.max(10, Math.min(140, Math.ceil(distance / 150))))
+      treeMarkersRef.current = positions.map(([lng, lat], index) => {
+        const marker = new library.Marker3DInteractiveElement({
+          position: { lat, lng }, label: locale === 'ko' ? '나무길' : 'Tree-lined route',
+          title: locale === 'ko' ? '가을 길의 나무와 떨어지는 잎' : 'Trees and falling leaves along the autumn route',
+          altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
+        })
+        marker.classList.add('tour-tree-marker')
+        const icon = createRouteTreeMarker(season, locale, index, () => {
+          map.flyCameraTo({ endCamera: { center: { lat, lng, altitude: 30 }, range: 1300, tilt: 38, heading: map.heading }, durationMillis: 650 })
+        })
+        icon.classList.add('tour-google-tree-icon')
+        const template = document.createElement('template')
+        template.content.append(icon)
+        marker.append(template)
+        marker.style.display = map.range <= 12000 ? '' : 'none'
+        map.append(marker)
+        return marker
+      })
+    }
     peopleMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
-    let cancelled = false
     if (showRiders && routePath && routePath.length >= 2) {
       const distance = routePath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
         (point[0] - routePath[index - 1][0]) * 88_000, (point[1] - routePath[index - 1][1]) * 111_000), 0)
       const count = Math.max(2, Math.min(7, Math.floor(distance / 1800)))
       const riderPositions = sampleRiderPositions(routePath, count)
-      void loadRiderImageSources().then(sources => {
-        if (cancelled || mapRef.current !== map) return
-        peopleMarkersRef.current = riderPositions.map(([lng, lat], index) => {
-          const marker = new library.Marker3DElement({
-            position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
-            drawsWhenOccluded: false, sizePreserved: false,
-          })
-          const accessibilityLabel = locale === 'ko' ? 'AI 생성 라이딩 장면 · 실제 이용자 아님' : 'AI-generated rider illustration · not a live person'
-          marker.setAttribute('aria-label', accessibilityLabel)
-          marker.setAttribute('title', accessibilityLabel)
-          const image = document.createElement('img')
-          image.src = sources[index % sources.length]
-          image.width = 64
-          image.height = 128
-          image.alt = ''
-          const template = document.createElement('template')
-          template.content.append(image)
-          marker.append(template)
-          marker.style.display = map.range <= 4500 ? '' : 'none'
-          map.append(marker)
-          return marker
+      peopleMarkersRef.current = riderPositions.map(([lng, lat], index) => {
+        const marker = new library.Marker3DElement({
+          position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+          drawsWhenOccluded: false, sizePreserved: false,
         })
-      }).catch(() => { /* Keep the route usable if the illustrative image cannot load. */ })
+        const icon = createCyclistMarker(index, locale)
+        icon.style.width = '48px'
+        icon.style.height = '70px'
+        const template = document.createElement('template')
+        template.content.append(icon)
+        marker.append(template)
+        marker.style.display = map.range <= 4500 ? '' : 'none'
+        map.append(marker)
+        return marker
+      })
     }
-    return () => { cancelled = true }
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, routePath, showCourse, showRiders, status])
+    const updateTreeVisibility = () => treeMarkersRef.current.forEach(marker => {
+      marker.style.display = map.range <= 12000 ? '' : 'none'
+      marker.classList.toggle('is-close-view', map.range <= 4000)
+    })
+    map.addEventListener('gmp-rangechange', updateTreeVisibility)
+    updateTreeVisibility()
+    return () => {
+      map.removeEventListener('gmp-rangechange', updateTreeVisibility)
+      peopleMarkersRef.current.forEach(marker => marker.remove())
+      peopleMarkersRef.current = []
+      treeMarkersRef.current.forEach(marker => marker.remove())
+      treeMarkersRef.current = []
+    }
+  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, routePath, season, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -326,7 +332,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
           })
           marker.addEventListener('gmp-click', () => {
             map.stopCameraAnimation()
-            const nextCamera: Camera3D = { center: { lat: cluster.lat, lng: cluster.lng, altitude: 40 }, range: Math.max(900, map.range * .38), tilt: 62, heading: map.heading }
+            const nextCamera: Camera3D = { center: { lat: cluster.lat, lng: cluster.lng, altitude: 40 }, range: Math.max(900, map.range * .38), tilt: 48, heading: map.heading }
             map.flyCameraTo({ endCamera: nextCamera, durationMillis: 500 })
           })
           map.append(marker)
@@ -372,7 +378,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
     const focusCamera: Camera3D = {
       center: { ...userLocation, altitude: 40 },
       range: Math.max(1_400, Math.min(12_000, Math.hypot((destination.lng - userLocation.lng) * 88_000, (destination.lat - userLocation.lat) * 111_000) * .82)),
-      tilt: 60,
+      tilt: 48,
       heading: bearingBetween(userLocation, destination),
     }
     map.stopCameraAnimation()
@@ -384,7 +390,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
     if (!map || status !== 'ready' || !rotationRequest) return
     const current = rotatedCameraRef.current
     const endCamera: Camera3D = rotationRequest.direction === 'up' || rotationRequest.direction === 'down'
-      ? { ...current, tilt: Math.max(0, Math.min(75, current.tilt + (rotationRequest.direction === 'up' ? 10 : -10))) }
+      ? { ...current, tilt: Math.max(0, Math.min(58, current.tilt + (rotationRequest.direction === 'up' ? 8 : -8))) }
       : { ...current, heading: ((current.heading + (rotationRequest.direction === 'left' ? -32 : 32)) % 360 + 360) % 360 }
     rotatedCameraRef.current = endCamera
     map.stopCameraAnimation()

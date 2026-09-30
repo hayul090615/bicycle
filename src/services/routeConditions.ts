@@ -136,18 +136,18 @@ export async function fetchRouteBikeLanes(path: LonLat[], signal: AbortSignal): 
   const key = cacheKey(path)
   const cached = bikeLaneCache.get(key)
   if (cached) return cached
-  const samples = routeSamples(path, 550, 28)
+  const samples = routeSamples(path, 380, 44)
   if (samples.length < 2) return []
   const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
-  const query = `[out:json][timeout:9];(way["highway"="cycleway"](around:160,${pairs});way["cycleway"~"^(lane|track|shared_lane)$"](around:160,${pairs});way["cycleway:left"~"^(lane|track)$"](around:160,${pairs});way["cycleway:right"~"^(lane|track)$"](around:160,${pairs}););out geom 200;`
+  const query = `[out:json][timeout:12];(way["highway"="cycleway"](around:240,${pairs});way["cycleway"~"^(lane|track|shared_lane)$"](around:240,${pairs});way["cycleway:left"~"^(lane|track)$"](around:240,${pairs});way["cycleway:right"~"^(lane|track)$"](around:240,${pairs}););out geom 300;`
   const data = await queryOverpass(query, signal)
   const lanes = (data.elements ?? []).flatMap(item => {
     const points = (item.geometry ?? []).map(point => [point.lon, point.lat] as LonLat)
     if (points.length < 2) return []
-    const close = points.some((point, index) => index % 8 === 0 && distanceAlongRoute(point, path).gap <= 180)
+    const close = points.some((point, index) => index % 8 === 0 && distanceAlongRoute(point, path).gap <= 280)
     if (!close) return []
     return [{ id: `bike-lane-${item.id}`, points, kind: item.tags?.highway === 'cycleway' ? 'cycleway' as const : 'lane' as const }]
-  }).slice(0, 120)
+  }).slice(0, 220)
   bikeLaneCache.set(key, lanes)
   return lanes
 }

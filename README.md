@@ -224,3 +224,10 @@ seoul-typing-bike-high-score
 두 지도는 경유지 연결을 보여주는 코스 미리보기입니다. 실제 자전거 길안내가 아니므로 출발 전에 현장 자전거도로와 통행 제한을 확인하세요. Google 3D 건물 제공 범위도 지역별로 다릅니다.
 
 자료·기술: [MapLibre GL JS 3D 건물](https://maplibre.org/maplibre-gl-js/docs/examples/display-buildings-in-3d/), [OpenFreeMap](https://openfreemap.org/), [Esri World Imagery 출처](https://support.esri.com/en-us/knowledge-base/what-is-the-correct-way-to-cite-an-arcgis-online-basema-000012040), [Google Maps 3D 시작하기](https://developers.google.com/maps/documentation/javascript/3d/get-started), [Google API 키 설정](https://developers.google.com/maps/documentation/javascript/get-api-key).
+
+## 최신 화면 개선 (2026-09-30)
+
+- 경로 위 사람 표시는 지도 크기에 맞는 간결한 자전거 아이콘으로 바꾸고, 3D 카메라 기울기를 낮춰 가까운 건물의 원근 왜곡을 줄였습니다.
+- 카카오·2D/3D·Google 3D 경로에 나무 표식을 배치하고, 가을 코스에서는 가까이 확대했을 때 나무 아래로 짧은 낙엽 효과가 보입니다. 봄·여름·겨울에는 낙엽이 떨어지지 않습니다.
+- 선택한 주행 경로는 굵은 빨간색, 기존 자전거 도로는 청록색으로 계속 구분합니다. 지도 카메라 화살표는 금색 계열로 대비를 높였습니다.
+- 지도 위에 코스 선택 → 지도 확인 → 주변 따릉이 찾기의 3단계 안내를 추가하고, 지도 설정과 경로 정보의 색·간격·버튼을 차분한 호텔식 톤으로 정리했습니다.

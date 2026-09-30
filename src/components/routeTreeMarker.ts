@@ -39,5 +39,13 @@ export function createRouteTreeMarker(season: TourSeason, locale: 'en' | 'ko', v
     cluster.className = `tour-map-tree-leaf-cluster tour-map-tree-leaf-cluster--${index + 1}`
     tree.append(cluster)
   }
+  const fallingLeaves = document.createElement('span')
+  fallingLeaves.className = 'tour-map-tree-falling-leaves'
+  for (let index = 0; index < 3; index++) {
+    const leaf = document.createElement('i')
+    leaf.style.setProperty('--leaf-index', String(index))
+    fallingLeaves.append(leaf)
+  }
+  tree.append(fallingLeaves)
   return tree
 }

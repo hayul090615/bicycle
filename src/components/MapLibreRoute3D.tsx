@@ -5,11 +5,11 @@ import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeo
 import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
 import { createRouteTreeMarker } from './routeTreeMarker'
+import { createCyclistMarker } from './cyclistMarker'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
-import riderSpriteUrl from '../assets/map-riders.png'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl)
@@ -189,7 +189,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const treePositions = useMemo(() => {
     const length = linePoints.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
       (point[0] - linePoints[index - 1][0]) * 88_000, (point[1] - linePoints[index - 1][1]) * 111_000), 0)
-    return samplePathWithBearing(linePoints, Math.max(12, Math.min(180, Math.ceil(length / 100))))
+    return samplePathWithBearing(linePoints, Math.max(18, Math.min(240, Math.ceil(length / 60))))
       .map(({ point, bearing }, index) => {
         const offset = (index % 2 === 0 ? 1 : -1) * (9 + index % 3 * 2)
         return { point: offsetFromRoute(point, bearing, offset), bearing }
@@ -210,10 +210,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       style: STYLE_URL,
       center: initialCenter.current ?? [points[0].lng, points[0].lat],
       zoom: 14,
-      pitch: is3DView ? 64 : 0,
+      pitch: is3DView ? 50 : 0,
       bearing: is3DView ? -10 : 0,
       maxZoom: 23,
-      maxPitch: 75,
+      maxPitch: 58,
       attributionControl: {},
       canvasContextAttributes: { antialias: true },
     })
@@ -492,12 +492,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       if (showRiders) {
         const riderCount = Math.max(3, Math.min(8, Math.floor(routeLength / 2200)))
         peopleMarkersRef.current = samplePath(sceneryPath, riderCount).map(([lng, lat], index) => {
-          const element = document.createElement('span')
-          element.className = `tour-map-person tour-map-person--${index % 3}`
-          element.style.backgroundImage = `url("${riderSpriteUrl}")`
-          element.setAttribute('role', 'img')
-          element.setAttribute('aria-label', locale === 'ko' ? 'AI가 만든 자전거 이용자 일러스트' : 'AI-generated illustrative rider')
-          element.title = locale === 'ko' ? 'AI로 만든 일러스트이며 실제 인물은 아닙니다' : 'AI-generated illustration, not a live person'
+          const element = createCyclistMarker(index, locale)
           return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
         })
       }
@@ -542,11 +537,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           marker.getElement().style.display = visible ? '' : 'none'
         })
         treeMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 15.5 && !(zoom >= 16 && isBlocked(marker))
-          const scale = Math.max(25, Math.min(42, 30 + (zoom - 14) * 4))
+          const visible = zoom >= 13.2 && !(zoom >= 16 && isBlocked(marker))
+          marker.getElement().classList.toggle('is-close-view', zoom >= 15)
+          const scale = Math.max(19, Math.min(36, 22 + (zoom - 14) * 3))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.48}px`
           marker.getElement().style.display = visible ? '' : 'none'
+          marker.getElement().classList.toggle('is-close-view', zoom >= 15)
         })
         conditionMarkersRef.current.forEach(marker => {
           marker.getElement().style.display = zoom >= 14.5 && !isBlocked(marker) ? '' : 'none'
@@ -663,17 +660,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (accessPath && accessPath.length >= 2) {
       const bounds = new maplibregl.LngLatBounds()
       ;(selectedStop === null ? [...linePoints, ...accessPath, ...(walkPath ?? [])] : [...accessPath, ...(walkPath ?? [])]).forEach(point => bounds.extend(point))
-      map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 16.2, pitch: isFlatMap ? 0 : 55, duration: 480 })
+      map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 16.2, pitch: isFlatMap ? 0 : 46, duration: 480 })
       return
     }
     if (selectedStop !== null) {
       const point = points[selectedStop]
-      map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: isFlatMap ? 0 : 67, bearing: isFlatMap ? 0 : -18, duration: 1100, essential: false })
+      map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: isFlatMap ? 0 : 48, bearing: isFlatMap ? 0 : -12, duration: 1100, essential: false })
       return
     }
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
-    map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
+    map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 48, bearing: isFlatMap ? 0 : -6, duration: 480 })
   }, [accessPath, activeTreeFocus, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
@@ -686,7 +683,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     map.fitBounds(bounds, {
       padding: { top: 88, right: 88, bottom: 88, left: 88 },
       maxZoom: 16,
-      pitch: is3DView ? 62 : 0,
+      pitch: is3DView ? 48 : 0,
       bearing: is3DView ? bearingToDestination(userLocation, destination) : 0,
       duration: 720,
       essential: false,
@@ -699,7 +696,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     const [lng, lat] = activeTreeFocus.anchor
     const distance = (point: LonLat) => Math.hypot((point[0] - lng) * Math.cos(lat * Math.PI / 180), point[1] - lat)
     const target = treePositions.reduce((nearest, tree) => distance(tree.point) < distance(nearest.point) ? tree : nearest)
-    map.flyTo({ center: target.point, zoom: 17.2, pitch: is3DView ? 52 : 0, bearing: is3DView ? target.bearing : 0, duration: 900, essential: false })
+    map.flyTo({ center: target.point, zoom: 17.2, pitch: is3DView ? 44 : 0, bearing: is3DView ? target.bearing : 0, duration: 900, essential: false })
   }, [activeTreeFocus, is3DView, status, treePositions])
 
   useEffect(() => {
@@ -849,7 +846,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (!map || status !== 'ready' || !rotationRequest) return
     if (rotationRequest.direction === 'up' || rotationRequest.direction === 'down') {
       if (is3DView) {
-        const pitch = Math.max(18, Math.min(75, map.getPitch() + (rotationRequest.direction === 'up' ? 9 : -9)))
+      const pitch = Math.max(18, Math.min(58, map.getPitch() + (rotationRequest.direction === 'up' ? 7 : -7)))
         map.easeTo({ pitch, duration: 420 })
       } else {
         map.panBy([0, rotationRequest.direction === 'up' ? -120 : 120], { duration: 350 })
