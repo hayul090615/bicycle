@@ -4,9 +4,20 @@
       "root": ".",
       "framework": "vite",
       "buildCommand": "npm ci && npm run build"
+    },
+    "seoul-bike-api": {
+      "root": "api/",
+      "framework": "express",
+      "entrypoint": "index.js"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "seoul-bike-api"
+      }
+    },
     {
       "source": "/(.*)",
       "destination": {

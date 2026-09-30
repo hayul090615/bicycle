@@ -13,12 +13,15 @@ export type RouteRestaurant = {
   cuisine?: string
 }
 
+export type RouteBikeLane = { id: string; points: LonLat[]; kind: 'cycleway' | 'lane' }
+
 type Sample = { point: LonLat; distance: number }
-type OSMResponse = { elements?: Array<{ id: number; type?: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }> }
+type OSMResponse = { elements?: Array<{ id: number; type?: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; geometry?: Array<{ lat: number; lon: number }>; tags?: Record<string, string> }> }
 const METERS_PER_DEGREE_LAT = 111_000
 const signalCache = new Map<string, RouteCondition[]>()
 const gradeCache = new Map<string, RouteCondition[]>()
 const restaurantCache = new Map<string, RouteRestaurant[]>()
+const bikeLaneCache = new Map<string, RouteBikeLane[]>()
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
@@ -127,6 +130,26 @@ export async function fetchRouteSignals(path: LonLat[], signal: AbortSignal): Pr
   }
   signalCache.set(key, unique)
   return unique
+}
+
+export async function fetchRouteBikeLanes(path: LonLat[], signal: AbortSignal): Promise<RouteBikeLane[]> {
+  const key = cacheKey(path)
+  const cached = bikeLaneCache.get(key)
+  if (cached) return cached
+  const samples = routeSamples(path, 550, 28)
+  if (samples.length < 2) return []
+  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
+  const query = `[out:json][timeout:9];(way["highway"="cycleway"](around:160,${pairs});way["cycleway"~"^(lane|track|shared_lane)$"](around:160,${pairs});way["cycleway:left"~"^(lane|track)$"](around:160,${pairs});way["cycleway:right"~"^(lane|track)$"](around:160,${pairs}););out geom 200;`
+  const data = await queryOverpass(query, signal)
+  const lanes = (data.elements ?? []).flatMap(item => {
+    const points = (item.geometry ?? []).map(point => [point.lon, point.lat] as LonLat)
+    if (points.length < 2) return []
+    const close = points.some((point, index) => index % 8 === 0 && distanceAlongRoute(point, path).gap <= 180)
+    if (!close) return []
+    return [{ id: `bike-lane-${item.id}`, points, kind: item.tags?.highway === 'cycleway' ? 'cycleway' as const : 'lane' as const }]
+  }).slice(0, 120)
+  bikeLaneCache.set(key, lanes)
+  return lanes
 }
 
 export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal): Promise<RouteRestaurant[]> {

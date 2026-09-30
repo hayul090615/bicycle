@@ -1,3 +1,5 @@
+import type { LonLat } from './bikeRoute'
+
 export interface PublicCamera {
   id: string
   name: string
@@ -53,4 +55,33 @@ export function clusterPublicCameras(cameras: PublicCamera[], center: { lat: num
     lng: group.reduce((sum, camera) => sum + camera.lng, 0) / group.length,
     cameras: group,
   }))
+}
+
+function distanceToRouteSegmentMeters(camera: PublicCamera, start: LonLat, end: LonLat) {
+  const latitudeScale = 111_320
+  const longitudeScale = latitudeScale * Math.cos(camera.lat * Math.PI / 180)
+  const ax = (start[0] - camera.lng) * longitudeScale
+  const ay = (start[1] - camera.lat) * latitudeScale
+  const bx = (end[0] - camera.lng) * longitudeScale
+  const by = (end[1] - camera.lat) * latitudeScale
+  const dx = bx - ax
+  const dy = by - ay
+  const ratio = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / Math.max(1, dx * dx + dy * dy)))
+  return Math.hypot(ax + ratio * dx, ay + ratio * dy)
+}
+
+export function publicCamerasAlongRoute(cameras: PublicCamera[], path: LonLat[], radiusMeters = 500) {
+  if (path.length < 2) return []
+  const paddingLat = radiusMeters / 111_320
+  const minLat = Math.min(...path.map((point) => point[1])) - paddingLat
+  const maxLat = Math.max(...path.map((point) => point[1])) + paddingLat
+  const referenceLat = (minLat + maxLat) / 2
+  const paddingLng = radiusMeters / Math.max(20_000, 111_320 * Math.cos(referenceLat * Math.PI / 180))
+  const minLng = Math.min(...path.map((point) => point[0])) - paddingLng
+  const maxLng = Math.max(...path.map((point) => point[0])) + paddingLng
+  const segments = path.slice(1).map((point, index) => [path[index], point] as const)
+  return cameras.filter((camera) => {
+    if (camera.lat < minLat || camera.lat > maxLat || camera.lng < minLng || camera.lng > maxLng) return false
+    return segments.some(([start, end]) => distanceToRouteSegmentMeters(camera, start, end) <= radiusMeters)
+  })
 }

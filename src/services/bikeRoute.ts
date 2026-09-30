@@ -30,3 +30,14 @@ export async function fetchBikePath(waypoints: LonLat[], signal: AbortSignal, ca
   }
   return result
 }
+
+export async function fetchWalkingPath(waypoints: LonLat[], signal: AbortSignal): Promise<BikeRouteResult> {
+  const path = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
+  const url = `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${path}?overview=full&geometries=geojson&steps=false`
+  const response = await fetch(url, { signal })
+  if (!response.ok) throw new Error(`walking route ${response.status}`)
+  const data = await response.json() as { code: string; routes?: Array<{ geometry?: { coordinates?: LonLat[] }; distance?: number }> }
+  const geometry = data.routes?.[0]?.geometry?.coordinates
+  if (data.code !== 'Ok' || !geometry || geometry.length < 2) throw new Error('walking route unavailable')
+  return { geometry, waypoints, distanceMeters: data.routes?.[0]?.distance }
+}

@@ -6,7 +6,8 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
-import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { NearbyBikeStation } from '../services/nearbyBikes'
 import riderSpriteUrl from '../assets/map-riders.png'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -69,12 +70,16 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
+  walkPath: LonLat[] | null
+  pickupStation: NearbyBikeStation | null
+  bikeLanes: RouteBikeLane[]
+  showBikeLanes: boolean
   season: TourSeason
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
@@ -104,6 +109,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvPopupRef = useRef<maplibregl.Popup | null>(null)
   const userMarkerRef = useRef<MapLibreMarker | null>(null)
+  const pickupMarkerRef = useRef<MapLibreMarker | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
@@ -174,6 +180,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
+      pickupMarkerRef.current?.remove()
+      pickupMarkerRef.current = null
       map.remove()
       mapRef.current = null
       setStatus('error')
@@ -210,6 +218,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         }
         map.addSource('tour-route-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
         map.addSource('tour-access-line', { type: 'geojson', data: EMPTY_LINE })
+        map.addSource('tour-walk-line', { type: 'geojson', data: EMPTY_LINE })
+        map.addSource('tour-bike-lanes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
         const buildingLayer = layers.find(layer => layer.id === 'building-3d')?.id
         const routeLayer = {
           id: 'tour-route-line',
@@ -242,6 +252,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         const accessDashed = { id: 'tour-access-dashed', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: { 'line-color': '#2479db', 'line-width': 6, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
+        const walkLine = { id: 'tour-walk-line', type: 'line' as const, source: 'tour-walk-line',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          paint: { 'line-color': '#506b7b', 'line-width': 4, 'line-opacity': 1, 'line-dasharray': [1.2, 1.2] } }
+        const bikeLaneCasing = { id: 'tour-bike-lanes-casing', type: 'line' as const, source: 'tour-bike-lanes',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          paint: { 'line-color': '#fffdf4', 'line-width': 7, 'line-opacity': .9 } }
+        const bikeLaneLine = { id: 'tour-bike-lanes-line', type: 'line' as const, source: 'tour-bike-lanes',
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          paint: { 'line-color': '#22a9c8', 'line-width': 4, 'line-opacity': .95, 'line-dasharray': [2, 1.4] } }
         map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
         const shadowFill = {
           id: 'tour-building-shadow-fill',
@@ -263,6 +282,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           map.addLayer(accessCasing, buildingLayer)
           map.addLayer(accessLine, buildingLayer)
           map.addLayer(accessDashed, buildingLayer)
+          map.addLayer(walkLine, buildingLayer)
+          map.addLayer(bikeLaneCasing, buildingLayer)
+          map.addLayer(bikeLaneLine, buildingLayer)
         } else {
           map.addLayer(shadowFill)
           map.addLayer(shadowOutline)
@@ -271,6 +293,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           map.addLayer(accessCasing)
           map.addLayer(accessLine)
           map.addLayer(accessDashed)
+          map.addLayer(walkLine)
+          map.addLayer(bikeLaneCasing)
+          map.addLayer(bikeLaneLine)
         }
         setStatus('ready')
         shadowUpdateTimeout = window.setTimeout(updateBuildingShadows, 350)
@@ -300,6 +325,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       restaurantMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
+      pickupMarkerRef.current?.remove()
+      pickupMarkerRef.current = null
       if (!failed) map.remove()
       mapRef.current = null
     }
@@ -327,6 +354,32 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     map.setLayoutProperty('tour-access-solid', 'visibility', showCourse && accessPath && !accessEstimated ? 'visible' : 'none')
     map.setLayoutProperty('tour-access-dashed', 'visibility', showCourse && accessPath && accessEstimated ? 'visible' : 'none')
   }, [accessPath, accessEstimated, showCourse, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const source = map.getSource('tour-walk-line') as GeoJSONSource | undefined
+    source?.setData(walkPath && walkPath.length >= 2
+      ? { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walkPath } }
+      : EMPTY_LINE)
+  }, [status, walkPath])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const source = map.getSource('tour-bike-lanes') as GeoJSONSource | undefined
+    source?.setData({
+      type: 'FeatureCollection',
+      features: bikeLanes.map(lane => ({
+        type: 'Feature',
+        properties: { kind: lane.kind },
+        geometry: { type: 'LineString', coordinates: lane.points },
+      })),
+    })
+    const visibility = showBikeLanes ? 'visible' : 'none'
+    map.setLayoutProperty('tour-bike-lanes-casing', 'visibility', visibility)
+    map.setLayoutProperty('tour-bike-lanes-line', 'visibility', visibility)
+  }, [bikeLanes, showBikeLanes, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -421,6 +474,23 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
+    pickupMarkerRef.current?.remove()
+    pickupMarkerRef.current = null
+    if (!pickupStation) return
+    const element = document.createElement('div')
+    element.className = 'tour-pickup-marker'
+    element.textContent = '🚲'
+    const label = locale === 'ko' ? `${pickupStation.name} · 대여 가능 ${pickupStation.available ?? '확인 전'}대` : `${pickupStation.name} · ${pickupStation.available ?? 'unknown'} bikes available`
+    element.setAttribute('role', 'img')
+    element.setAttribute('aria-label', label)
+    element.title = label
+    pickupMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
+      .setLngLat([pickupStation.lng, pickupStation.lat]).addTo(map)
+  }, [locale, pickupStation, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
     const routeSource = map.getSource('tour-route-line') as GeoJSONSource | undefined
     routeSource?.setData({
       type: 'Feature',
@@ -465,9 +535,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     markersRef.current.forEach((marker, index) => {
       marker.getElement().classList.toggle('is-selected', selectedStop === index)
     })
+    if (locationFocusRequest > 0 && selectedStop === null && userLocation) return
     if (accessPath && accessPath.length >= 2) {
       const bounds = new maplibregl.LngLatBounds()
-      ;(selectedStop === null ? [...linePoints, ...accessPath] : accessPath).forEach(point => bounds.extend(point))
+      ;(selectedStop === null ? [...linePoints, ...accessPath, ...(walkPath ?? [])] : [...accessPath, ...(walkPath ?? [])]).forEach(point => bounds.extend(point))
       map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 16.2, pitch: isFlatMap ? 0 : 55, duration: 480 })
       return
     }
@@ -479,7 +550,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
     map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 58, bearing: isFlatMap ? 0 : -8, duration: 480 })
-  }, [accessPath, isFlatMap, linePoints, points, selectedStop, status])
+  }, [accessPath, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
     const map = mapRef.current

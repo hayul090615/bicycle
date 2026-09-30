@@ -17,7 +17,7 @@ export function usePublicCctvData() {
     return () => { active = false }
   }, [])
 
-  // The map layers cluster the complete Seoul dataset instead of clipping it to
-  // a small radius around the route or the rider.
+  // Return the complete source bundle; the route explorer clips it to the
+  // currently selected journey before any markers are sent to a map renderer.
   return { cameras: bundle?.cameras ?? EMPTY_CAMERAS, loading, error, count: bundle?.count ?? 0, latestRecordDate: bundle?.latestRecordDate ?? '' }
 }

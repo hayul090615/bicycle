@@ -16,6 +16,7 @@ export interface TouristRoute {
   id: string
   category: TourCategory
   season?: TourSeason
+  mostlyFlat?: boolean
   title: string
   titleKo: string
   area: string
@@ -37,6 +38,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'yeouido',
     category: 'sightseeing',
+    mostlyFlat: true,
     title: 'Yeouido river & park',
     titleKo: '여의도 한강·공원 코스',
     area: 'Easy city ride',
@@ -57,6 +59,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'seoul-forest',
     category: 'sightseeing',
+    mostlyFlat: true,
     title: 'Seoul Forest to Ttukseom',
     titleKo: '서울숲에서 뚝섬까지',
     area: 'Green & riverside',
@@ -77,6 +80,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'banpo',
     category: 'sightseeing',
+    mostlyFlat: true,
     title: 'Banpo & Jamwon',
     titleKo: '반포·잠원 코스',
     area: 'Late afternoon',
@@ -97,6 +101,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'river-training',
     category: 'fitness',
+    mostlyFlat: true,
     title: 'Banpo to Mapo river ride',
     titleKo: '반포에서 마포까지 한강 라이딩',
     area: '16.4 km · mostly flat',
@@ -120,6 +125,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'tukseom-training',
     category: 'fitness',
+    mostlyFlat: true,
     title: 'Seoul Forest & Ttukseom training ride',
     titleKo: '서울숲·뚝섬 운동 코스',
     area: '10.1 km · riverside path',
@@ -141,6 +147,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'night-river',
     category: 'night',
+    mostlyFlat: true,
     title: 'Hangang night-view tour',
     titleKo: '한강 야경 투어',
     area: '13 km · Ttukseom to Nodeul',
@@ -163,6 +170,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'yeouido-night',
     category: 'night',
+    mostlyFlat: true,
     title: 'Yeouido lights & Saetgang',
     titleKo: '여의도 불빛·샛강 코스',
     area: '8 km · flat & well lit',
@@ -184,6 +192,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'spring-flowers',
     category: 'seasonal',
+    mostlyFlat: true,
     season: 'spring',
     title: 'Spring flowers in Yeouido',
     titleKo: '봄꽃 피는 여의도',
@@ -206,6 +215,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'summer-shade',
     category: 'seasonal',
+    mostlyFlat: true,
     season: 'summer',
     title: 'Summer shade at Seoul Forest',
     titleKo: '여름 그늘, 서울숲',
@@ -227,6 +237,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'autumn-reeds',
     category: 'seasonal',
+    mostlyFlat: true,
     season: 'autumn',
     title: 'Autumn reeds at Amsa',
     titleKo: '가을 갈대, 암사생태공원',
@@ -249,6 +260,7 @@ export const touristRoutes: TouristRoute[] = [
   {
     id: 'winter-daylight',
     category: 'seasonal',
+    mostlyFlat: true,
     season: 'winter',
     title: 'Winter daylight ride',
     titleKo: '겨울 낮 시간 라이딩',
