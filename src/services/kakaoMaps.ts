@@ -28,6 +28,14 @@ export interface KakaoMap {
   relayout(): void
 }
 
+export interface KakaoRoadview {
+  setPanoId(panoId: number, position?: KakaoLatLng): void
+}
+
+export interface KakaoRoadviewClient {
+  getNearestPanoId(position: KakaoLatLng, radius: number, callback: (panoId: number | null) => void): void
+}
+
 export interface KakaoMapsApi {
   addListener(target: object, eventName: string, handler: () => void): void
   removeListener(target: object, eventName: string, handler: () => void): void
@@ -40,6 +48,8 @@ export interface KakaoMapsApi {
     scrollwheel: boolean
   }) => KakaoMap
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
+  Roadview: new (container: HTMLElement) => KakaoRoadview
+  RoadviewClient: new () => KakaoRoadviewClient
   Polyline: new (options: {
     map: KakaoMap
     path: KakaoLatLng[]

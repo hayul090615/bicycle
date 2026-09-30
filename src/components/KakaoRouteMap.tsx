@@ -76,7 +76,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, onFoodGuideOpen, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
@@ -100,9 +100,12 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   onHoverStop: (index: number | null) => void
   onFocusTree: (point: LonLat) => void
   onFoodGuideOpen: (point: LonLat) => void
+  showRoadview: boolean
+  onCloseRoadview: () => void
   fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
+  const roadviewHost = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const apiRef = useRef<KakaoMapsApi | null>(null)
   const routeOverlaysRef = useRef<KakaoOverlay[]>([])
@@ -117,11 +120,35 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   const activePopupIdRef = useRef<string | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [roadviewStatus, setRoadviewStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
   }), [route])
   const linePoints = useMemo(() => routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [routePath, points])
+
+  useEffect(() => {
+    if (!showRoadview || !roadviewHost.current) return
+    let disposed = false
+    setRoadviewStatus('loading')
+    void loadKakaoMaps().then(api => {
+      if (disposed || !roadviewHost.current) return
+      const target = userLocation ?? points[selectedStop ?? 0]
+      const position = new api.LatLng(target.lat, target.lng)
+      const roadview = new api.Roadview(roadviewHost.current)
+      const client = new api.RoadviewClient()
+      client.getNearestPanoId(position, 100, panoId => {
+        if (disposed) return
+        if (panoId === null) {
+          setRoadviewStatus('missing')
+          return
+        }
+        roadview.setPanoId(panoId, position)
+        setRoadviewStatus('ready')
+      })
+    }).catch(() => { if (!disposed) setRoadviewStatus('error') })
+    return () => { disposed = true }
+  }, [points, selectedStop, showRoadview, userLocation])
 
   useEffect(() => {
     let disposed = false
@@ -533,5 +560,14 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     <div ref={host} className="kakao-route-host" role="region" aria-label={locale === 'ko' ? `${route.titleKo} 카카오 지도` : `${route.title} Kakao map`}
       style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} />
     {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? '카카오 지도를 불러오는 중…' : 'Loading Kakao map…'}</p>}
+    {showRoadview && <section className="tour-roadview-overlay" role="dialog" aria-modal="true" aria-label={locale === 'ko' ? '카카오 로드뷰' : 'Kakao Road View'}>
+      <div className="tour-roadview-host" ref={roadviewHost} />
+      <div className="tour-roadview-caption"><span>{locale === 'ko' ? '카카오 로드뷰' : 'Kakao Road View'} · {locale === 'ko' ? '가까운 촬영 지점' : 'Nearest panorama'}</span>
+        <button type="button" onClick={onCloseRoadview} aria-label={locale === 'ko' ? '로드뷰 닫기' : 'Close road view'}>×</button></div>
+      {roadviewStatus !== 'ready' && <p className="tour-roadview-status" role="status">{roadviewStatus === 'loading'
+        ? locale === 'ko' ? '주변 로드뷰를 찾고 있어요…' : 'Finding nearby road view…'
+        : roadviewStatus === 'missing' ? locale === 'ko' ? '이 주변에는 등록된 로드뷰가 없습니다.' : 'No Road View imagery is available nearby.'
+          : locale === 'ko' ? '로드뷰를 불러오지 못했습니다.' : 'Road View could not be loaded.'}</p>}
+    </section>}
   </div>
 }

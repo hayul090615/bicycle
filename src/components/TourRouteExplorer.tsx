@@ -180,6 +180,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
   const [view, setView] = useState<'city' | 'satellite' | 'map' | 'google' | 'kakao'>(() => hasKakaoMapsKey ? 'kakao' : 'city')
+  const [roadviewOpen, setRoadviewOpen] = useState(false)
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [trackingLocation, setTrackingLocation] = useState(false)
   const [locating, setLocating] = useState(false)
@@ -402,6 +403,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   const chooseMapView = (nextView: 'city' | 'satellite' | 'map' | 'google' | 'kakao') => {
+    setRoadviewOpen(false)
     setTreeFocusRequest(null)
     setRotationRequest(null)
     setView(nextView)
@@ -699,8 +701,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
           <strong aria-live="polite">{selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
-        <button className="tour-sidebar-toggle" type="button" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
-          onClick={() => setSidebarOpen(open => !open)}>{sidebarOpen ? text('Hide routes ×', '코스 닫기 ×') : text('Routes & bikes ☰', '코스·대여소 ☰')}</button>
       </div>
       <div className="tour-route-summary" aria-label={text('Selected route overview', '선택한 경로 안내')}>
         <div className="tour-route-summary-stops"><span>{journeyOrigin}</span><i aria-hidden="true">→</i><strong>{text(destinationStop.place, destinationStop.placeKo)}</strong></div>
@@ -719,25 +719,32 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} showRoadview={roadviewOpen} onCloseRoadview={() => setRoadviewOpen(false)} fallback={map} />}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        <nav className="tour-map-quick-filters" aria-label={text('Quick map layers', '빠른 지도 필터')}>
-          <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
-          <button type="button" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
-          <button type="button" aria-pressed={showBikeLanes} onClick={() => toggleMapLayer('bikeLanes')}><span aria-hidden="true">↗</span>{text('Bike paths', '자전거도로')}</button>
-          <button type="button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}><span aria-hidden="true">◉</span>{text('CCTV', 'CCTV')}</button>
-        </nav>
-        <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
-          <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
-            {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
-            <option value="city">{text('3D city', '3D 도시')}</option>
-            <option value="satellite">{text('2D satellite', '2D 위성')}</option>
-            <option value="map">{text('Flat map', '평면 지도')}</option>
-            {hasGoogleMapsKey && <option value="google">Google 3D</option>}
-          </select>
-        </label>
+        <aside className="tour-map-control-rail" aria-label={text('Map controls', '지도 도구')}>
+          <button type="button" className="tour-map-rail-sidebar-toggle" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen(open => !open)}><span aria-hidden="true">☷</span>{text('Routes', '코스 목록')}</button>
+          <nav className="tour-map-quick-filters" aria-label={text('Quick map layers', '빠른 지도 필터')}>
+            <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
+            <button type="button" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
+            <button type="button" aria-pressed={showBikeLanes} onClick={() => toggleMapLayer('bikeLanes')}><span aria-hidden="true">↗</span>{text('Bike path', '자전거도로')}</button>
+            <button type="button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}><span aria-hidden="true">◉</span>{text('CCTV', 'CCTV')}</button>
+          </nav>
+          <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
+            <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
+              {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
+              <option value="city">{text('3D city', '3D 도시')}</option>
+              <option value="satellite">{text('2D satellite', '2D 위성')}</option>
+              <option value="map">{text('Flat map', '평면 지도')}</option>
+              {hasGoogleMapsKey && <option value="google">Google 3D</option>}
+            </select>
+          </label>
+          {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewOpen}
+            onClick={() => { setView('kakao'); setRoadviewOpen(true) }}>
+            <span aria-hidden="true">▣</span>{text('Road view', '로드뷰')}
+          </button>}
         <details className="tour-season-controls tour-map-settings">
           <summary><span aria-hidden="true">⚙</span>{text('Map settings', '지도 설정')}<i aria-hidden="true">⌄</i></summary>
           <div className="tour-map-settings-panel">
@@ -780,11 +787,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
           <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
         </button>
-        {pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
-          <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
-            ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
-            : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
-        </div>}
         <button type="button" className={`tour-food-guide-trigger${rideFoodPrompt?.routeId === route.id ? ' is-nearby' : ''}`}
           aria-expanded={foodGuideOpen} aria-controls="tour-food-guide-panel" onClick={() => {
             setFoodGuideOpen(open => !open)
@@ -794,6 +796,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <span><small>{text('LOCAL FOOD GUIDE', '동네 맛집 가이드')}</small><strong>{text('Find a good stop', '근처 맛집 추천')}</strong></span>
           <i aria-hidden="true">{foodGuideOpen ? '−' : '+'}</i>
         </button>
+        </aside>
+        {pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
+          <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
+            ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
+            : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
+        </div>}
         {foodGuideOpen && <aside className="tour-food-guide-panel" id="tour-food-guide-panel" aria-label={text('Food recommendations near the route', '경로 주변 맛집 추천')}>
           <div className="tour-food-guide-heading">
             <span><small>{text('A GOOD BITE ALONG THE WAY', '라이딩 중 잠깐 들르기')}</small><strong>{rideFoodPrompt?.routeId === route.id && route.stops[rideFoodPrompt.stopIndex]

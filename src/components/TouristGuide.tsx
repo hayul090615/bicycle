@@ -11,7 +11,7 @@ const seasonNames: Record<TourSeason, [string, string]> = {
 }
 
 export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () => void; darkMode: boolean; onToggleTheme: () => void }) {
-  const [locale, setLocale] = useState<Locale>(() => new URLSearchParams(window.location.search).get('lang') === 'ko' ? 'ko' : 'en')
+  const [locale, setLocale] = useState<Locale>(() => new URLSearchParams(window.location.search).get('lang') === 'en' ? 'en' : 'ko')
   const [seoulClock, setSeoulClock] = useState(nowInSeoul)
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
   const [category, setCategory] = useState<TourCategory>(initialRoute.category)
