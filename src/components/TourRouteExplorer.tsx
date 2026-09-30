@@ -23,6 +23,11 @@ type RotationRequest = { direction: 'left' | 'right' | 'up' | 'down'; serial: nu
 type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | 'bikeLanes'
 type MapLayers = Record<MapLayerKey, boolean>
 const DEFAULT_MAP_LAYERS: MapLayers = { course: true, restaurants: false, cctv: false, roadInfo: true, riders: true, bikeLanes: true }
+const FOOD_PHOTOS = {
+  cafe: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=720&q=82',
+  restaurant: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=720&q=82',
+  quick: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=720&q=82',
+}
 
 function readMapLayers(): MapLayers {
   try {
@@ -201,6 +206,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   )
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
+  const [foodGuideOpen, setFoodGuideOpen] = useState(false)
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
   const [treeFocusRequest, setTreeFocusRequest] = useState<TreeFocusRequest | null>(null)
   const autoLocationRequested = useRef(false)
@@ -286,6 +292,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const routeSignals = activeRoadConditions?.signals ?? []
   const routeGrades = activeRoadConditions?.grades ?? []
   const routeRestaurants = activeRoutePlaces?.places ?? []
+  const foodGuideAnchor = userLocation ?? (selectedStop === null
+    ? { lat: destinationStation.lat, lng: destinationStation.lng }
+    : getTouristStation(route.stops[selectedStop]?.stationId ?? destinationStop.stationId))
+  const foodRecommendations = useMemo(() => routeRestaurants
+    .map(place => ({ place, distance: distanceMeters(foodGuideAnchor, { lat: place.lat, lng: place.lng }) }))
+    .sort((first, second) => first.distance - second.distance)
+    .slice(0, 6), [foodGuideAnchor.lat, foodGuideAnchor.lng, routeRestaurants])
   const showCourse = mapLayers.course
   const showRestaurants = mapLayers.restaurants
   const showCctv = mapLayers.cctv
@@ -427,6 +440,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     if (!nearbyStop) return
     promptedStopsRef.current.add(`${route.id}:${nearbyStop.index}`)
     setRideFoodPrompt({ routeId: route.id, stopIndex: nearbyStop.index })
+    setFoodGuideOpen(true)
   }, [locationMovementTick, route, trackingLocation, userLocation, rideFoodPrompt])
   useEffect(() => {
     setRideFoodPrompt(null)
@@ -741,20 +755,42 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
             : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
         </div>}
-        {rideFoodPrompt?.routeId === route.id && <aside className="tour-ride-food-prompt" role="status" aria-live="polite">
-          <button type="button" className="tour-ride-food-prompt-close" aria-label={text('Dismiss food suggestion', '맛집 안내 닫기')} onClick={() => setRideFoodPrompt(null)}>×</button>
-          <span className="tour-ride-food-prompt-kicker">{text('A STOP ALONG YOUR RIDE', '라이딩 중 경유지')}</span>
-          <strong>{text('Want to find good food nearby?', '이 근처 맛집을 찾아볼까요?')}</strong>
-          <p>{text(`You are near ${route.stops[rideFoodPrompt.stopIndex]?.place ?? 'a route stop'}.`, `${route.stops[rideFoodPrompt.stopIndex]?.placeKo ?? '경유지'} 근처에 도착했어요.`)}{' '}
-            {activeRoutePlaces?.status === 'loading' ? text('Searching nearby…', '주변 가게를 찾고 있어요…')
-              : activeRoutePlaces?.status === 'ready' ? text(`${routeRestaurants.filter(place => distanceMeters(userLocation ?? destinationStation, place) <= 750).length} food and cafe options nearby`, `반경 750m 맛집·카페 ${routeRestaurants.filter(place => distanceMeters(userLocation ?? destinationStation, place) <= 750).length}곳`)
-                : text('See nearby restaurants and cafes on the map.', '지도에서 주변 음식점과 카페를 볼 수 있어요.')}</p>
-          <div><button type="button" className="tour-ride-food-prompt-primary" onClick={() => {
+        <button type="button" className={`tour-food-guide-trigger${rideFoodPrompt?.routeId === route.id ? ' is-nearby' : ''}`}
+          aria-expanded={foodGuideOpen} aria-controls="tour-food-guide-panel" onClick={() => {
+            setFoodGuideOpen(open => !open)
             setMapLayers(current => ({ ...current, restaurants: true }))
-            setSidebarOpen(true)
-            setRideFoodPrompt(null)
-          }}>{text('Show nearby food', '주변 맛집 보기')}</button>
-            <button type="button" onClick={() => setRideFoodPrompt(null)}>{text('Keep riding', '계속 라이딩')}</button></div>
+          }}>
+          <span className="tour-food-guide-avatar" aria-hidden="true">🧑‍🍳</span>
+          <span><small>{text('LOCAL FOOD GUIDE', '동네 맛집 가이드')}</small><strong>{text('Find a good stop', '근처 맛집 추천')}</strong></span>
+          <i aria-hidden="true">{foodGuideOpen ? '−' : '+'}</i>
+        </button>
+        {foodGuideOpen && <aside className="tour-food-guide-panel" id="tour-food-guide-panel" aria-label={text('Food recommendations near the route', '경로 주변 맛집 추천')}>
+          <div className="tour-food-guide-heading">
+            <span><small>{text('A GOOD BITE ALONG THE WAY', '라이딩 중 잠깐 들르기')}</small><strong>{rideFoodPrompt?.routeId === route.id && route.stops[rideFoodPrompt.stopIndex]
+              ? text(`Near ${route.stops[rideFoodPrompt.stopIndex].place}`, `${route.stops[rideFoodPrompt.stopIndex].placeKo} 근처`)
+              : text('Recommended along your route', '경로 주변 추천 맛집')}</strong></span>
+            <button type="button" aria-label={text('Close recommendations', '추천 닫기')} onClick={() => setFoodGuideOpen(false)}>×</button>
+          </div>
+          {activeRoutePlaces?.status === 'loading' && <p className="tour-food-guide-status">{text('Finding places along the route…', '경로 주변 가게를 찾고 있어요…')}</p>}
+          {activeRoutePlaces?.status === 'unavailable' && <p className="tour-food-guide-status">{text('Food places are temporarily unavailable. Try again shortly.', '맛집 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')}</p>}
+          {activeRoutePlaces?.status === 'ready' && foodRecommendations.length === 0 && <p className="tour-food-guide-status">{text('No listed restaurants were found along this route yet.', '아직 이 경로 주변에 등록된 음식점이 없어요.')}</p>}
+          {activeRoutePlaces?.status === 'ready' && foodRecommendations.length > 0 && <div className="tour-food-guide-list">
+            {foodRecommendations.map(({ place, distance }) => {
+              const query = encodeURIComponent(`${place.name} 서울 맛집`)
+              const photo = FOOD_PHOTOS[place.kind]
+              return <article className="tour-food-card" key={place.id}>
+                <img src={photo} alt={text(`Representative ${place.kind === 'cafe' ? 'cafe' : 'food'} photo`, '가게 대표 사진이 아닌 음식 참고 이미지')} loading="lazy" />
+                <div className="tour-food-card-body"><div><strong>{place.name}</strong><small>{text(`${distanceLabel(distance)} away`, `${distanceLabel(distance)} 거리`)}{place.cuisine ? ` · ${place.cuisine}` : ''}</small></div>
+                  <div className="tour-food-social-links">
+                    <a href={`https://search.naver.com/search.naver?where=blog&query=${query}`} target="_blank" rel="noopener noreferrer">{text('Blog', '블로그')}</a>
+                    <a href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer">Instagram</a>
+                    <a href={`https://www.tiktok.com/search?q=${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer">TikTok</a>
+                  </div>
+                </div>
+              </article>
+            })}
+          </div>}
+          <p className="tour-food-guide-disclaimer">{text('Photos are representative menu inspiration. Social links open public search results.', '사진은 메뉴 참고용 이미지이며, 블로그·SNS 버튼은 공개 검색 결과로 이동합니다.')}</p>
         </aside>}
         {view !== 'kakao' && <div className={`tour-map-rotate-controls${view === 'city' || view === 'google' ? ' tour-map-rotate-controls--tilt' : ''}`} role="group" aria-label={text('Map camera controls', '지도 방향 조작')}>
           <button type="button" className="tour-map-arrow--up" onClick={() => rotateMap('up')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera up', '카메라 시점을 올리기') : text('Move map north', '지도를 북쪽으로 이동')}>↑</button>
