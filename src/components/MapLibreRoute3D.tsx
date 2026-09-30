@@ -144,7 +144,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   locale: 'en' | 'ko'
-  userLocation: { lat: number; lng: number } | null
+  userLocation: { lat: number; lng: number; heading?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
@@ -319,7 +319,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           paint: { 'line-color': '#fffdf4', 'line-width': 7, 'line-opacity': .9 } }
         const bikeLaneLine = { id: 'tour-bike-lanes-line', type: 'line' as const, source: 'tour-bike-lanes',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
-          paint: { 'line-color': '#22a9c8', 'line-width': 4, 'line-opacity': .95, 'line-dasharray': [2, 1.4] } }
+          paint: { 'line-color': '#df3b3b', 'line-width': 4, 'line-opacity': .98, 'line-dasharray': [2, 1.4] } }
         map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
         const shadowFill = {
           id: 'tour-building-shadow-fill',
@@ -563,6 +563,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (!userLocation) return
     const element = document.createElement('div')
     element.className = 'tour-user-location-marker'
+    element.style.setProperty('--tour-user-heading', `${userLocation.heading ?? 0}deg`)
     element.setAttribute('role', 'img')
     element.setAttribute('aria-label', locale === 'ko' ? '내 위치' : 'You are here')
     element.title = locale === 'ko' ? '내 위치' : 'You are here'

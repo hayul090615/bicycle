@@ -1350,7 +1350,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-finder-routes small { color: #737b6f; font-size: .65rem; }
 .tour-finder-categories button:hover, .tour-finder-routes button:hover { border-color: #70866f; }
 .tour-finder-categories button[aria-pressed='true'], .tour-finder-routes button[aria-pressed='true'] { border-color: #527158; color: #304c39; background: #e3eadf; box-shadow: inset 3px 0 #527158; }
-.tour-user-location-marker { width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%; background: #246fe5; box-shadow: 0 0 0 5px #246fe548, 0 2px 8px #12254d88; }
+.tour-user-location-marker { position: relative; width: 34px; height: 39px; display: block; border: 0; border-radius: 0; background: transparent; pointer-events: none; }
+.tour-user-location-marker::before { position: absolute; inset: 1px 2px 3px; background: #1677e8; clip-path: polygon(50% 0, 96% 91%, 50% 72%, 4% 91%); filter: drop-shadow(0 2px 3px #132b4c99); transform: rotate(var(--tour-user-heading, 0deg)); transform-origin: 50% 50%; content: ''; }
+.tour-user-location-marker::after { position: absolute; z-index: 1; top: 70%; left: 50%; width: 6px; height: 6px; border: 1px solid #fff; border-radius: 50%; background: #1677e8; transform: translate(-50%, -50%); content: ''; }
 @media (max-width: 990px) {
   .tour-route-finder { margin-bottom: 1rem; }
   .tour-finder-categories { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -1404,6 +1406,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-my-map-layers label:last-child { grid-column: 1 / -1; }
 .tour-my-map-layers input { width: 15px; height: 15px; flex: 0 0 15px; margin: 0; accent-color: #08765b; cursor: pointer; }
 .tour-my-map-layers label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-my-map-layers .tour-bike-lane-label::before { width: 13px; height: 3px; display: inline-block; margin: 0 .3rem .16rem 0; border-radius: 2px; background: #df3b3b; content: ''; }
 .tour-my-map-layers label small { margin-left: auto; color: #778379; font: 700 .58rem 'DM Sans', 'Noto Sans KR', sans-serif; }
 .tour-my-map-layers label:has(input:checked) { border-color: #9fcbb2; background: #edf6ef; }
 .tour-my-map .tour-cctv-status { margin: 0; }
@@ -1916,6 +1919,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map-tree--winter { --map-tree-leaves: #66867e; --map-tree-light: #a8c1bc; }
 .tour-map-tree--winter b { top: 0; left: 15%; width: 70%; height: 74%; border-radius: 0; clip-path: polygon(50% 0, 100% 42%, 77% 42%, 100% 72%, 71% 72%, 91% 100%, 9% 100%, 29% 72%, 0 72%, 23% 42%, 0 42%); }
 .tour-map-tree--winter em { display: none; }
+.tour-ride-food-prompt { position: absolute; z-index: 1210; right: .85rem; bottom: 8.2rem; width: min(340px, calc(100% - 1.7rem)); display: grid; gap: .38rem; padding: .9rem; border: 1px solid #c8d8ce; border-radius: 9px; color: #263f32; background: #fffdf7f5; box-shadow: 0 8px 26px #16281e35; backdrop-filter: blur(9px); }
+.tour-ride-food-prompt-close { position: absolute; top: .35rem; right: .45rem; width: 27px; height: 27px; border: 0; border-radius: 50%; color: #607269; background: transparent; font: 1.15rem/1 'DM Sans', sans-serif; cursor: pointer; }
+.tour-ride-food-prompt-kicker { color: #78836f; font: 800 .57rem 'DM Sans', 'Noto Sans KR', sans-serif; letter-spacing: .1em; }
+.tour-ride-food-prompt > strong { padding-right: 1.1rem; color: #183d30; font-size: .9rem; }
+.tour-ride-food-prompt p { margin: 0; color: #657267; font-size: .68rem; line-height: 1.5; }
+.tour-ride-food-prompt > div { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .12rem; }
+.tour-ride-food-prompt > div button { min-height: 34px; padding: .42rem .62rem; border: 1px solid #d2dbd2; border-radius: 5px; color: #536358; background: #f5f5ed; font: 750 .65rem 'DM Sans', 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-ride-food-prompt > div .tour-ride-food-prompt-primary { border-color: #167c5c; color: #fff; background: #167c5c; }
+.tour-screen--dark .tour-ride-food-prompt { border-color: #4a6756; color: #e6eee7; background: #1d3029f5; }
+.tour-screen--dark .tour-ride-food-prompt-kicker, .tour-screen--dark .tour-ride-food-prompt p { color: #aec2b1; }
+.tour-screen--dark .tour-ride-food-prompt > strong { color: #f1f6ef; }
+.tour-screen--dark .tour-ride-food-prompt > div button { border-color: #485c4c; color: #e0eadf; background: #293b30; }
+.tour-screen--dark .tour-ride-food-prompt > div .tour-ride-food-prompt-primary { border-color: #198760; color: #fff; background: #198760; }
 .tour-screen--dark .tour-map-rotate-controls button, .tour-screen--dark .tour-map-stock-overlay { border-color: #43564b; color: #e7eee8; background: #1f3029ee; }
 .tour-screen--dark .tour-map-stock-overlay strong { color: #86ddb7; }
 .tour-screen--dark .tour-map-stock-overlay small { color: #aec1b5; }
@@ -1927,4 +1943,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-map-stock-overlay { bottom: .65rem; left: .55rem; max-width: 43%; padding: .38rem .45rem; }
   .tour-map-stock-overlay strong { font-size: .61rem; }
   .tour-map-stock-overlay small { font-size: .54rem; }
+  .tour-ride-food-prompt { right: .55rem; bottom: 6.4rem; width: min(330px, calc(100% - 1.1rem)); padding: .72rem; }
+  .tour-ride-food-prompt > strong { font-size: .82rem; }
+  .tour-ride-food-prompt p { font-size: .62rem; }
 }

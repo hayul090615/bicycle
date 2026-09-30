@@ -1,9 +1,46 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
+import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoOverlay } from '../services/kakaoMaps'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
-import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import riderSpriteUrl from '../assets/map-riders.png'
+
+type MapPoint = { lat: number; lng: number }
+
+function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number) {
+  if (path.length < 2) return []
+  const segmentLengths = path.slice(1).map((point, index) => {
+    const previous = path[index]
+    const meanLatitude = (point.lat + previous.lat) / 2 * Math.PI / 180
+    return Math.hypot((point.lng - previous.lng) * 111_000 * Math.cos(meanLatitude), (point.lat - previous.lat) * 111_000)
+  })
+  const total = segmentLengths.reduce((sum, value) => sum + value, 0)
+  const samples: MapPoint[] = []
+  let segmentIndex = 0
+  let segmentStart = 0
+  for (let distance = spacing * .55; distance < total; distance += spacing) {
+    while (segmentIndex < segmentLengths.length - 1 && segmentStart + segmentLengths[segmentIndex] < distance) {
+      segmentStart += segmentLengths[segmentIndex]
+      segmentIndex += 1
+    }
+    const segmentLength = segmentLengths[segmentIndex]
+    if (!segmentLength) continue
+    const from = path[segmentIndex]
+    const to = path[segmentIndex + 1]
+    const ratio = Math.max(0, Math.min(1, (distance - segmentStart) / segmentLength))
+    const meanLatitude = (from.lat + to.lat) / 2 * Math.PI / 180
+    const east = (to.lng - from.lng) * 111_000 * Math.cos(meanLatitude)
+    const north = (to.lat - from.lat) * 111_000
+    const bearing = (Math.atan2(east, north) * 180 / Math.PI + 360) % 360
+    const side = samples.length % 2 === 0 ? 1 : -1
+    const sideRadians = (bearing + 90 * side) * Math.PI / 180
+    const lat = from.lat + (north * ratio + Math.cos(sideRadians) * offsetMeters) / 111_000
+    const lng = from.lng + (east * ratio + Math.sin(sideRadians) * offsetMeters) / (111_000 * Math.max(.2, Math.cos(meanLatitude)))
+    samples.push({ lat, lng })
+  }
+  return samples
+}
 
 function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
   const popup = document.createElement('div')
@@ -35,11 +72,15 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
+  bikeLanes: RouteBikeLane[]
+  showBikeLanes: boolean
+  season: TourSeason
+  showRiders: boolean
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
@@ -49,7 +90,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
   cctvCameras: PublicCamera[]
   locationFocusRequest: number
   locale: 'en' | 'ko'
-  userLocation: { lat: number; lng: number } | null
+  userLocation: { lat: number; lng: number; heading?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
@@ -63,6 +104,8 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
   const conditionOverlaysRef = useRef<KakaoOverlay[]>([])
   const restaurantOverlaysRef = useRef<KakaoOverlay[]>([])
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
+  const bikeLaneOverlaysRef = useRef<KakaoOverlay[]>([])
+  const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
@@ -112,6 +155,8 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
       conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       restaurantOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       routeOverlaysRef.current = []
@@ -119,6 +164,8 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
       conditionOverlaysRef.current = []
       restaurantOverlaysRef.current = []
       cctvOverlaysRef.current = []
+      bikeLaneOverlaysRef.current = []
+      sceneryOverlaysRef.current = []
       userOverlayRef.current = null
       activePopupRef.current = null
       activePopupIdRef.current = null
@@ -215,6 +262,57 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 10, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 6, strokeColor: '#2479db', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
   }, [accessEstimated, accessPath, showCourse, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    bikeLaneOverlaysRef.current = []
+    if (!showBikeLanes) return
+    bikeLanes.forEach(lane => {
+      if (lane.points.length < 2) return
+      const path = lane.points.map(([lng, lat]) => new api.LatLng(lat, lng))
+      bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: .95, strokeStyle: 'solid' }))
+      bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#df3b3b', strokeOpacity: .98, strokeStyle: 'solid' }))
+    })
+    return () => {
+      bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      bikeLaneOverlaysRef.current = []
+    }
+  }, [bikeLanes, showBikeLanes, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    sceneryOverlaysRef.current = []
+    if (!showCourse) return
+    const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
+    const treeSamples = routeSamples(path, 310, 13)
+    treeSamples.forEach(point => {
+      const tree = document.createElement('span')
+      tree.className = `tour-map-tree tour-map-tree--${season}`
+      tree.setAttribute('aria-hidden', 'true')
+      tree.append(document.createElement('i'), document.createElement('b'), document.createElement('em'))
+      sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: tree, xAnchor: .5, yAnchor: 1, zIndex: 3 }))
+    })
+    if (showRiders) {
+      routeSamples(path, 760, 9).forEach((point, index) => {
+        const person = document.createElement('span')
+        person.className = `tour-map-person tour-map-person--${index % 3}`
+        person.style.backgroundImage = `url("${riderSpriteUrl}")`
+        person.setAttribute('role', 'img')
+        person.setAttribute('aria-label', locale === 'ko' ? '자전거 도로의 라이더' : 'Cyclist on the route')
+        sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: person, xAnchor: .5, yAnchor: 1, zIndex: 4 }))
+      })
+    }
+    return () => {
+      sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      sceneryOverlaysRef.current = []
+    }
+  }, [locale, points, routePath, season, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -365,6 +463,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, r
     if (!userLocation) return
     const marker = document.createElement('div')
     marker.className = 'tour-user-location-marker kakao-user-marker'
+    marker.style.setProperty('--tour-user-heading', `${userLocation.heading ?? 0}deg`)
     marker.setAttribute('role', 'img')
     marker.setAttribute('aria-label', locale === 'ko' ? '내 위치' : 'You are here')
     marker.title = locale === 'ko' ? '내 위치' : 'You are here'
