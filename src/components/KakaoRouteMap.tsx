@@ -7,6 +7,8 @@ import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services
 import { createRouteMotion } from '../services/routeMotion'
 import { createRouteTreeMarker } from './routeTreeMarker'
 import { createCyclistMarker } from './cyclistMarker'
+import { createFoodGuideMarker } from './foodGuideMarker'
+import { offsetRouteSample, sampleRouteAtIntervals } from '../utils/routeMapSamples'
 
 type MapPoint = { lat: number; lng: number }
 
@@ -74,7 +76,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, onFoodGuideOpen, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
@@ -97,6 +99,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
   onFocusTree: (point: LonLat) => void
+  onFoodGuideOpen: (point: LonLat) => void
   fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -293,7 +296,12 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     sceneryOverlaysRef.current = []
     if (!showCourse) return
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
-    const treeSamples = routeSamples(path, 260, 10)
+    const routeCoordinates = path.map(point => [point.lng, point.lat] as LonLat)
+    const sampledRoute = sampleRouteAtIntervals(routeCoordinates, 100)
+    const treeSamples = sampleRouteAtIntervals(routeCoordinates, 260).map(({ point, bearing }, index) => {
+      const offset = offsetRouteSample(point, bearing, 10, index % 2 === 0 ? 1 : -1)
+      return { lat: offset[1], lng: offset[0] }
+    })
     const treeElements: HTMLButtonElement[] = []
     const riderOverlays: Array<{ overlay: KakaoOverlay; phase: number; person: HTMLElement }> = []
     let riderFrame = 0
@@ -301,6 +309,10 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       const tree = createRouteTreeMarker(season, locale, index, () => onFocusTree([point.lng, point.lat]))
       treeElements.push(tree)
       sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: tree, xAnchor: .5, yAnchor: 1, zIndex: 3 }))
+    })
+    sampledRoute.forEach(({ point }, index) => {
+      const guide = createFoodGuideMarker(locale, index, () => onFoodGuideOpen(point))
+      sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point[1], point[0]), content: guide, xAnchor: .5, yAnchor: 1, zIndex: 7 }))
     })
     const updateLeafMotion = () => treeElements.forEach(tree => tree.classList.toggle('is-close-view', map.getLevel() <= 4))
     api.addListener(map, 'zoom_changed', updateLeafMotion)
@@ -344,7 +356,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []
     }
-  }, [locale, onFocusTree, points, routePath, season, showCourse, showRiders, status])
+  }, [locale, onFocusTree, onFoodGuideOpen, points, routePath, season, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current

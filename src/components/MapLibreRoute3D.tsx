@@ -6,6 +6,8 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import { createRouteTreeMarker } from './routeTreeMarker'
 import { createCyclistMarker } from './cyclistMarker'
+import { createFoodGuideMarker } from './foodGuideMarker'
+import { offsetRouteSample, sampleRouteAtIntervals } from '../utils/routeMapSamples'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
@@ -29,6 +31,13 @@ const SEASON_SKIES: Record<TourSeason, SkySpecification> = {
   summer: { 'sky-color': '#78abc5', 'horizon-color': '#f1dfa9', 'sky-horizon-blend': 0.74, 'horizon-fog-blend': 0.2, 'atmosphere-blend': 0.48 },
   autumn: { 'sky-color': '#98acb7', 'horizon-color': '#e8c18f', 'sky-horizon-blend': 0.7, 'horizon-fog-blend': 0.24, 'atmosphere-blend': 0.48 },
   winter: { 'sky-color': '#a7c4d2', 'horizon-color': '#e2eaf0', 'sky-horizon-blend': 0.76, 'horizon-fog-blend': 0.2, 'atmosphere-blend': 0.46 },
+}
+type MapWeather = 'sunny' | 'cloudy' | 'rainy'
+function mapSky(season: TourSeason, weather: MapWeather): SkySpecification {
+  const seasonal = SEASON_SKIES[season]
+  if (weather === 'rainy') return { ...seasonal, 'sky-color': '#728393', 'horizon-color': '#9ca9b2', 'sky-horizon-blend': .84, 'horizon-fog-blend': .34, 'atmosphere-blend': .68 }
+  if (weather === 'cloudy') return { ...seasonal, 'sky-color': '#91a0a8', 'horizon-color': '#bdc3bf', 'sky-horizon-blend': .8, 'horizon-fog-blend': .3, 'atmosphere-blend': .56 }
+  return { ...seasonal, 'sky-color': '#78afd0', 'horizon-color': '#f3d992', 'sky-horizon-blend': .72, 'horizon-fog-blend': .16, 'atmosphere-blend': .42 }
 }
 
 function samplePath(path: LonLat[], count: number): LonLat[] {
@@ -125,7 +134,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, weather, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -136,6 +145,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   bikeLanes: RouteBikeLane[]
   showBikeLanes: boolean
   season: TourSeason
+  weather: MapWeather
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
@@ -149,6 +159,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   treeFocusRequest: TreeFocusRequest | null
   onFocusTree: (point: LonLat) => void
+  onFoodGuideOpen: (point: LonLat) => void
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number; heading?: number } | null
   selectedStop: number | null
@@ -163,6 +174,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const markersRef = useRef<MapLibreMarker[]>([])
   const peopleMarkersRef = useRef<MapLibreMarker[]>([])
   const treeMarkersRef = useRef<MapLibreMarker[]>([])
+  const foodGuideMarkersRef = useRef<MapLibreMarker[]>([])
   const conditionMarkersRef = useRef<MapLibreMarker[]>([])
   const restaurantMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
@@ -188,12 +200,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const linePoints = useMemo(() => routePath ?? points.map(point => [point.lng, point.lat] as LonLat), [routePath, points])
   // Camera targets and markers share the same coordinates, including the roadside offset.
   const treePositions = useMemo(() => {
-    const length = linePoints.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
-      (point[0] - linePoints[index - 1][0]) * 88_000, (point[1] - linePoints[index - 1][1]) * 111_000), 0)
-    return samplePathWithBearing(linePoints, Math.max(1, Math.ceil(length / 260)))
+    return sampleRouteAtIntervals(linePoints, 260)
       .map(({ point, bearing }, index) => {
-        const offset = (index % 2 === 0 ? 1 : -1) * (9 + index % 3 * 2)
-        return { point: offsetFromRoute(point, bearing, offset), bearing }
+        const offset = 8 + index % 3 * 2
+        return { point: offsetRouteSample(point, bearing, offset, index % 2 === 0 ? 1 : -1), bearing }
       })
   }, [linePoints])
   const activeTreeFocus = treeFocusRequest?.routeId === route.id ? treeFocusRequest : null
@@ -247,6 +257,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       peopleMarkersRef.current = []
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
+      foodGuideMarkersRef.current.forEach(marker => marker.remove())
+      foodGuideMarkersRef.current = []
+      foodGuideMarkersRef.current.forEach(marker => marker.remove())
+      foodGuideMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -268,7 +282,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       if (disposed || failed) return
       window.clearTimeout(timeout)
       try {
-        if (is3DView) map.setSky(SEASON_SKIES[season])
+        if (is3DView) map.setSky(mapSky(season, weather))
         map.addSource('tour-imagery', {
           type: 'raster',
           tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
@@ -427,8 +441,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
-    if (is3DView) map.setSky(SEASON_SKIES[season])
-  }, [is3DView, season, status])
+    if (is3DView) map.setSky(mapSky(season, weather))
+  }, [is3DView, season, status, weather])
 
   useEffect(() => {
     const map = mapRef.current
@@ -482,9 +496,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (!map || status !== 'ready') return
     peopleMarkersRef.current.forEach(marker => marker.remove())
     treeMarkersRef.current.forEach(marker => marker.remove())
+    foodGuideMarkersRef.current.forEach(marker => marker.remove())
     conditionMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
     treeMarkersRef.current = []
+    foodGuideMarkersRef.current = []
     conditionMarkersRef.current = []
     let riderFrame = 0
     const sceneryPath = routePath && routePath.length >= 2 ? routePath : linePoints
@@ -522,6 +538,12 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           .setLngLat(point)
           .addTo(map)
       })
+      if (showCourse) {
+        foodGuideMarkersRef.current = sampleRouteAtIntervals(sceneryPath, 100).map(({ point }, index) => {
+          const element = createFoodGuideMarker(locale, index, () => onFoodGuideOpen(point))
+          return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat(point).addTo(map)
+        })
+      }
     }
     conditionMarkersRef.current = showRoadInfo ? routeConditions.map(condition => {
       const element = document.createElement('div')
@@ -556,7 +578,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           marker.getElement().style.display = visible ? '' : 'none'
         })
         treeMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 12.8 && !(zoom >= 16 && isBlocked(marker))
+          const visible = zoom >= 11.5
           const scale = Math.max(19, Math.min(36, 22 + (zoom - 14) * 3))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.48}px`
@@ -583,12 +605,14 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       map.off('idle', updateVisibility)
       peopleMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current.forEach(marker => marker.remove())
+      foodGuideMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
       treeMarkersRef.current = []
+      foodGuideMarkersRef.current = []
       conditionMarkersRef.current = []
     }
-  }, [is3DView, linePoints, locale, onFocusTree, routeConditions, routePath, season, showRiders, showRoadInfo, status, treePositions])
+  }, [is3DView, linePoints, locale, onFocusTree, onFoodGuideOpen, routeConditions, routePath, season, showCourse, showRiders, showRoadInfo, status, treePositions])
 
   useEffect(() => {
     const map = mapRef.current

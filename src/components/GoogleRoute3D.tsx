@@ -7,6 +7,8 @@ import type { RouteCondition, RouteRestaurant } from '../services/routeCondition
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createRouteTreeMarker } from './routeTreeMarker'
+import { createFoodGuideMarker } from './foodGuideMarker'
+import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
 
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
@@ -37,7 +39,7 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
-export function GoogleRoute3D({ route, routePath, accessPath, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, fallback }: {
+export function GoogleRoute3D({ route, routePath, accessPath, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
@@ -54,6 +56,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   userLocation: { lat: number; lng: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
+  onFoodGuideOpen: (point: LonLat) => void
   fallback: ReactNode
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -64,6 +67,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
   const markersRef = useRef<HTMLElement[]>([])
   const peopleMarkersRef = useRef<HTMLElement[]>([])
   const treeMarkersRef = useRef<HTMLElement[]>([])
+  const foodGuideMarkersRef = useRef<HTMLElement[]>([])
   const conditionMarkersRef = useRef<HTMLElement[]>([])
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
@@ -132,6 +136,8 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
       peopleMarkersRef.current = []
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
+      foodGuideMarkersRef.current.forEach(marker => marker.remove())
+      foodGuideMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -173,14 +179,14 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     }) : []
     treeMarkersRef.current.forEach(marker => marker.remove())
     treeMarkersRef.current = []
+    foodGuideMarkersRef.current.forEach(marker => marker.remove())
+    foodGuideMarkersRef.current = []
     const sceneryPath = routePath && routePath.length >= 2
       ? routePath
       : linePoints.map(point => [point.lng, point.lat] as LonLat)
     if (showCourse && sceneryPath.length >= 2) {
-      const distance = sceneryPath.reduce((sum, point, index) => index === 0 ? 0 : sum + Math.hypot(
-        (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
-      const positions = sampleRiderPositions(sceneryPath, Math.max(1, Math.ceil(distance / 260)))
-      treeMarkersRef.current = positions.map(([lng, lat], index) => {
+      const treePositions = sampleRouteAtIntervals(sceneryPath, 260)
+      treeMarkersRef.current = treePositions.map(({ point: [lng, lat] }, index) => {
         const marker = new library.Marker3DElement({
           position: { lat, lng },
           title: locale === 'ko' ? '가을 길의 나무와 떨어지는 잎' : 'Trees and falling leaves along the autumn route',
@@ -194,7 +200,20 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
         const template = document.createElement('template')
         template.content.append(icon)
         marker.append(template)
-        marker.style.display = map.range <= 25000 ? '' : 'none'
+        marker.style.display = map.range <= 65000 ? '' : 'none'
+        map.append(marker)
+        return marker
+      })
+      foodGuideMarkersRef.current = sampleRouteAtIntervals(sceneryPath, 100).map(({ point: [lng, lat] }, index) => {
+        const marker = new library.Marker3DElement({
+          position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+          title: locale === 'ko' ? '100m 지점 맛집 추천' : 'Food recommendations at this route point',
+          drawsWhenOccluded: false, sizePreserved: false,
+        })
+        const icon = createFoodGuideMarker(locale, index, () => onFoodGuideOpen([lng, lat]))
+        const template = document.createElement('template')
+        template.content.append(icon)
+        marker.append(template)
         map.append(marker)
         return marker
       })
@@ -242,7 +261,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
       riderFrame = window.requestAnimationFrame(moveRiders)
     }
     const updateTreeVisibility = () => treeMarkersRef.current.forEach(marker => {
-      marker.style.display = map.range <= 25000 ? '' : 'none'
+      marker.style.display = map.range <= 65000 ? '' : 'none'
       marker.classList.toggle('is-close-view', map.range <= 4000)
     })
     map.addEventListener('gmp-rangechange', updateTreeVisibility)
@@ -255,7 +274,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
     }
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, routePath, season, showCourse, showRiders, status])
+  }, [linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, points, route, routePath, season, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current

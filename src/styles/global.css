@@ -2155,15 +2155,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-sidebar-toggle:hover { background: #d8ff78; }
 .tour-map-person { filter: drop-shadow(0 2px 2px #0a161488); }
 .tour-map-person svg { overflow: visible; }
-.tour-food-guide-trigger { position: absolute; z-index: 1240; left: .9rem; bottom: 1rem; display: flex; align-items: center; gap: .65rem; min-width: 210px; padding: .55rem .75rem .55rem .55rem; border: 1px solid #ffffffc9; border-radius: 16px; color: #18372a; background: #fffef4f2; box-shadow: 0 10px 30px #0b201c42; text-align: left; cursor: pointer; backdrop-filter: blur(12px); transition: transform .18s ease, box-shadow .18s ease; }
-.tour-food-guide-trigger:hover, .tour-food-guide-trigger:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px #0b201c50; }
+.tour-food-guide-trigger { position: absolute; z-index: 2000; left: .85rem; top: 50%; bottom: auto; display: flex; align-items: center; gap: .65rem; min-width: 210px; padding: .55rem .75rem .55rem .55rem; border: 1px solid #ffffffc9; border-radius: 16px; color: #18372a; background: #fffef4f2; box-shadow: 0 10px 30px #0b201c42; text-align: left; cursor: pointer; backdrop-filter: blur(12px); transform: translateY(-50%); transition: transform .18s ease, box-shadow .18s ease; }
+.tour-food-guide-trigger:hover, .tour-food-guide-trigger:focus-visible { transform: translateY(calc(-50% - 2px)); box-shadow: 0 14px 34px #0b201c50; }
 .tour-food-guide-trigger.is-nearby { border-color: #cbf267; box-shadow: 0 0 0 3px #c9f45d55, 0 12px 34px #0b201c45; }
 .tour-food-guide-avatar { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 42px; border-radius: 14px; color: #153b2d; background: #dcf3b8; font-size: 1.4rem; }
 .tour-food-guide-trigger > span:nth-child(2) { display: grid; gap: .12rem; }
 .tour-food-guide-trigger small, .tour-food-guide-heading small { color: #70824d; font: 800 .54rem 'DM Sans', 'Noto Sans KR', sans-serif; letter-spacing: .1em; }
 .tour-food-guide-trigger strong { color: #18372a; font-size: .77rem; }
 .tour-food-guide-trigger > i { display: grid; width: 25px; height: 25px; place-items: center; margin-left: auto; border-radius: 50%; color: #31502b; background: #edf6d7; font-size: 1rem; font-style: normal; }
-.tour-food-guide-panel { position: absolute; z-index: 1241; left: .9rem; bottom: 5.6rem; width: min(390px, calc(100% - 1.8rem)); max-height: min(68vh, 610px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .65rem; padding: .9rem; overflow: hidden; border: 1px solid #dce4d3; border-radius: 18px; color: #21372b; background: #fffef5f5; box-shadow: 0 18px 52px #0b201c55; backdrop-filter: blur(16px); }
+.tour-food-guide-panel { position: absolute; z-index: 2001; left: .85rem; top: calc(50% + 48px); bottom: auto; width: min(390px, calc(100% - 1.7rem)); max-height: min(62vh, 560px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .65rem; padding: .9rem; overflow: hidden; border: 1px solid #dce4d3; border-radius: 18px; color: #21372b; background: #fffef5f5; box-shadow: 0 18px 52px #0b201c55; backdrop-filter: blur(16px); }
 .tour-food-guide-heading { display: flex; align-items: center; justify-content: space-between; gap: .7rem; }
 .tour-food-guide-heading > span { display: grid; gap: .2rem; }
 .tour-food-guide-heading strong { color: #1e362a; font-size: .93rem; }
@@ -2180,6 +2180,23 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-food-social-links a:hover, .tour-food-social-links a:focus-visible { border-color: #b3d863; color: #23391f; background: #eff8d8; }
 .tour-food-guide-status { margin: 0; padding: 1.1rem .5rem; color: #6b776a; font-size: .72rem; text-align: center; }
 .tour-food-guide-disclaimer { margin: 0; color: #818679; font-size: .54rem; line-height: 1.45; }
+.tour-food-guide-map-marker { width: 27px; height: 27px; display: grid; place-items: center; padding: 0; border: 2px solid #fff; border-radius: 50%; color: #172f20; background: #d4f56b; box-shadow: 0 2px 8px #14251c70; font-size: 16px; line-height: 1; cursor: pointer; transition: transform .14s ease, background .14s ease; }
+.tour-food-guide-map-marker:hover, .tour-food-guide-map-marker:focus-visible { z-index: 8; background: #efffa4; outline: 2px solid #fff; transform: scale(1.35); }
+.tour-food-guide-map-marker--1 { background: #e8f6b9; }
+.tour-food-guide-map-marker--2 { background: #c6ee7e; }
+.tour-weather-setting { display: grid; gap: .36rem; }
+.tour-weather-setting > strong { color: #405445; font-size: .67rem; }
+.tour-weather-setting > div { display: flex; flex-wrap: wrap; gap: .38rem; }
+.tour-weather-setting button { min-height: 34px; display: inline-flex; align-items: center; gap: .28rem; padding: .35rem .62rem; border: 1px solid #dce2d5; border-radius: 999px; color: #52604d; background: #fff; font-size: .66rem; font-weight: 700; cursor: pointer; }
+.tour-weather-setting button[aria-pressed='true'] { border-color: #a6c951; color: #293e20; background: #eef8d4; box-shadow: inset 0 0 0 1px #c4e67a; }
+.tour-screen--dark .tour-weather-setting > strong { color: #dfe9d4; }
+.tour-screen--dark .tour-weather-setting button { border-color: #455747; color: #d9e5d4; background: #25372b; }
+.tour-screen--dark .tour-weather-setting button[aria-pressed='true'] { border-color: #aacd5d; color: #f2f8e9; background: #40552e; }
+.tour-map-stage--sunny::after, .tour-map-stage--cloudy::after, .tour-map-stage--rainy::after { position: absolute; z-index: 1190; inset: 0; pointer-events: none; content: ''; }
+.tour-map-stage--sunny::after { background: radial-gradient(ellipse at 84% 8%, #ffdc7866, transparent 38%), linear-gradient(180deg, #fff3c21a, transparent 42%); }
+.tour-map-stage--cloudy::after { background: linear-gradient(180deg, #65758342, #6c77821c 48%, #313f4a12); }
+.tour-map-stage--rainy::after { background: repeating-linear-gradient(108deg, transparent 0 20px, #d9eff459 21px 22px, transparent 23px 45px), linear-gradient(180deg, #344b5a65, #5d71804d 50%, #23364542); background-size: 90px 120px, 100% 100%; animation: tour-map-rain .72s linear infinite; }
+@keyframes tour-map-rain { from { background-position: 0 -120px, 0 0; } to { background-position: 0 0, 0 0; } }
 .tour-screen--dark .tour-food-guide-trigger { border-color: #587060; color: #f0f7e6; background: #1c3029ed; }
 .tour-screen--dark .tour-food-guide-trigger strong, .tour-screen--dark .tour-food-guide-heading strong { color: #f0f7e6; }
 .tour-screen--dark .tour-food-guide-trigger small, .tour-screen--dark .tour-food-guide-heading small { color: #c3dc86; }
@@ -2213,11 +2230,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-earth-preview { height: 100%; min-height: 0; }
   .tour-map-rotate-controls { top: 3.5rem; right: .35rem; left: auto; width: 100px; height: 100px; transform: none; }
   .tour-map-rotate-controls--tilt { top: 7rem; }
-  .tour-food-guide-trigger { left: .5rem; bottom: .5rem; min-width: 0; padding: .42rem .6rem .42rem .42rem; }
+  .tour-food-guide-trigger { left: .5rem; min-width: 0; padding: .42rem .6rem .42rem .42rem; }
   .tour-food-guide-avatar { width: 36px; height: 36px; flex-basis: 36px; }
   .tour-food-guide-trigger small { font-size: .47rem; }
   .tour-food-guide-trigger strong { font-size: .67rem; }
-  .tour-food-guide-panel { left: .5rem; bottom: 4.7rem; width: min(370px, calc(100% - 1rem)); max-height: min(65vh, 540px); padding: .7rem; }
+  .tour-food-guide-panel { left: .5rem; top: calc(50% + 42px); width: min(370px, calc(100% - 1rem)); max-height: min(55vh, 450px); padding: .7rem; }
   .tour-food-card { grid-template-columns: 88px minmax(0, 1fr); }
   .tour-food-card > img { width: 88px; }
 }

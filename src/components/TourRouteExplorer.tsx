@@ -207,6 +207,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
   const [foodGuideOpen, setFoodGuideOpen] = useState(false)
+  const [foodGuideAnchorOverride, setFoodGuideAnchorOverride] = useState<LonLat | null>(null)
+  const [mapWeather, setMapWeather] = useState<'sunny' | 'cloudy' | 'rainy'>('sunny')
   const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
   const [treeFocusRequest, setTreeFocusRequest] = useState<TreeFocusRequest | null>(null)
   const autoLocationRequested = useRef(false)
@@ -217,6 +219,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
+  const openFoodGuideAt = useCallback((point: LonLat) => {
+    setFoodGuideAnchorOverride(point)
+    setFoodGuideOpen(true)
+    setMapLayers(current => ({ ...current, restaurants: true }))
+  }, [])
   const publishLocation = (position: GeolocationPosition) => {
     const previous = previousLocationRef.current
     const next = { lat: position.coords.latitude, lng: position.coords.longitude }
@@ -292,7 +299,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const routeSignals = activeRoadConditions?.signals ?? []
   const routeGrades = activeRoadConditions?.grades ?? []
   const routeRestaurants = activeRoutePlaces?.places ?? []
-  const foodGuideAnchor = userLocation ?? (selectedStop === null
+  const foodGuideAnchor = foodGuideAnchorOverride
+    ? { lat: foodGuideAnchorOverride[1], lng: foodGuideAnchorOverride[0] }
+    : userLocation ?? (selectedStop === null
     ? { lat: destinationStation.lat, lng: destinationStation.lng }
     : getTouristStation(route.stops[selectedStop]?.stationId ?? destinationStop.stationId))
   const foodRecommendations = useMemo(() => routeRestaurants
@@ -440,10 +449,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     if (!nearbyStop) return
     promptedStopsRef.current.add(`${route.id}:${nearbyStop.index}`)
     setRideFoodPrompt({ routeId: route.id, stopIndex: nearbyStop.index })
+    const nearbyStation = getTouristStation(route.stops[nearbyStop.index].stationId)
+    setFoodGuideAnchorOverride([nearbyStation.lng, nearbyStation.lat])
     setFoodGuideOpen(true)
   }, [locationMovementTick, route, trackingLocation, userLocation, rideFoodPrompt])
   useEffect(() => {
     setRideFoodPrompt(null)
+    setFoodGuideOpen(false)
+    setFoodGuideAnchorOverride(null)
   }, [route.id])
   useEffect(() => {
     if (route.season) setDisplaySeason(route.season)
@@ -710,14 +723,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>2</b>{text('Check the map', '지도를 살펴봐요')}</span><i aria-hidden="true">›</i>
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
-      <div className="tour-map-stage" onMouseLeave={() => hoverStop(null)}>
+      <div className={`tour-map-stage tour-map-stage--${mapWeather}`} onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFocusTree={focusTree} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <details className="tour-season-controls tour-map-settings">
           <summary><span aria-hidden="true">⚙</span>{text('Map settings', '지도 설정')}<i aria-hidden="true">⌄</i></summary>
@@ -728,6 +741,17 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                 className={`tour-season-tab tour-season-tab--${option.id}`} aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
             </div>
             <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
+            <div className="tour-weather-setting">
+              <strong>{text('Weather mood', '날씨 표현')}</strong>
+              <div role="group" aria-label={text('Choose weather appearance', '날씨 표현 선택')}>
+                {([
+                  ['sunny', '☀️', 'Sun', '햇볕'],
+                  ['cloudy', '☁️', 'Cloudy', '흐림'],
+                  ['rainy', '🌧️', 'Rain', '비'],
+                ] as const).map(([id, icon, en, ko]) => <button key={id} type="button" aria-pressed={mapWeather === id}
+                  onClick={() => setMapWeather(id)}><span aria-hidden="true">{icon}</span>{text(en, ko)}</button>)}
+              </div>
+            </div>
             <div className="tour-map-settings-actions">
               <button type="button" className="tour-tree-focus" onClick={viewTrees}
                 title={text('Zoom to trees along this route in 3D', '이 코스의 나무가 있는 구간을 3D로 확대')}>
