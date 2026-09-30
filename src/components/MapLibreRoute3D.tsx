@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker } from 'maplibre-gl'
+import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker, SkySpecification } from 'maplibre-gl'
 import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
 import type { LonLat } from '../services/bikeRoute'
@@ -20,6 +20,12 @@ const EMPTY_SHADOWS: GeoJSON.FeatureCollection<GeoJSON.Polygon> = { type: 'Featu
 const EMPTY_LINE: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: 'FeatureCollection', features: [] }
 const SEASON_BUILDING_COLORS: Record<TourSeason, string> = {
   spring: '#c5bbb8', summer: '#b6bab1', autumn: '#c6b6a5', winter: '#bcc7ca',
+}
+const SEASON_SKIES: Record<TourSeason, SkySpecification> = {
+  spring: { 'sky-color': '#9bbbd0', 'horizon-color': '#f0d5d2', 'sky-horizon-blend': 0.72, 'horizon-fog-blend': 0.22, 'atmosphere-blend': 0.5 },
+  summer: { 'sky-color': '#78abc5', 'horizon-color': '#f1dfa9', 'sky-horizon-blend': 0.74, 'horizon-fog-blend': 0.2, 'atmosphere-blend': 0.48 },
+  autumn: { 'sky-color': '#98acb7', 'horizon-color': '#e8c18f', 'sky-horizon-blend': 0.7, 'horizon-fog-blend': 0.24, 'atmosphere-blend': 0.48 },
+  winter: { 'sky-color': '#a7c4d2', 'horizon-color': '#e2eaf0', 'sky-horizon-blend': 0.76, 'horizon-fog-blend': 0.2, 'atmosphere-blend': 0.46 },
 }
 
 function samplePath(path: LonLat[], count: number): LonLat[] {
@@ -244,6 +250,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       if (disposed || failed) return
       window.clearTimeout(timeout)
       try {
+        if (is3DView) map.setSky(SEASON_SKIES[season])
         map.addSource('tour-imagery', {
           type: 'raster',
           tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
@@ -393,6 +400,12 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
+    if (is3DView) map.setSky(SEASON_SKIES[season])
+  }, [is3DView, season, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
     if (map.getLayer('building-3d')) {
       map.setPaintProperty('building-3d', 'fill-extrusion-color', SEASON_BUILDING_COLORS[season])
       map.setPaintProperty('building-3d', 'fill-extrusion-opacity', .96)
@@ -447,28 +460,28 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     treeMarkersRef.current = []
     conditionMarkersRef.current = []
     const sceneryPath = routePath && routePath.length >= 2 ? routePath : linePoints
-    if (is3DView && sceneryPath.length >= 2) {
+    if (sceneryPath.length >= 2) {
       const routeLength = sceneryPath.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(
         (point[0] - sceneryPath[index - 1][0]) * 88_000, (point[1] - sceneryPath[index - 1][1]) * 111_000), 0)
       if (showRiders) {
-        const riderCount = Math.max(2, Math.min(7, Math.floor(routeLength / 1800)))
+        const riderCount = Math.max(3, Math.min(8, Math.floor(routeLength / 2200)))
         peopleMarkersRef.current = samplePath(sceneryPath, riderCount).map(([lng, lat], index) => {
           const element = document.createElement('span')
           element.className = `tour-map-person tour-map-person--${index % 3}`
           element.style.backgroundImage = `url("${riderSpriteUrl}")`
           element.setAttribute('role', 'img')
-          element.setAttribute('aria-label', locale === 'ko' ? 'AI로 만든 따릉이 이용자 이미지' : 'AI-generated illustrative rider')
-          element.title = locale === 'ko' ? 'AI 생성 이미지 · 실제 이용자 아님' : 'AI generated · illustrative, not a live person'
+          element.setAttribute('aria-label', locale === 'ko' ? 'AI가 만든 자전거 이용자 일러스트' : 'AI-generated illustrative rider')
+          element.title = locale === 'ko' ? 'AI로 만든 일러스트이며 실제 인물은 아닙니다' : 'AI-generated illustration, not a live person'
           return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map)
         })
       }
-      const treeCount = Math.max(6, Math.min(28, Math.floor(routeLength / 280)))
+      const treeCount = Math.max(7, Math.min(18, Math.floor(routeLength / 500)))
       treeMarkersRef.current = samplePathWithBearing(sceneryPath, treeCount).map(({ point, bearing }, index) => {
         const element = document.createElement('span')
         element.className = `tour-map-tree tour-map-tree--${season}`
         element.setAttribute('role', 'img')
-        element.setAttribute('aria-label', locale === 'ko' ? '자전거 길 옆 계절 나무' : 'Seasonal tree beside the route')
-        element.title = locale === 'ko' ? '코스 주변 나무 풍경' : 'Tree scenery near the cycling route'
+        element.setAttribute('aria-label', locale === 'ko' ? '자전거 길 주변의 계절 나무' : 'Seasonal tree beside the route')
+        element.title = locale === 'ko' ? '자전거 코스 주변에 배치한 계절 나무' : 'Seasonal tree scenery near the cycling route'
         const trunk = document.createElement('i')
         const crown = document.createElement('b')
         const crownHighlight = document.createElement('em')
@@ -503,15 +516,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           return map.queryRenderedFeatures(pixel, { layers: ['building-3d'] }).length > 0
         }
         peopleMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 16.2 && !isBlocked(marker)
-          const scale = Math.max(22, Math.min(48, 24 + (zoom - 16.2) * 15))
+          const visible = zoom >= 13.2 && !(zoom >= 16 && isBlocked(marker))
+          const scale = Math.max(19, Math.min(42, 24 + (zoom - 14) * 5))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.85}px`
           marker.getElement().style.display = visible ? '' : 'none'
         })
         treeMarkersRef.current.forEach(marker => {
-          const visible = zoom >= 15.7 && !isBlocked(marker)
-          const scale = Math.max(22, Math.min(34, 25 + (zoom - 15.7) * 5))
+          const visible = zoom >= 12.5 && !(zoom >= 16 && isBlocked(marker))
+          const scale = Math.max(18, Math.min(32, 22 + (zoom - 13) * 3))
           marker.getElement().style.width = `${scale}px`
           marker.getElement().style.height = `${scale * 1.35}px`
           marker.getElement().style.display = visible ? '' : 'none'
