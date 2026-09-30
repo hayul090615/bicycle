@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
-import { latLngBounds, type LatLngExpression } from 'leaflet'
+import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { divIcon, latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { GoogleRoute3D } from './GoogleRoute3D'
 import { hasGoogleMapsKey } from '../services/googleMaps3d'
@@ -349,7 +349,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     }, error => {
       setLocating(false)
       setLocationError(error.code === 1 ? 'denied' : error.code === 3 ? 'timeout' : 'unavailable')
-    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 })
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 1000 })
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   const chooseMapView = (nextView: 'city' | 'satellite' | 'map' | 'google' | 'kakao') => {
@@ -385,7 +385,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     }, error => {
       setLocationError(error.code === 1 ? 'denied' : error.code === 3 ? 'timeout' : 'unavailable')
       if (error.code === 1) { setTrackingLocation(false); setUserLocation(null) }
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 })
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 })
     return () => navigator.geolocation.clearWatch(watchId)
   }, [trackingLocation])
   useEffect(() => {
@@ -587,6 +587,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const seasonalRoute = routes.find(candidate => candidate.category === 'seasonal' && candidate.season === season)
     if (seasonalRoute) { setFlatOnly(false); onRouteSelect(seasonalRoute.id) }
   }
+  const locationHeading = userLocation?.heading ?? 0
+  const locationIcon = useMemo(() => divIcon({
+    className: 'tour-leaflet-location-icon',
+    html: `<span class="tour-user-location-marker" style="--tour-user-heading:${locationHeading}deg"></span>`,
+    iconSize: [34, 39],
+    iconAnchor: [17, 20],
+  }), [locationHeading])
   const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom={false}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
@@ -596,10 +603,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#3578e5', weight: 5, opacity: 1, dashArray: approachRoute?.estimated ? '8 7' : undefined }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
-    {userLocation && <CircleMarker center={[userLocation.lat, userLocation.lng]} radius={9}
-      pathOptions={{ color: '#fff', weight: 3, fillColor: '#246fe5', fillOpacity: 1 }}>
+    {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
       <Tooltip direction="top">{text('You are here', '내 위치')}</Tooltip>
-    </CircleMarker>}
+    </Marker>}
     {pickupStation && <CircleMarker center={[pickupStation.lat, pickupStation.lng]} radius={11}
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#137e72', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{text('Pick up a bike', '자전거 대여')} · {pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</Tooltip>

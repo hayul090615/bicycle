@@ -1353,6 +1353,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-user-location-marker { position: relative; width: 34px; height: 39px; display: block; border: 0; border-radius: 0; background: transparent; pointer-events: none; }
 .tour-user-location-marker::before { position: absolute; inset: 1px 2px 3px; background: #1677e8; clip-path: polygon(50% 0, 96% 91%, 50% 72%, 4% 91%); filter: drop-shadow(0 2px 3px #132b4c99); transform: rotate(var(--tour-user-heading, 0deg)); transform-origin: 50% 50%; content: ''; }
 .tour-user-location-marker::after { position: absolute; z-index: 1; top: 70%; left: 50%; width: 6px; height: 6px; border: 1px solid #fff; border-radius: 50%; background: #1677e8; transform: translate(-50%, -50%); content: ''; }
+.tour-leaflet-location-icon { border: 0 !important; background: transparent !important; }
 @media (max-width: 990px) {
   .tour-route-finder { margin-bottom: 1rem; }
   .tour-finder-categories { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -1648,6 +1649,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .kakao-route-underlay .tour-explorer-map, .kakao-route-fallback .tour-explorer-map { height: 100%; }
 .kakao-route-map .google-route-loading { z-index: 3; left: 50%; right: auto; transform: translateX(-50%); white-space: nowrap; }
 .kakao-route-map--error .tour-earth-notice { position: absolute; z-index: 3; top: .6rem; right: .6rem; left: auto; width: min(390px, calc(100% - 1.2rem)); padding: .5rem .65rem; border: 1px solid #d7ddcf; border-radius: 5px; background: #f4f5eeef; box-shadow: 0 2px 8px #1a281c26; font-size: .66rem; }
+.kakao-route-map--error .tour-earth-notice { line-height: 1.55; }
+.kakao-route-map--error .tour-earth-notice code { color: #235d49; font-size: .62rem; overflow-wrap: anywhere; }
 .kakao-route-map--error .kakao-route-fallback { height: 100%; }
 .kakao-cctv-marker { cursor: pointer; }
 .kakao-user-marker { position: relative; }
