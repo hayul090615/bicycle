@@ -124,7 +124,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -143,6 +143,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   showRiders: boolean
   cctvCameras: PublicCamera[]
   showCctv: boolean
+  showShadows: boolean
   locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   treeFocusRequest: TreeFocusRequest | null
@@ -301,8 +302,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           source: 'tour-route-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
           paint: {
-            'line-color': '#04bd83',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 17, 6] as ExpressionSpecification,
+            'line-color': '#ff3b30',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 5, 17, 10] as ExpressionSpecification,
             'line-opacity': 1,
           },
         }
@@ -313,20 +314,20 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
           paint: {
             'line-color': '#f5f5ed',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 7, 17, 11] as ExpressionSpecification,
+            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 10, 17, 15] as ExpressionSpecification,
             'line-opacity': 0.96,
           },
         }
         if (map.getLayer('building-3d')) map.setLayoutProperty('building-3d', 'visibility', is3DView ? 'visible' : 'none')
         const accessCasing = { id: 'tour-access-casing', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
-          paint: { 'line-color': '#fffdf5', 'line-width': 10, 'line-opacity': .98 } }
+          paint: { 'line-color': '#fffdf5', 'line-width': 14, 'line-opacity': .98 } }
         const accessLine = { id: 'tour-access-solid', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#2479db', 'line-width': 6, 'line-opacity': 1 } }
+          paint: { 'line-color': '#ff3b30', 'line-width': 8, 'line-opacity': 1 } }
         const accessDashed = { id: 'tour-access-dashed', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#2479db', 'line-width': 6, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
+          paint: { 'line-color': '#ff3b30', 'line-width': 8, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
         const walkLine = { id: 'tour-walk-line', type: 'line' as const, source: 'tour-walk-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
           paint: { 'line-color': '#506b7b', 'line-width': 4, 'line-opacity': 1, 'line-dasharray': [1.2, 1.2] } }
@@ -335,20 +336,20 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           paint: { 'line-color': '#fffdf4', 'line-width': 7, 'line-opacity': .9 } }
         const bikeLaneLine = { id: 'tour-bike-lanes-line', type: 'line' as const, source: 'tour-bike-lanes',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
-          paint: { 'line-color': '#df3b3b', 'line-width': 4, 'line-opacity': .98, 'line-dasharray': [2, 1.4] } }
+          paint: { 'line-color': '#2585a6', 'line-width': 4, 'line-opacity': .98, 'line-dasharray': [2, 1.4] } }
         map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
         const shadowFill = {
           id: 'tour-building-shadow-fill',
           type: 'fill' as const,
           source: 'tour-building-shadows',
-          layout: { visibility: is3DView ? 'visible' as const : 'none' as const },
+          layout: { visibility: is3DView && showShadows ? 'visible' as const : 'none' as const },
           paint: { 'fill-color': '#24362f', 'fill-opacity': 0.36, 'fill-antialias': true },
         }
         const shadowOutline = {
           id: 'tour-building-shadow-outline',
           type: 'line' as const,
           source: 'tour-building-shadows',
-          layout: { visibility: is3DView ? 'visible' as const : 'none' as const },
+          layout: { visibility: is3DView && showShadows ? 'visible' as const : 'none' as const },
           paint: { 'line-color': '#162820', 'line-width': 1.15, 'line-opacity': 0.78 },
         }
         if (buildingLayer) {
@@ -412,6 +413,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   }, [])
 
   useEffect(() => { updateBuildingShadowsRef.current() }, [shadowAzimuth, sunElevation, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const visibility = is3DView && showShadows ? 'visible' : 'none'
+    for (const layerId of ['tour-building-shadow-fill', 'tour-building-shadow-outline']) {
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visibility)
+    }
+  }, [is3DView, showShadows, status])
 
   useEffect(() => {
     const map = mapRef.current

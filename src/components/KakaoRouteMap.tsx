@@ -187,8 +187,8 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     activePopupIdRef.current = null
 
     const path = linePoints.map(point => new api.LatLng(point.lat, point.lng))
-    const casing = new api.Polyline({ map, path, strokeWeight: 10, strokeColor: '#ffffff', strokeOpacity: .95, strokeStyle: 'solid' })
-    const line = new api.Polyline({ map, path, strokeWeight: 5, strokeColor: '#08765b', strokeOpacity: 1, strokeStyle: 'solid' })
+    const casing = new api.Polyline({ map, path, strokeWeight: 15, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' })
+    const line = new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ff3b30', strokeOpacity: 1, strokeStyle: 'solid' })
     routeOverlaysRef.current.push(casing, line)
     route.stops.forEach((stop, index) => {
       const label = locale === 'ko' ? stop.placeKo : stop.place
@@ -261,8 +261,8 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     accessOverlaysRef.current = []
     if (!showCourse || !accessPath || accessPath.length < 2) return
     const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
-    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 10, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
-    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 6, strokeColor: '#2479db', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 15, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ff3b30', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
   }, [accessEstimated, accessPath, showCourse, status])
 
   useEffect(() => {
@@ -276,7 +276,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       if (lane.points.length < 2) return
       const path = lane.points.map(([lng, lat]) => new api.LatLng(lat, lng))
       bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: .95, strokeStyle: 'solid' }))
-      bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#df3b3b', strokeOpacity: .98, strokeStyle: 'solid' }))
+      bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#2585a6', strokeOpacity: .98, strokeStyle: 'solid' }))
     })
     return () => {
       bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))

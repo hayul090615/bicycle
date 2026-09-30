@@ -194,6 +194,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [flatOnly, setFlatOnly] = useState(false)
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
+  const [showShadows, setShowShadows] = useState(true)
   const [locationFocusRequest, setLocationFocusRequest] = useState(0)
   const [routePlacesState, setRoutePlacesState] = useState<{ routeId: string; places: RouteRestaurant[]; status: 'idle' | 'loading' | 'ready' | 'unavailable' }>(
     { routeId: '', places: [], status: 'idle' },
@@ -308,6 +309,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         return [station.lng, station.lat] as LonLat
       })) * 1.3
   const routeDistanceEstimated = routeGeometry?.routeId !== route.id
+  const journeyOrigin = userLocation && pickupStation ? text('My location', '내 위치') : text(route.stops[0].place, route.stops[0].placeKo)
+  const journeyDistance = userLocation && pickupStation && approachDistance !== null ? approachDistance + (walkingDistance ?? 0) : routeDistance
+  const journeyMinutes = userLocation && pickupStation && approachDistance !== null
+    ? bikeMinutes(approachDistance) + Math.ceil((walkingDistance ?? 0) / 75)
+    : bikeMinutes(routeDistance)
   const linePoints = useMemo<LatLngExpression[]>(() => routedPath
     ? routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)
     : points, [routedPath, points])
@@ -620,10 +626,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom={false}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
-    {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#f5f5ed', weight: 9, opacity: .96 }} />}
-    {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#08765b', weight: 5, opacity: 1 }} />}
-    {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 9, opacity: .95 }} />}
-    {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#3578e5', weight: 5, opacity: 1, dashArray: approachRoute?.estimated ? '8 7' : undefined }} />}
+    {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#fff', weight: 14, opacity: .98 }} />}
+    {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#ff3b30', weight: 8, opacity: 1 }} />}
+    {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 14, opacity: .98 }} />}
+    {showCourse && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#ff3b30', weight: 8, opacity: 1, dashArray: approachRoute?.estimated ? '8 7' : undefined }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
@@ -676,40 +682,50 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button className="tour-sidebar-toggle" type="button" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
           onClick={() => setSidebarOpen(open => !open)}>{sidebarOpen ? text('Hide routes ×', '코스 닫기 ×') : text('Routes & bikes ☰', '코스·대여소 ☰')}</button>
       </div>
+      <div className="tour-route-summary" aria-label={text('Selected route overview', '선택한 경로 안내')}>
+        <div className="tour-route-summary-stops"><span>{journeyOrigin}</span><i aria-hidden="true">→</i><strong>{text(destinationStop.place, destinationStop.placeKo)}</strong></div>
+        <div className="tour-route-summary-metrics"><span><small>{text('DISTANCE', '거리')}</small><strong>{(userLocation && pickupStation ? activeApproachRoute?.estimated !== false : routeDistanceEstimated) ? '≈ ' : ''}{distanceLabel(journeyDistance)}</strong></span>
+          <span><small>{text('ESTIMATED TIME', '예상 시간')}</small><strong>{text(`About ${journeyMinutes} min`, `약 ${journeyMinutes}분`)}</strong></span>
+          {pickupStation && <span className="tour-route-summary-bikes"><small>{text('BIKES NEARBY', '대여 가능')}</small><strong>{pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</strong></span>}
+        </div>
+      </div>
       <div className="tour-map-stage" onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} fallback={map} />}
         {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFocusTree={focusTree} fallback={map} />}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} season={displaySeason} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        <div className="tour-season-controls">
-          <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
-            {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
-              className={`tour-season-tab tour-season-tab--${option.id}`} aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
-          </div>
-          <div className="tour-map-overlay-meta">
+        <details className="tour-season-controls tour-map-settings">
+          <summary><span aria-hidden="true">⚙</span>{text('Map settings', '지도 설정')}<i aria-hidden="true">⌄</i></summary>
+          <div className="tour-map-settings-panel">
+            <strong>{text('Seasonal scenery', '계절 풍경')}</strong>
+            <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
+              {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
+                className={`tour-season-tab tour-season-tab--${option.id}`} aria-label={text(option.en, option.ko)} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
+            </div>
             <span className="tour-season-weather" aria-live="polite">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</span>
-            {view === 'city' && <span className="tour-shadow-status" aria-label={text('Building shadows are shown on the map', '지도에 건물 그림자를 표시합니다')}><i aria-hidden="true" />{text('Shadows', '그림자')}</span>}
+            <div className="tour-map-settings-actions">
+              <button type="button" className="tour-tree-focus" onClick={viewTrees}
+                title={text('Zoom to trees along this route in 3D', '이 코스의 나무가 있는 구간을 3D로 확대')}>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v-7m-3 7h6M8 16a4 4 0 0 1-3-6 5 5 0 0 1 4-7 4 4 0 0 1 7 3 5 5 0 0 1 3 8 4 4 0 0 1-5 2" /></svg>
+                {text('View trees', '나무길 보기')}
+              </button>
+              <button type="button" className="tour-shadow-toggle" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>
+                <i aria-hidden="true" />{text('Building shadows', '건물 그림자')}<strong>{showShadows ? text('ON', '켜짐') : text('OFF', '꺼짐')}</strong>
+              </button>
+              <button type="button" className="tour-cctv-toggle tour-cctv-toggle--map" aria-pressed={showCctv}
+                aria-label={text(showCctv ? 'Hide public CCTV from the map' : 'Show public CCTV on the map', showCctv ? '지도에서 공공 CCTV 숨기기' : '지도에 공공 CCTV 표시하기')}
+                onClick={() => toggleMapLayer('cctv')}>
+                <span className="tour-cctv-dot" aria-hidden="true" /><span>{text('Public CCTV', '공공 CCTV')}</span>
+                <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</strong>
+                <i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
+              </button>
+            </div>
           </div>
-          <div className="tour-map-quick-actions">
-            <button type="button" className="tour-tree-focus" onClick={viewTrees}
-              title={text('Zoom to trees along this route in 3D', '이 코스의 나무가 있는 구간을 3D로 확대')}>
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v-7m-3 7h6M8 16a4 4 0 0 1-3-6 5 5 0 0 1 4-7 4 4 0 0 1 7 3 5 5 0 0 1 3 8 4 4 0 0 1-5 2" /></svg>
-              {text('View trees', '나무길 보기')}
-            </button>
-            <button type="button" className="tour-cctv-toggle tour-cctv-toggle--map" aria-pressed={showCctv}
-              aria-label={text(showCctv ? 'Hide public CCTV from the map' : 'Show public CCTV on the map', showCctv ? '지도에서 공공 CCTV 숨기기' : '지도에 공공 CCTV 표시하기')}
-              onClick={() => toggleMapLayer('cctv')}>
-              <span className="tour-cctv-dot" aria-hidden="true" />
-              <span>{text('Public CCTV', '공공 CCTV')}</span>
-              <strong>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</strong>
-              <i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
-            </button>
-          </div>
-        </div>
+        </details>
         <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
           <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
         </button>
@@ -717,12 +733,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
             ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
             : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
-        </div>}
-        {userLocation && <div className="tour-journey-legend" role="status">
-          <span className="tour-journey-legend-route"><i aria-hidden="true" />{text('From here to your destination', '내 위치에서 목적지까지')}</span>
-          {pickupStation && <strong>{text('Walk', '도보')} {walkingDistance === null ? '—' : `${distanceLabel(walkingDistance)} · ${Math.max(1, Math.ceil(walkingDistance / 75))}${text(' min', '분')}`} → {pickupStation.name}</strong>}
-          {approachDistance !== null && <b>{text('Ride', '자전거')} {activeApproachRoute?.estimated ? '≈ ' : ''}{distanceLabel(approachDistance)} · {text(`about ${bikeMinutes(approachDistance)} min`, `약 ${bikeMinutes(approachDistance)}분`)}</b>}
-          <small>{text(destinationStop.place, destinationStop.placeKo)} · {pickupStation?.available === null ? text('Bike count unavailable', '자전거 잔여 대수 확인 전') : `${pickupStation?.available ?? '—'}${text(' bikes available', '대 대여 가능')}`}</small>
         </div>}
         {rideFoodPrompt?.routeId === route.id && <aside className="tour-ride-food-prompt" role="status" aria-live="polite">
           <button type="button" className="tour-ride-food-prompt-close" aria-label={text('Dismiss food suggestion', '맛집 안내 닫기')} onClick={() => setRideFoodPrompt(null)}>×</button>
