@@ -5,9 +5,9 @@
   color: #173d36;
   background: #f4f8f6;
   font-synthesis: none;
-  --green: #00a875;
-  --green-dark: #08765b;
-  --green-soft: #dff8ee;
+  --green: #17603e;
+  --green-dark: #103d2b;
+  --green-soft: #e4eee5;
   --ink: #173d36;
   --muted: #6f817d;
   --line: #dce8e3;
@@ -2670,3 +2670,38 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-header-actions { gap: .14rem; }
   .tour-theme-button, .tour-language-button, .tour-back { padding: .28rem .3rem; font-size: .48rem; }
 }
+
+/* Seoul Bike's evergreen brand palette. */
+.tour-screen {
+  --tour-forest-950: #102f25;
+  --tour-forest-900: #123b2c;
+  --tour-forest-800: #185139;
+  --tour-forest-700: #216346;
+  --tour-sage-100: #e8f0e7;
+  --tour-sage-200: #d7e5d8;
+}
+.tour-screen .tour-language-button { border-color: var(--tour-forest-800); background: var(--tour-forest-800); }
+.tour-screen .tour-language-button:hover { background: var(--tour-forest-900); }
+.tour-screen .tour-route-summary { background: linear-gradient(105deg, var(--tour-forest-950), var(--tour-forest-900) 66%, #1b4b36); border-color: #315d45; }
+.tour-screen .tour-view-switch button[aria-pressed='true'], .tour-screen .tour-finder-categories button[aria-pressed='true'], .tour-screen .tour-finder-routes button[aria-pressed='true'] { border-color: var(--tour-forest-700); color: #fff; background: var(--tour-forest-800); box-shadow: inset 3px 0 var(--tour-forest-700); }
+.tour-screen .tour-map-panel-action:not(.tour-map-panel-action--quiet):not([aria-pressed='false']), .tour-screen .tour-map-view-options button[aria-pressed='true'] { border-color: var(--tour-forest-800); background: var(--tour-forest-800); }
+.tour-screen .tour-map-panel-action:hover { background: var(--tour-forest-900); }
+.tour-screen .tour-map-side-panel-header { border-color: #315d45; background: var(--tour-forest-900); }
+.tour-screen .tour-map-side-panel-header small { color: #bdd3c2; }
+.tour-screen .tour-map-side-panel-header strong { color: #f4f7ef; }
+.tour-screen .tour-map-side-panel-header > button { border-color: #426650; color: #f3f5ed; background: #214936; }
+.tour-screen .tour-map-control-rail { border-color: #315b44; background: #123b2cf2; box-shadow: 0 8px 28px #10251c55; }
+.tour-screen .tour-map-control-rail button, .tour-screen .tour-map-control-rail .tour-map-mode-select > span { color: #e8f0e7; }
+.tour-screen .tour-map-control-rail button > span { color: #9cc5a3; }
+.tour-screen .tour-map-quick-filters button:hover, .tour-screen .tour-map-control-rail .tour-map-settings > summary:hover { background: #1c4c37; }
+.tour-screen .tour-map-quick-filters button[aria-pressed='true'], .tour-screen .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'], .tour-screen .tour-map-control-rail .tour-roadview-toggle[aria-pressed='true'], .tour-screen .tour-map-rail-sidebar-toggle[aria-expanded='true'] { border-color: #34704d; color: #fff; background: #256644; }
+.tour-screen .tour-map-quick-filters button[aria-pressed='true'] > span, .tour-screen .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span, .tour-screen .tour-map-control-rail .tour-roadview-toggle[aria-pressed='true'] > span { color: #fff; }
+.tour-screen .tour-map-control-rail .tour-map-locate, .tour-screen .tour-map-control-rail .tour-map-settings > summary { border-color: #315b44; color: #edf3ea; background: #1a4632; }
+.tour-screen .tour-map-control-rail .tour-map-mode-select select { border-color: #486b53; color: #f0f4ec; background: #1a4632; }
+.tour-screen .tour-destination-list > button[aria-pressed='true'] { border-color: var(--tour-forest-700); background: var(--tour-sage-100); box-shadow: inset 0 0 0 1px #21634640; }
+.tour-screen .tour-destination-list > button b, .tour-screen .tour-facility-heading b { background: var(--tour-forest-800); }
+.tour-screen .tour-season-picker button[aria-pressed='true'], .tour-screen .tour-rental-duration button[aria-pressed='true'] { border-color: var(--tour-forest-800); background: var(--tour-forest-800); }
+.tour-screen .tour-sidebar-toggle { border-color: var(--tour-forest-800); color: #fff; background: var(--tour-forest-800); }
+.tour-screen .tour-sidebar-toggle:hover { background: var(--tour-forest-900); }
+.tour-screen--dark .tour-map-quick-filters button[aria-pressed='true'], .tour-screen--dark .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'], .tour-screen--dark .tour-map-control-rail .tour-roadview-toggle[aria-pressed='true'], .tour-screen--dark .tour-map-rail-sidebar-toggle[aria-expanded='true'], .tour-screen--dark .tour-map-settings-button[aria-expanded='true'], .tour-screen--dark .tour-map-view-options button[aria-pressed='true'], .tour-screen--dark .tour-rental-duration button[aria-pressed='true'], .tour-screen--dark .tour-sidebar-toggle { border-color: #49835e; color: #f3f7ef; background: #286344; }
+.tour-screen--dark .tour-map-quick-filters button[aria-pressed='true'] > span, .tour-screen--dark .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span, .tour-screen--dark .tour-map-control-rail .tour-roadview-toggle[aria-pressed='true'] > span, .tour-screen--dark .tour-map-settings-button[aria-expanded='true'] > span { color: #f3f7ef; }
