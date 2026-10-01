@@ -340,3 +340,8 @@ seoul-typing-bike-high-score
 
 + Kept the map full-width and made the right route panel translucent so map details remain visible behind it.
 + Closing the route panel now reveals the map across the previously blank area.
+
+## Left sidebar beside the green map rail (2026-10-01)
+
++ Arranged the map from left to right as the course list, its green edge handle and controls, then the map.
++ The closed course list no longer reserves a blank column; the map expands into it.

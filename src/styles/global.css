@@ -2754,3 +2754,30 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-map-side-panel { right: 4.7rem; left: auto; }
   .tour-screen .tour-itinerary { z-index: 1310; }
 }
+
+/* Final map layout: course panel, green controls, then the map. */
+@media (min-width: 901px) {
+  .tour-screen .tour-explorer-grid { grid-template-columns: minmax(340px, min(26vw, 490px)) minmax(0, 1fr); }
+  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) { grid-template-columns: minmax(0, 1fr); }
+  .tour-screen .tour-itinerary { position: relative; top: auto; right: auto; bottom: auto; left: auto; width: auto; height: 100%; grid-column: 1; grid-row: 1; border-right: 1px solid #d9ddd8; border-left: 0; box-shadow: none; }
+  .tour-screen .tour-earth-preview { grid-column: 2; grid-row: 1; }
+  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-earth-preview { grid-column: 1; }
+  .tour-screen .tour-map-control-rail { right: auto; left: .65rem; }
+  .tour-screen .tour-map-side-panel { right: auto; left: 5.65rem; }
+  .tour-screen .tour-sidebar-edge-toggle { left: calc(max(340px, min(26vw, 490px)) - 14px); }
+  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-sidebar-edge-toggle { left: 0; }
+}
+@media (max-width: 900px) {
+  .tour-screen .tour-itinerary { top: 52px; right: auto; left: 0; width: min(390px, calc(100vw - 78px)); border-right: 1px solid #d4ded6; border-left: 0; box-shadow: 12px 0 30px #142f2227; }
+  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-map-control-rail { right: auto; left: .45rem; }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-control-rail { right: auto; left: calc(min(390px, calc(100vw - 78px)) + .45rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { right: auto; left: calc(min(390px, calc(100vw - 78px)) + 4.7rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-sidebar-edge-toggle { left: calc(min(390px, calc(100vw - 78px)) - 14px); }
+  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-sidebar-edge-toggle { left: 0; }
+}
+@media (max-width: 600px) {
+  .tour-screen .tour-itinerary { top: 48px; width: min(320px, calc(100vw - 78px)); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-control-rail { left: calc(min(320px, calc(100vw - 78px)) + .45rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { left: calc(min(320px, calc(100vw - 78px)) + 4.7rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-sidebar-edge-toggle { left: calc(min(320px, calc(100vw - 78px)) - 14px); }
+}
