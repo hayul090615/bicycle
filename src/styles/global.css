@@ -2715,8 +2715,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-explorer-grid { grid-template-columns: minmax(0, 1fr); }
   .tour-screen .tour-itinerary { position: absolute; z-index: 1310; top: 0; right: 0; bottom: 0; left: auto; width: min(490px, 42vw); height: auto; grid-column: auto; grid-row: auto; border-right: 0; border-left: 1px solid #d9ddd8; background: #ffffffc9; box-shadow: -12px 0 30px #142f2218; backdrop-filter: blur(7px); }
   .tour-screen .tour-earth-preview { grid-column: 1; grid-row: 1; }
-  .tour-screen .tour-map-control-rail { right: auto; left: .65rem; }
-  .tour-screen .tour-map-side-panel { right: auto; left: 5.65rem; }
+  .tour-screen .tour-map-control-rail { right: auto; left: 2.1rem; }
+  .tour-screen .tour-map-side-panel { right: auto; left: 7.1rem; }
   .tour-screen .tour-elevation-card { right: 5.7rem; }
 }
 
@@ -2769,15 +2769,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 @media (max-width: 900px) {
   .tour-screen .tour-itinerary { top: 52px; right: auto; left: 0; width: min(390px, calc(100vw - 78px)); border-right: 1px solid #d4ded6; border-left: 0; box-shadow: 12px 0 30px #142f2227; }
-  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-map-control-rail { right: auto; left: .45rem; }
-  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-control-rail { right: auto; left: calc(min(390px, calc(100vw - 78px)) + .45rem); }
-  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { right: auto; left: calc(min(390px, calc(100vw - 78px)) + 4.7rem); }
+  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-map-control-rail { right: auto; left: 2.1rem; }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-control-rail { right: auto; left: calc(min(390px, calc(100vw - 78px)) + 2.1rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { right: auto; left: calc(min(390px, calc(100vw - 78px)) + 6.3rem); }
   .tour-screen .tour-explorer-grid--sidebar-open .tour-sidebar-edge-toggle { left: calc(min(390px, calc(100vw - 78px)) - 14px); }
   .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) .tour-sidebar-edge-toggle { left: 0; }
 }
 @media (max-width: 600px) {
   .tour-screen .tour-itinerary { top: 48px; width: min(320px, calc(100vw - 78px)); }
-  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-control-rail { left: calc(min(320px, calc(100vw - 78px)) + .45rem); }
-  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { left: calc(min(320px, calc(100vw - 78px)) + 4.7rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-control-rail { left: calc(min(320px, calc(100vw - 78px)) + 2.1rem); }
+  .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { left: calc(min(320px, calc(100vw - 78px)) + 6.3rem); }
   .tour-screen .tour-explorer-grid--sidebar-open .tour-sidebar-edge-toggle { left: calc(min(320px, calc(100vw - 78px)) - 14px); }
 }
