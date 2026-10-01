@@ -259,7 +259,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [walkingRoute, setWalkingRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [nearbyBikes, setNearbyBikes] = useState<{ key: string; stations: NearbyBikeStation[]; updatedAt: string | null; status: 'loading' | 'live' | 'unavailable' } | null>(null)
   const [selectedBikeStationId, setSelectedBikeStationId] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 901px)').matches)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [flatOnly, setFlatOnly] = useState(false)
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
   const [showShadows, setShowShadows] = useState(true)
@@ -853,7 +853,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </CircleMarker>)}
   </MapContainer>
 
-  return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ''}`}>
+  return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}`}>
     <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>

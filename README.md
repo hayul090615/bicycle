@@ -345,3 +345,9 @@ seoul-typing-bike-high-score
 
 + Arranged the map from left to right as the course list, its green edge handle and controls, then the map.
 + The closed course list no longer reserves a blank column; the map expands into it.
+
+## Map-first opening and two-column controls (2026-10-01)
+
++ The route panel now starts closed, leaving the map visible across the full viewport.
++ The green map tools use a wider two-column layout so common controls are easier to scan.
++ Hidden route-panel space is removed from the layout to prevent an empty strip beside the map.

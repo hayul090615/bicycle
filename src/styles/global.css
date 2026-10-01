@@ -2781,3 +2781,63 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-explorer-grid--sidebar-open .tour-map-side-panel { left: calc(min(320px, calc(100vw - 78px)) + 6.3rem); }
   .tour-screen .tour-explorer-grid--sidebar-open .tour-sidebar-edge-toggle { left: calc(min(320px, calc(100vw - 78px)) - 14px); }
 }
+
+/* Start on the full map with the green tools arranged in two columns. */
+.tour-screen .tour-explorer-grid--sidebar-closed {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+.tour-screen .tour-explorer-grid--sidebar-closed > .tour-itinerary[hidden] {
+  display: none !important;
+}
+.tour-screen .tour-explorer-grid--sidebar-closed > .tour-earth-preview {
+  width: 100% !important;
+  min-width: 0 !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+.tour-screen .tour-map-control-rail {
+  width: 172px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: stretch;
+  gap: .3rem;
+  padding: .42rem;
+}
+.tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle,
+.tour-screen .tour-map-control-rail > .tour-map-quick-filters,
+.tour-screen .tour-map-control-rail > .tour-map-mode-select,
+.tour-screen .tour-map-control-rail > .tour-food-guide-trigger {
+  grid-column: 1 / -1;
+}
+.tour-screen .tour-map-control-rail > .tour-map-quick-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .3rem;
+}
+.tour-screen .tour-map-control-rail > .tour-map-quick-filters > button {
+  min-height: 48px;
+}
+.tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle {
+  min-height: 42px;
+  flex-direction: row;
+  gap: .45rem;
+}
+.tour-screen .tour-map-control-rail > .tour-map-mode-select select {
+  min-height: 38px;
+}
+.tour-screen .tour-map-control-rail > .tour-food-guide-trigger {
+  flex-direction: row;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 48px;
+}
+@media (max-width: 900px) {
+  .tour-screen .tour-map-control-rail { width: 154px; }
+  .tour-screen .tour-map-control-rail > .tour-map-quick-filters > button { min-height: 44px; }
+}
+@media (max-width: 600px) {
+  .tour-screen .tour-map-control-rail { width: 142px; }
+  .tour-screen .tour-map-control-rail > .tour-map-quick-filters > button { min-height: 40px; font-size: .48rem; }
+}
