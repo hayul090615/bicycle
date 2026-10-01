@@ -2959,3 +2959,44 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   }
   .tour-screen .tour-map-side-panel { position: fixed; z-index: 1350; inset: auto .6rem .6rem; width: auto; max-height: 72vh; border-radius: 14px; }
 }
+
+/* Grouped map controls and a compact, unclipped export menu. */
+.tour-screen .tour-map-stage { position: relative; }
+.tour-screen .tour-map-control-rail { position: absolute; z-index: 1305; top: .5rem; right: auto; bottom: .5rem; left: .5rem; width: clamp(174px, 38vw, 220px); max-height: none; height: auto; transform: none; display: flex; flex-direction: column; align-items: stretch; gap: .5rem; padding: .65rem; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #315b44; border-radius: 14px; background: #123b2cf2; box-shadow: 0 8px 28px #10251c55; scrollbar-width: thin; scrollbar-color: #6d9476 transparent; }
+.tour-screen .tour-map-rail-sidebar-toggle, .tour-screen .tour-map-rail-group button, .tour-screen .tour-map-quick-filters button { width: 100%; min-width: 0; min-height: 38px; display: flex; align-items: center; justify-content: flex-start; gap: .7rem; padding: .45rem .6rem; border: 1px solid #315b44; border-radius: 9px; color: #e8f0e7; background: #1a4632; font: 750 .76rem/1.25 "Noto Sans KR", sans-serif; text-align: left; cursor: pointer; }
+.tour-screen .tour-map-rail-sidebar-toggle { min-height: 42px; font-size: .8rem; background: #205c40; }
+.tour-screen .tour-map-control-rail button > span { width: 1.25rem; flex: 0 0 1.25rem; color: #bdd8bd; font-size: 1rem; text-align: center; }
+.tour-screen .tour-map-rail-group { display: grid; gap: .28rem; padding-top: .42rem; border-top: 1px solid #426650; }
+.tour-screen .tour-map-rail-group h2 { margin: 0; padding: 0 .15rem .1rem; color: #b9d4bd; font-size: .61rem; font-weight: 850; letter-spacing: .08em; }
+.tour-screen .tour-map-quick-filters { display: flex; flex-direction: column; gap: .25rem; }
+.tour-screen .tour-map-quick-filters button { min-height: 37px; }
+.tour-screen .tour-map-control-rail .tour-map-mode-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .3rem; }
+.tour-screen .tour-map-control-rail .tour-map-mode-switch button { min-height: 34px; justify-content: center; padding: .35rem; font-size: .72rem; }
+.tour-screen .tour-map-control-rail .tour-map-mode-select { display: grid; gap: .24rem; }
+.tour-screen .tour-map-control-rail .tour-map-mode-select > span { color: #c5d9c7; font-size: .62rem; font-weight: 750; }
+.tour-screen .tour-map-control-rail .tour-map-mode-select select { width: 100%; min-height: 36px; border: 1px solid #486b53; border-radius: 8px; color: #f0f4ec; background: #1a4632; font-size: .7rem; font-weight: 750; }
+.tour-screen .tour-map-control-rail .tour-roadview-toggle { min-height: 37px; display: flex; align-items: center; justify-content: flex-start; gap: .7rem; padding: .45rem .6rem; border-radius: 9px; font-size: .75rem; }
+.tour-screen .tour-map-quick-filters button[aria-current="true"], .tour-screen .tour-map-control-rail .tour-map-settings-button[aria-expanded="true"], .tour-screen .tour-map-control-rail .tour-roadview-toggle[aria-pressed="true"], .tour-screen .tour-map-control-rail .tour-map-mode-switch button[aria-pressed="true"] { border-color: #c7ebae; color: #173b2b; background: #d7efc5; box-shadow: inset 0 0 0 1px #f0f9e8; text-shadow: none; }
+.tour-screen .tour-map-quick-filters button[aria-current="true"] > span, .tour-screen .tour-map-control-rail .tour-map-settings-button[aria-expanded="true"] > span, .tour-screen .tour-map-control-rail .tour-roadview-toggle[aria-pressed="true"] > span { color: #155d3e; }
+.tour-screen .tour-map-control-rail button:hover:not([aria-pressed="true"]) { background: #24583d; }
+.tour-screen .tour-map-stage > .tour-map-locate { position: absolute; z-index: 1401; right: .8rem; bottom: 4.1rem; min-height: 42px; display: flex; align-items: center; gap: .5rem; padding: .55rem .85rem; border: 1px solid #d4e2ed; border-radius: 999px; color: #174632; background: #fffffff2; box-shadow: 0 3px 12px #17324b40; font: 800 .76rem "Noto Sans KR", sans-serif; cursor: pointer; }
+.tour-screen .tour-map-stage > .tour-map-locate > span { color: #216346; }
+.tour-screen .tour-earth-preview { overflow: visible; }
+.tour-screen .tour-earth-actions { position: absolute; z-index: 1402; right: .65rem; bottom: .55rem; left: auto; display: block; width: auto; min-height: 0; padding: 0; overflow: visible; border: 0; border-radius: 10px; background: transparent; box-shadow: none; }
+.tour-screen .tour-earth-actions > summary { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .55rem .85rem; border: 1px solid #9eafa1; border-radius: 8px; color: #173f34; background: #f7f6f0f2; box-shadow: 0 4px 18px #15271d33; font-size: .75rem; font-weight: 850; list-style: none; cursor: pointer; backdrop-filter: blur(10px); }
+.tour-screen .tour-earth-actions > summary::-webkit-details-marker { display: none; }
+.tour-screen .tour-earth-actions > summary::after { content: "\2304"; font-size: 1rem; }
+.tour-screen .tour-earth-actions[open] > summary::after { content: "\2303"; }
+.tour-screen .tour-earth-action-list { position: absolute; right: 0; bottom: calc(100% + .45rem); width: min(250px, calc(100vw - 1.3rem)); display: grid; gap: .4rem; padding: .55rem; border: 1px solid #d4ddd5; border-radius: 10px; background: #f7f6f0f5; box-shadow: 0 6px 22px #15271d40; backdrop-filter: blur(12px); }
+.tour-screen .tour-earth-action-list > * { min-height: 38px; display: flex; align-items: center; justify-content: center; padding: .48rem .6rem; border-radius: 6px; font-size: .7rem; text-align: center; text-decoration: none; }
+.tour-screen .tour-map-side-panel { left: calc(clamp(174px, 38vw, 220px) + 1rem); right: auto; }
+@media (max-width: 600px) {
+  .tour-screen .tour-map-control-rail { width: clamp(158px, 42vw, 190px); padding: .55rem; gap: .42rem; }
+  .tour-screen .tour-map-rail-sidebar-toggle, .tour-screen .tour-map-quick-filters button, .tour-screen .tour-map-control-rail .tour-roadview-toggle { min-height: 35px; font-size: .68rem; }
+  .tour-screen .tour-map-rail-group { gap: .22rem; padding-top: .35rem; }
+  .tour-screen .tour-map-mode-switch button { min-height: 31px; }
+  .tour-screen .tour-map-control-rail .tour-map-locate { right: .55rem; bottom: 4.3rem; min-height: 38px; padding: .45rem .65rem; font-size: .68rem; }
+  .tour-screen .tour-earth-actions { right: .45rem; bottom: .45rem; }
+  .tour-screen .tour-earth-actions > summary { min-height: 38px; padding: .45rem .65rem; font-size: .68rem; }
+  .tour-screen .tour-map-side-panel { left: calc(clamp(158px, 42vw, 190px) + .8rem); right: .5rem; width: auto; }
+}

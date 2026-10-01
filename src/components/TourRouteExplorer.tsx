@@ -883,52 +883,52 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        <aside className="tour-map-control-rail" aria-label={text('Map controls', '지도 도구')}>
-          <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={sidebarOpen || activeMapTool === 'routes'}
-            onClick={() => { if (window.matchMedia('(min-width: 901px)').matches) { setSidebarOpen(open => !open); setActiveMapTool(null) } else setActiveMapTool(current => current === 'routes' ? null : 'routes') }}><span aria-hidden="true">☷</span>{text('Routes', '코스 목록')}</button>
-          <nav className="tour-map-quick-filters" aria-label={text('Quick map layers', '빠른 지도 필터')}>
-            <button type="button" aria-pressed={showCourse} onClick={() => { toggleMapLayer('course'); setActiveMapTool('course') }}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
-            <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer('restaurants'); setActiveMapTool('food') }}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
-            <button type="button" aria-pressed={showBikeLanes} onClick={() => { toggleMapLayer('bikeLanes'); setActiveMapTool('bikeLanes') }}><span aria-hidden="true">↗</span>{text('Bike path', '자전거도로')}</button>
-            <button type="button" aria-pressed={showCctv} onClick={() => { toggleMapLayer('cctv'); setActiveMapTool('cctv') }}><span aria-hidden="true">◉</span>{text('CCTV', 'CCTV')}</button>
-            <button type="button" aria-pressed={showAmenities} onClick={() => { if (!showAmenities) toggleMapLayer('amenities'); setActiveMapTool('facilities') }}><span aria-hidden="true">⌖</span>{text('Facilities', '시설')}</button>
-          </nav>
-          <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
-            <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
-              {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
-              <option value="city">{text('City', '\uB3C4\uC2DC')}</option>
-              <option value="satellite">{text('2D satellite', '2D 위성')}</option>
-              <option value="map">{text('Flat map', '평면 지도')}</option>
-              {hasGoogleMapsKey && <option value="google">Google 3D</option>}
-            </select>
-          </label>
-          <button type="button" className="tour-map-3d-button" aria-pressed={view === 'city'} onClick={() => { setActiveMapTool(null); chooseMapView('city') }}>
-            <span aria-hidden="true">3D</span>{text('City', '\uB3C4\uC2DC')}
+        <aside className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
+          <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={sidebarOpen || activeMapTool === "routes"}
+            onClick={() => { if (window.matchMedia("(min-width: 901px)").matches) { setSidebarOpen(open => !open); setActiveMapTool(null) } else setActiveMapTool(current => current === "routes" ? null : "routes") }}>
+            <span aria-hidden="true">&#x2637;</span>{text("Routes", "\uCF54\uC2A4 \uBAA9\uB85D")}
           </button>
-          <button type="button" className="tour-map-2d-button" aria-pressed={view === 'satellite' || view === 'map'} onClick={() => { setActiveMapTool(null); chooseMapView('satellite') }}>
-            <span aria-hidden="true">2D</span>{text('Map', '\uC9C0\uB3C4')}
-          </button>
-          {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewOpen}
-            onClick={() => { setActiveMapTool(null); setFoodGuideOpen(false); setView('kakao'); setRoadviewOpen(true) }}>
-            <span aria-hidden="true">▣</span>{text('Road view', '로드뷰')}
-          </button>}
-        <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === 'settings'} onClick={() => setActiveMapTool(current => current === 'settings' ? null : 'settings')}>
-          <span aria-hidden="true">⚙</span>{text('Settings', '설정')}
-        </button>
-        <button type="button" className="tour-map-locate" onClick={() => { locateNearestRoute(false); setActiveMapTool('location') }} disabled={locating} aria-label={text('Find a nearby Ttareungi station and show my route', '가까운 따릉이 대여소와 이동 경로 찾기')}>
-          <span aria-hidden="true">◎</span>{locating ? text('Locating…', '위치 확인 중…') : text('My location', '내 위치')}
-        </button>
-        <button type="button" className={`tour-food-guide-trigger${rideFoodPrompt?.routeId === route.id ? ' is-nearby' : ''}`}
-          aria-expanded={foodGuideOpen} aria-controls="tour-food-guide-panel" onClick={() => {
-            setActiveMapTool(null)
-            setFoodGuideOpen(open => !open)
-            setMapLayers(current => ({ ...current, restaurants: true }))
-          }}>
-          <span className="tour-food-guide-avatar" aria-hidden="true">🧑‍🍳</span>
-          <span><small>{text('LOCAL FOOD GUIDE', '동네 맛집 가이드')}</small><strong>{text('Find a good stop', '근처 맛집 추천')}</strong></span>
-          <i aria-hidden="true">{foodGuideOpen ? '−' : '+'}</i>
-        </button>
+          <section className="tour-map-rail-group">
+            <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>
+            <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>
+              <button type="button" aria-current={activeMapTool === "course" ? "true" : undefined} onClick={() => { toggleMapLayer("course"); setActiveMapTool("course") }}><span aria-hidden="true">&#x2301;</span>{text("Course", "\uCF54\uC2A4")}</button>
+              <button type="button" aria-current={activeMapTool === "food" ? "true" : undefined} onClick={() => { toggleMapLayer("restaurants"); setActiveMapTool("food") }}><span aria-hidden="true">&#x2668;</span>{text("Food", "\uB9DB\uC9D1")}</button>
+              <button type="button" aria-current={activeMapTool === "bikeLanes" ? "true" : undefined} onClick={() => { toggleMapLayer("bikeLanes"); setActiveMapTool("bikeLanes") }}><span aria-hidden="true">&#x2197;</span>{text("Bike paths", "\uC790\uC804\uAC70\uB3C4\uB85C")}</button>
+              <button type="button" aria-current={activeMapTool === "facilities" ? "true" : undefined} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x2316;</span>{text("Facilities", "\uC2DC\uC124")}</button>
+              <button type="button" aria-current={activeMapTool === "cctv" ? "true" : undefined} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool("cctv") }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
+            </nav>
+          </section>
+          <section className="tour-map-rail-group tour-map-rail-group--map">
+            <h2>{text("Map", "\uC9C0\uB3C4")}</h2>
+            <div className="tour-map-mode-switch" role="group" aria-label={text("2D or 3D map", "2D \uB610\uB294 3D \uC9C0\uB3C4")}>
+              <button type="button" aria-pressed={view === "satellite" || view === "map" || view === "kakao"} onClick={() => { setActiveMapTool(null); chooseMapView("satellite") }}>2D</button>
+              <button type="button" aria-pressed={view === "city" || view === "google"} onClick={() => { setActiveMapTool(null); chooseMapView("city") }}>3D</button>
+            </div>
+            {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-expanded={roadviewOpen}
+              onClick={() => { setActiveMapTool(null); setFoodGuideOpen(false); setView("kakao"); setRoadviewOpen(open => !open) }}>
+              <span aria-hidden="true">&#x25C9;</span>{text("Road view", "\uB85C\uB4DC\uBDF0")}
+            </button>}
+            <label className="tour-map-mode-select"><span>{text("Map type", "\uC9C0\uB3C4 \uC885\uB958")}</span>
+              <select value={view} aria-label={text("Choose a map view", "\uC9C0\uB3C4 \uC885\uB958 \uC120\uD0DD")} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
+                {hasKakaoMapsKey && <option value="kakao">{text("Kakao map - road", "\uCE74\uCE74\uC624 \uC9C0\uB3C4 ? \uB3C4\uB85C")}</option>}
+                <option value="city">{text("3D city", "3D \uB3C4\uC2DC")}</option>
+                <option value="satellite">{text("Satellite", "\uC704\uC131")}</option>
+                <option value="map">{text("Flat map", "\uD3C9\uBA74 \uC9C0\uB3C4")}</option>
+                {hasGoogleMapsKey && <option value="google">Google 3D</option>}
+              </select>
+            </label>
+          </section>
+          <section className="tour-map-rail-group tour-map-rail-group--other">
+            <h2>{text("Other", "\uAE30\uD0C0")}</h2>
+            <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === "settings"}
+              onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
+              <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
+            </button>
+          </section>
         </aside>
+        <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text("Find a nearby Ttareungi station and show my route", "\uAC00\uAE4C\uC6B4 \uB530\uB989\uC774 \uB300\uC5EC\uC18C\uC640 \uC774\uB3D9 \uACBD\uB85C \uCC3E\uAE30")}>
+          <span aria-hidden="true">&#x25CE;</span>{locating ? text("Locating...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("My location", "\uB0B4 \uC704\uCE58")}
+        </button>
         {activeMapTool && <aside className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
           <header className="tour-map-side-panel-header">
             <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
@@ -1099,11 +1099,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             </> : <div className="tour-scenery-placeholder">{text('No nearby public photo is available for this stop.', '이 경유지 주변에서 사용할 수 있는 공개 사진을 찾지 못했습니다.')}</div>}
         </aside>}
       </div>
-      <div className="tour-earth-actions">
-        <a className="button button--primary" href={googleEarthUrl(route, selectedStop ?? 0)} target="_blank" rel="noopener noreferrer">{text('Open in Google Earth ↗', 'Google Earth에서 보기 ↗')}</a>
-        <button type="button" className="button button--ghost" onClick={() => downloadEarthRoute(route, locale)}>{text('Download route for Earth', 'Earth용 코스 받기')}</button>
-        <button type="button" className="tour-show-all" onClick={() => selectStop(null)}>{text('Show all stops', '전체 경유지 보기')}</button>
-      </div>
+      <details className="tour-earth-actions">
+        <summary>{text("Share and export", "\uACF5\uC720\u00B7\uB0B4\uBCF4\uB0B4\uAE30")}</summary>
+        <div className="tour-earth-action-list">
+          <a className="button button--primary" href={googleEarthUrl(route, selectedStop ?? 0)} target="_blank" rel="noopener noreferrer">{text("Open in Google Earth \u2197", "Google Earth\uC5D0\uC11C \uBCF4\uAE30 \u2197")}</a>
+          <button type="button" className="button button--ghost" onClick={() => downloadEarthRoute(route, locale)}>{text("Download route for Earth", "Earth\uC6A9 \uCF54\uC2A4 \uBC1B\uAE30")}</button>
+          <button type="button" className="tour-show-all" onClick={() => selectStop(null)}>{text("Show all stops", "\uC804\uCCB4 \uACBD\uC720\uC9C0 \uBCF4\uAE30")}</button>
+        </div>
+      </details>
       <details className="tour-map-details">
         <summary>{text('Map and route information', '지도 및 코스 안내')}</summary>
         <div>
