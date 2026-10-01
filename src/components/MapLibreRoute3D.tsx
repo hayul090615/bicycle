@@ -32,12 +32,20 @@ const SEASON_SKIES: Record<TourSeason, SkySpecification> = {
   autumn: { 'sky-color': '#98acb7', 'horizon-color': '#e8c18f', 'sky-horizon-blend': 0.7, 'horizon-fog-blend': 0.24, 'atmosphere-blend': 0.48 },
   winter: { 'sky-color': '#a7c4d2', 'horizon-color': '#e2eaf0', 'sky-horizon-blend': 0.76, 'horizon-fog-blend': 0.2, 'atmosphere-blend': 0.46 },
 }
+const SEASON_NIGHT_SKIES: Record<TourSeason, SkySpecification> = {
+  spring: { 'sky-color': '#101b36', 'horizon-color': '#76566e', 'sky-horizon-blend': .78, 'horizon-fog-blend': .26, 'atmosphere-blend': .56 },
+  summer: { 'sky-color': '#081a32', 'horizon-color': '#3d6975', 'sky-horizon-blend': .8, 'horizon-fog-blend': .22, 'atmosphere-blend': .5 },
+  autumn: { 'sky-color': '#17172f', 'horizon-color': '#885e55', 'sky-horizon-blend': .76, 'horizon-fog-blend': .3, 'atmosphere-blend': .58 },
+  winter: { 'sky-color': '#07172c', 'horizon-color': '#637e9c', 'sky-horizon-blend': .82, 'horizon-fog-blend': .24, 'atmosphere-blend': .5 },
+}
 type MapWeather = 'sunny' | 'cloudy' | 'rainy'
-function mapSky(season: TourSeason, weather: MapWeather): SkySpecification {
-  const seasonal = SEASON_SKIES[season]
+function mapSky(season: TourSeason, weather: MapWeather, night: boolean): SkySpecification {
+  const seasonal = night ? SEASON_NIGHT_SKIES[season] : SEASON_SKIES[season]
+  if (night && weather === 'rainy') return { ...seasonal, 'sky-color': '#101821', 'horizon-color': '#394956', 'horizon-fog-blend': .42, 'atmosphere-blend': .68 }
+  if (night && weather === 'cloudy') return { ...seasonal, 'sky-color': '#162235', 'horizon-fog-blend': .38, 'atmosphere-blend': .64 }
   if (weather === 'rainy') return { ...seasonal, 'sky-color': '#728393', 'horizon-color': '#9ca9b2', 'sky-horizon-blend': .84, 'horizon-fog-blend': .34, 'atmosphere-blend': .68 }
   if (weather === 'cloudy') return { ...seasonal, 'sky-color': '#91a0a8', 'horizon-color': '#bdc3bf', 'sky-horizon-blend': .8, 'horizon-fog-blend': .3, 'atmosphere-blend': .56 }
-  return { ...seasonal, 'sky-color': '#78afd0', 'horizon-color': '#f3d992', 'sky-horizon-blend': .72, 'horizon-fog-blend': .16, 'atmosphere-blend': .42 }
+  return seasonal
 }
 
 function samplePath(path: LonLat[], count: number): LonLat[] {
@@ -134,7 +142,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, treeFocusRequest, onFocusTree, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -150,6 +158,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   showBikeStations: boolean
   season: TourSeason
   weather: MapWeather
+  nightSky: boolean
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
@@ -188,11 +197,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   const lastLocationFocusRequestRef = useRef(0)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
+  const nightSkyRef = useRef(nightSky)
   const updateBuildingShadowsRef = useRef<() => void>(() => {})
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [satellite, setSatellite] = useState(() => viewMode !== 'map')
   shadowAzimuthRef.current = shadowAzimuth
   sunElevationRef.current = sunElevation
+  nightSkyRef.current = nightSky
   const initialCenter = useRef<maplibregl.LngLatLike | null>(null)
   const is3DView = viewMode === 'city'
   const isFlatMap = !is3DView
@@ -225,7 +236,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       style: STYLE_URL,
       center: initialCenter.current ?? [points[0].lng, points[0].lat],
       zoom: 11.2,
-      pitch: is3DView ? 50 : 0,
+      pitch: is3DView ? 68 : 0,
       bearing: is3DView ? -10 : 0,
       maxZoom: 23,
       maxPitch: 85,
@@ -237,7 +248,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       if (!map.isStyleLoaded() || !map.getLayer('building-3d')) return
       const source = map.getSource('tour-building-shadows') as GeoJSONSource | undefined
       if (!source) return
-      const features = is3DView && sunElevationRef.current > 0
+      const features = is3DView && !nightSkyRef.current && sunElevationRef.current > 0
         ? map.queryRenderedFeatures({ layers: ['building-3d'] })
         : []
       const data = makeBuildingShadows(features, sunElevationRef.current, shadowAzimuthRef.current)
@@ -286,7 +297,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       if (disposed || failed) return
       window.clearTimeout(timeout)
       try {
-        if (is3DView) map.setSky(mapSky(season, weather))
+        if (is3DView) map.setSky(mapSky(season, weather, nightSky))
         map.addSource('tour-imagery', {
           type: 'raster',
           tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
@@ -473,17 +484,18 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
-    const visibility = is3DView && showShadows ? 'visible' : 'none'
+    const visibility = is3DView && showShadows && !nightSky ? 'visible' : 'none'
     for (const layerId of ['tour-building-shadow-fill', 'tour-building-shadow-outline']) {
       if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visibility)
     }
-  }, [is3DView, showShadows, status])
+  }, [is3DView, nightSky, showShadows, status])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
-    if (is3DView) map.setSky(mapSky(season, weather))
-  }, [is3DView, season, status, weather])
+    if (is3DView) map.setSky(mapSky(season, weather, nightSky))
+    if (map.getLayer('tour-imagery')) map.setPaintProperty('tour-imagery', 'raster-brightness-max', nightSky && is3DView ? .62 : 1)
+  }, [is3DView, nightSky, season, status, weather])
 
   useEffect(() => {
     const map = mapRef.current
@@ -745,17 +757,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     if (accessPath && accessPath.length >= 2) {
       const bounds = new maplibregl.LngLatBounds()
       ;(selectedStop === null ? [...linePoints, ...accessPath, ...(walkPath ?? [])] : [...accessPath, ...(walkPath ?? [])]).forEach(point => bounds.extend(point))
-      map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 16.2, pitch: isFlatMap ? 0 : 46, duration: 480 })
+      map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 16.2, pitch: isFlatMap ? 0 : 66, duration: 480 })
       return
     }
     if (selectedStop !== null) {
       const point = points[selectedStop]
-      map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: isFlatMap ? 0 : 48, bearing: isFlatMap ? 0 : -12, duration: 1100, essential: false })
+      map.flyTo({ center: [point.lng, point.lat], zoom: 17.1, pitch: isFlatMap ? 0 : 68, bearing: isFlatMap ? 0 : -12, duration: 1100, essential: false })
       return
     }
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
-    map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 48, bearing: isFlatMap ? 0 : -6, duration: 480 })
+    map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 66, bearing: isFlatMap ? 0 : -6, duration: 480 })
   }, [accessPath, activeTreeFocus, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
@@ -768,7 +780,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     map.fitBounds(bounds, {
       padding: { top: 88, right: 88, bottom: 88, left: 88 },
       maxZoom: 16,
-      pitch: is3DView ? 48 : 0,
+      pitch: is3DView ? 66 : 0,
       bearing: is3DView ? bearingToDestination(userLocation, destination) : 0,
       duration: 720,
       essential: false,
@@ -781,7 +793,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     const [lng, lat] = activeTreeFocus.anchor
     const distance = (point: LonLat) => Math.hypot((point[0] - lng) * Math.cos(lat * Math.PI / 180), point[1] - lat)
     const target = treePositions.reduce((nearest, tree) => distance(tree.point) < distance(nearest.point) ? tree : nearest)
-    map.flyTo({ center: target.point, zoom: 17.2, pitch: is3DView ? 44 : 0, bearing: is3DView ? target.bearing : 0, duration: 900, essential: false })
+    map.flyTo({ center: target.point, zoom: 17.2, pitch: is3DView ? 64 : 0, bearing: is3DView ? target.bearing : 0, duration: 900, essential: false })
   }, [activeTreeFocus, is3DView, status, treePositions])
 
   useEffect(() => {
@@ -969,6 +981,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   return <div className={`tour-maplibre-3d tour-scene-${season}${isFlatMap ? ' tour-maplibre-2d' : ''}${viewMode === 'satellite' ? ' tour-maplibre-satellite' : ''}`}>
     {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
     <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={`${locale === 'ko' ? route.titleKo : route.title} ${mapModeLabel}`} />
+    {is3DView && nightSky && <div className={`tour-sky-stars tour-sky-stars--${season}`} aria-hidden="true"><i /></div>}
     {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
       {locale === 'ko' ? '위성 사진' : 'Satellite'}
     </button>}

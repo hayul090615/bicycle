@@ -2804,7 +2804,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   max-height: none;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: space-between;
+  align-content: start;
   align-items: stretch;
   gap: .3rem;
   padding: .42rem;
@@ -2885,6 +2885,51 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-map-control-rail .tour-map-2d-button[aria-pressed='true'] { border-color: #c7ebae; color: #123b28; background: #d7efc5; box-shadow: inset 0 0 0 1px #f0f9e8; }
 .tour-screen .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span,
 .tour-screen .tour-map-control-rail .tour-map-2d-button[aria-pressed='true'] > span { color: #155d3e; }
+
+/* High-contrast map tools and a restrained seasonal night sky. */
+.tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle,
+.tour-screen .tour-map-control-rail .tour-map-quick-filters > button,
+.tour-screen .tour-map-control-rail .tour-map-settings-button,
+.tour-screen .tour-map-control-rail .tour-map-locate,
+.tour-screen .tour-map-control-rail .tour-roadview-toggle {
+  min-height: 52px;
+  color: #f7fbf5;
+  background: #205c40;
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-shadow: 0 1px 1px #123723;
+}
+.tour-screen .tour-map-control-rail .tour-map-quick-filters > button > span,
+.tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle > span { color: #d5efcf; }
+.tour-screen .tour-map-control-rail .tour-map-quick-filters > button[aria-pressed='true'],
+.tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle[aria-expanded='true'] { color: #173b2b; background: #d7efc5; text-shadow: none; }
+.tour-screen .tour-map-control-rail .tour-map-mode-select > span { color: #174632; font-size: .62rem; font-weight: 800; }
+.tour-screen .tour-map-control-rail .tour-map-mode-select select { min-height: 34px; color: #fff; background: #174632; font-size: .66rem; font-weight: 800; }
+.tour-screen .tour-map-control-rail .tour-food-guide-trigger { min-height: 52px; color: #f7fbf5; background: #205c40; }
+.tour-screen .tour-map-control-rail .tour-food-guide-trigger strong { color: #f7fbf5; font-size: .7rem; }
+.tour-screen .tour-map-control-rail .tour-map-3d-button,
+.tour-screen .tour-map-control-rail .tour-map-2d-button { min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem; font-size: .72rem; }
+.tour-sky-mode-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
+.tour-sky-mode-picker button { min-height: 38px; border: 1px solid #d6dfd5; border-radius: 9px; color: #344c3d; background: #fff; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.tour-sky-mode-picker button[aria-pressed='true'] { border-color: #24744e; color: #fff; background: #205c40; }
+.tour-screen--dark .tour-sky-mode-picker button { border-color: #455a4c; color: #e5efe5; background: #23382c; }
+.tour-screen--dark .tour-sky-mode-picker button[aria-pressed='true'] { border-color: #8eb997; color: #f4faf2; background: #286344; }
+.tour-sky-stars { position: absolute; z-index: 2; top: 0; right: 15%; width: min(300px, 42vw); height: clamp(72px, 17vh, 150px); overflow: hidden; pointer-events: none; opacity: .76; background: radial-gradient(1px 1px at 12% 27%, #fff 95%, transparent), radial-gradient(1.5px 1.5px at 31% 54%, #fff 95%, transparent), radial-gradient(1px 1px at 47% 19%, #fff 95%, transparent), radial-gradient(1px 1px at 63% 39%, #fff 95%, transparent), radial-gradient(1.5px 1.5px at 82% 23%, #fff 95%, transparent), radial-gradient(1px 1px at 91% 68%, #fff 95%, transparent); mask-image: linear-gradient(to bottom, #000 35%, transparent 100%); }
+.tour-sky-stars > i { position: absolute; top: 24px; right: 26px; width: 28px; height: 28px; overflow: hidden; border-radius: 50%; background: #fff0bd; box-shadow: 0 0 12px #fff2c480; }
+.tour-sky-stars > i::after { position: absolute; top: -4px; right: -9px; width: 27px; height: 31px; border-radius: 50%; background: var(--night-sky-cover, #101b36); content: ''; }
+.tour-sky-stars--spring { --night-sky-cover: #101b36; }
+.tour-sky-stars--summer { --night-sky-cover: #081a32; }
+.tour-sky-stars--autumn { --night-sky-cover: #17172f; }
+.tour-sky-stars--winter { --night-sky-cover: #07172c; }
+@media (max-width: 600px) {
+  .tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle,
+  .tour-screen .tour-map-control-rail .tour-map-quick-filters > button,
+  .tour-screen .tour-map-control-rail .tour-map-settings-button,
+  .tour-screen .tour-map-control-rail .tour-map-locate,
+  .tour-screen .tour-map-control-rail .tour-roadview-toggle { min-height: 48px; font-size: .66rem; }
+  .tour-sky-stars { right: 4%; width: 55vw; height: 78px; }
+}
 
 /* On phones, give the map its own area and put map actions in the next row. */
 @media (max-width: 900px) {

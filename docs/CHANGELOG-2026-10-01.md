@@ -31,3 +31,11 @@ GitHub Pages: https://hayul090615.github.io/bicycle/
 
 
 Deployment verification: UI code commit 6fbbf5a was published successfully by GitHub Pages workflow 36807511000 on 2026-10-01; the public page returned HTTP 200.
+
+## 3D 하늘 및 도구 가독성 보완
+
++ 왼쪽 지도 도구의 행 간격을 정리하고 코스·시설·지도 보기·3D/2D 버튼의 글자 대비와 크기를 높였습니다.
++ 3D 지도의 기본 기울기를 높였습니다. 지도 오른쪽의 위 화살표로 최대 85도까지 시점을 올려 수평선과 하늘을 볼 수 있습니다.
++ 3D 하늘은 자동·낮·밤으로 선택할 수 있습니다. 자동 모드는 서울의 태양 높이를 사용하며 계절마다 서로 다른 낮·밤 색상을 표시합니다.
++ 밤 모드에서 별·달을 추가하고 위성 배경을 어둡게 조정했습니다. 밤 선택은 3D 보기를 바로 엽니다.
++ 데스크톱 Chrome 1280×900에서 밤·겨울 선택, 하늘 표시, 버튼 간격, 지도 화면 오류가 없는지 확인했습니다. TypeScript 검사와 Vite 배포 빌드도 통과했습니다.
