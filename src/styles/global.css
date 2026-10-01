@@ -2713,7 +2713,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 /* Naver-like desktop layout: browse routes on the left, keep the map on the right. */
 @media (min-width: 901px) {
   .tour-screen .tour-explorer-grid { grid-template-columns: minmax(340px, min(26vw, 490px)) minmax(0, 1fr); }
-  .tour-screen .tour-itinerary { grid-column: 1; grid-row: 1; border-right: 1px solid #d9ddd8; border-left: 0; }
+  .tour-screen .tour-itinerary { position: relative; top: auto; right: auto; bottom: auto; left: auto; width: auto; height: 100%; grid-column: 1; grid-row: 1; border-right: 1px solid #d9ddd8; border-left: 0; box-shadow: none; }
   .tour-screen .tour-earth-preview { grid-column: 2; grid-row: 1; }
   .tour-screen .tour-map-control-rail { right: .65rem; left: auto; }
   .tour-screen .tour-map-side-panel { right: 5.65rem; left: auto; }
