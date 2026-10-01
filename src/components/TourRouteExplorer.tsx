@@ -853,7 +853,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </CircleMarker>)}
   </MapContainer>
 
-  return <div className="tour-explorer-grid">
+  return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ''}`}>
     <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>

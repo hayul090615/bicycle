@@ -322,3 +322,8 @@ seoul-typing-bike-high-score
 
 + Added a green edge tab at the course panel boundary to open and collapse the route list.
 + Removed the Kakao authorization warning banner while keeping the fallback map available.
+
+## Swap panel and map rail; collapse cleanly (2026-10-01)
+
++ Put the route list on the right and the green map toolbar on the left.
++ When the route panel is closed on desktop, the map expands across the freed column so no blank white strip remains.
