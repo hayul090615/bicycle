@@ -15,6 +15,8 @@ import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStatio
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
 import { clusterPublicCameras, publicCamerasAlongRoute } from '../services/publicCctv'
 import { fetchRouteAmenities, fetchRouteBikeLanes, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteRestaurants, fetchRouteSignals, type RouteAmenity, type RouteBikeLane, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
+import { searchNaverBlogs, type NaverBlogPost } from '../services/naverBlogs'
+import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
@@ -24,12 +26,6 @@ type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | '
 type MapTool = 'routes' | 'course' | 'food' | 'bikeLanes' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | 'facilities'
 type MapLayers = Record<MapLayerKey, boolean>
 const DEFAULT_MAP_LAYERS: MapLayers = { course: true, restaurants: false, cctv: false, roadInfo: true, riders: true, bikeLanes: true, amenities: true, bikeStations: true }
-const FOOD_PHOTOS = {
-  cafe: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=720&q=82',
-  restaurant: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=720&q=82',
-  quick: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=720&q=82',
-}
-
 function readMapLayers(): MapLayers {
   try {
     const saved = localStorage.getItem('seoul-bike-map-layers-v2')
@@ -232,6 +228,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   shadowDate: string
   shadowMinutes: number
 }) {
+  const [showBikeSplash, setShowBikeSplash] = useState(() => {
+    try { return !sessionStorage.getItem('seoul-bike-map-splash-seen') } catch { return true }
+  })
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
   const [hover, setHover] = useState<{ routeId: string; index: number } | null>(null)
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
@@ -270,6 +269,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
   const [foodGuideOpen, setFoodGuideOpen] = useState(false)
+  const [foodBlogState, setFoodBlogState] = useState<{ query: string; posts: NaverBlogPost[]; status: 'idle' | 'loading' | 'ready' | 'unavailable' }>({ query: '', posts: [], status: 'idle' })
   const [rentalLimitMinutes, setRentalLimitMinutes] = useState<60 | 120>(60)
   const [rentalDeadline, setRentalDeadline] = useState<number | null>(null)
   const [rentalNow, setRentalNow] = useState(Date.now())
@@ -285,6 +285,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!showBikeSplash) return
+    try { sessionStorage.setItem('seoul-bike-map-splash-seen', '1') } catch { /* session storage may be disabled */ }
+    const timer = window.setTimeout(() => setShowBikeSplash(false), 1450)
+    return () => window.clearTimeout(timer)
+  }, [showBikeSplash])
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
   const openFoodGuideAt = useCallback((point: LonLat) => {
     setFoodGuideAnchorOverride(point)
@@ -375,10 +381,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     : userLocation ?? (selectedStop === null
     ? { lat: destinationStation.lat, lng: destinationStation.lng }
     : getTouristStation(route.stops[selectedStop]?.stationId ?? destinationStop.stationId))
-  const foodRecommendations = useMemo(() => routeRestaurants
-    .map(place => ({ place, distance: distanceMeters(foodGuideAnchor, { lat: place.lat, lng: place.lng }) }))
-    .sort((first, second) => first.distance - second.distance)
-    .slice(0, 6), [foodGuideAnchor.lat, foodGuideAnchor.lng, routeRestaurants])
+  const foodBlogStopIndex = rideFoodPrompt?.routeId === route.id ? rideFoodPrompt.stopIndex : selectedStop ?? (foodGuideAnchorOverride
+    ? route.stops.map((stop, index) => ({ index, distance: distanceMeters(foodGuideAnchor, getTouristStation(stop.stationId)) }))
+      .sort((first, second) => first.distance - second.distance)[0]?.index ?? 0
+    : 0)
+  const foodBlogQuery = (route.stops[foodBlogStopIndex]?.placeKo ?? route.titleKo) + ' 맛집'
+  const activeFoodBlogState = foodBlogState.query === foodBlogQuery ? foodBlogState : null
   const showCourse = mapLayers.course
   const showRestaurants = mapLayers.restaurants
   const showCctv = mapLayers.cctv
@@ -561,8 +569,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const timeout = window.setTimeout(() => controller.abort(), 14_000)
     let active = true
     setAmenitiesState({ routeId: route.id, places: [], status: 'loading' })
-    void fetchRouteAmenities(routedPath, controller.signal).then(places => {
-      if (active) setAmenitiesState({ routeId: route.id, places, status: 'ready' })
+    void Promise.allSettled([fetchRouteAmenities(routedPath, controller.signal), fetchSeoulToiletsAlongRoute(routedPath, controller.signal)]).then(results => {
+      const [osm, seoul] = results
+      const places = [
+        ...(osm.status === 'fulfilled' ? osm.value : []),
+        ...(seoul.status === 'fulfilled' ? seoul.value : []),
+      ].filter((place, index, all) => all.findIndex(other => other.kind === place.kind && other.lat === place.lat && other.lng === place.lng) === index)
+      if (active && places.length) setAmenitiesState({ routeId: route.id, places, status: 'ready' })
+      else if (active && osm.status === 'rejected' && seoul.status === 'rejected') setAmenitiesState(current => current?.routeId === route.id ? { ...current, status: 'unavailable' } : current)
+      else if (active) setAmenitiesState({ routeId: route.id, places, status: 'ready' })
     }).catch(() => {
       if (active) setAmenitiesState(current => current?.routeId === route.id ? { ...current, status: 'unavailable' } : current)
     }).finally(() => window.clearTimeout(timeout))
@@ -663,6 +678,17 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       controller.abort()
     }
   }, [route.id, routedPath])
+  useEffect(() => {
+    if (!foodGuideOpen) return
+    const controller = new AbortController()
+    setFoodBlogState({ query: foodBlogQuery, posts: [], status: 'loading' })
+    void searchNaverBlogs(foodBlogQuery, controller.signal).then(posts => {
+      if (!controller.signal.aborted) setFoodBlogState({ query: foodBlogQuery, posts, status: 'ready' })
+    }).catch(() => {
+      if (!controller.signal.aborted) setFoodBlogState({ query: foodBlogQuery, posts: [], status: 'unavailable' })
+    })
+    return () => controller.abort()
+  }, [foodGuideOpen, foodBlogQuery])
   useEffect(() => {
     if (!locationKey || locationLat === null || locationLng === null) {
       setNearbyBikes(null)
@@ -883,6 +909,23 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
+        <div className="tour-mobile-map-top" role="search">
+          <label className="tour-mobile-map-search"><span aria-hidden="true">&#x1F50D;</span><input value={routeSearch} onChange={event => setRouteSearch(event.currentTarget.value)} placeholder={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} aria-label={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} /></label>
+          <nav className="tour-mobile-map-chips" aria-label={text("Map shortcuts", "\uC9C0\uB3C4 \uBC14\uB85C\uAC00\uAE30")}>
+            <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer("course")}><span aria-hidden="true">&#x1F6B2;</span>{text("Bike routes", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</button>
+            <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer("restaurants"); setFoodGuideOpen(true) }}><span aria-hidden="true">&#x1F35C;</span>{text("Food", "\uB9DB\uC9D1")}</button>
+            <button type="button" aria-pressed={activeMapTool === "facilities"} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Toilets", "\uD654\uC7A5\uC2E4")}</button>
+          </nav>
+        </div>
+        <section className="tour-mobile-route-sheet" aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
+          <div className="tour-mobile-sheet-handle" aria-hidden="true"><i /></div>
+          <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
+          <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
+          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => locateNearestRoute(false)} disabled={locating}><span aria-hidden="true">&#x25CE;</span>{text("Nearby bike", "\uB0B4 \uC704\uCE58")}</button></div>
+        </section>
+        {showBikeSplash && <div className="tour-bike-splash" role="status" aria-label={text("Loading bike map", "\uC790\uC804\uAC70 \uC9C0\uB3C4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911")}>
+          <div className="tour-bike-splash-mark"><span aria-hidden="true">&#x1F6B2;</span><i /><i /></div><strong>{text("Seoul by bike", "\uC790\uC804\uAC70\uB85C \uC990\uAE30\uB294 \uC11C\uC6B8")}</strong>
+        </div>}
         <aside className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
           <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={sidebarOpen || activeMapTool === "routes"}
             onClick={() => { if (window.matchMedia("(min-width: 901px)").matches) { setSidebarOpen(open => !open); setActiveMapTool(null) } else setActiveMapTool(current => current === "routes" ? null : "routes") }}>
@@ -1054,33 +1097,24 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
             : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
         </div>}
-        {foodGuideOpen && <aside className="tour-food-guide-panel" id="tour-food-guide-panel" aria-label={text('Food recommendations near the route', '경로 주변 맛집 추천')}>
+        {foodGuideOpen && <aside className="tour-food-guide-panel" id="tour-food-guide-panel" aria-label={text("Food recommendations near the route", "\uACBD\uB85C \uC8FC\uBCC0 \uB9DB\uC9D1 \uCD94\uCC9C")}>
           <div className="tour-food-guide-heading">
-            <span><small>{text('A GOOD BITE ALONG THE WAY', '라이딩 중 잠깐 들르기')}</small><strong>{rideFoodPrompt?.routeId === route.id && route.stops[rideFoodPrompt.stopIndex]
-              ? text(`Near ${route.stops[rideFoodPrompt.stopIndex].place}`, `${route.stops[rideFoodPrompt.stopIndex].placeKo} 근처`)
-              : text('Recommended along your route', '경로 주변 추천 맛집')}</strong></span>
-            <button type="button" aria-label={text('Close recommendations', '추천 닫기')} onClick={() => setFoodGuideOpen(false)}>×</button>
+            <span><small>{text("NAVER BLOG SEARCH", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8 \uAC80\uC0C9")}</small><strong>{foodBlogQuery}</strong></span>
+            <button type="button" aria-label={text("Close recommendations", "\uCD94\uCC9C \uB2EB\uAE30")} onClick={() => setFoodGuideOpen(false)}>&#x00D7;</button>
           </div>
-          {activeRoutePlaces?.status === 'loading' && <p className="tour-food-guide-status">{text('Finding places along the route…', '경로 주변 가게를 찾고 있어요…')}</p>}
-          {activeRoutePlaces?.status === 'unavailable' && <p className="tour-food-guide-status">{text('Food places are temporarily unavailable. Try again shortly.', '맛집 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')}</p>}
-          {activeRoutePlaces?.status === 'ready' && foodRecommendations.length === 0 && <p className="tour-food-guide-status">{text('No listed restaurants were found along this route yet.', '아직 이 경로 주변에 등록된 음식점이 없어요.')}</p>}
-          {activeRoutePlaces?.status === 'ready' && foodRecommendations.length > 0 && <div className="tour-food-guide-list">
-            {foodRecommendations.map(({ place, distance }) => {
-              const query = encodeURIComponent(`${place.name} 서울 맛집`)
-              const photo = FOOD_PHOTOS[place.kind]
-              return <article className="tour-food-card" key={place.id}>
-                <img src={photo} alt={text(`Representative ${place.kind === 'cafe' ? 'cafe' : 'food'} photo`, '가게 대표 사진이 아닌 음식 참고 이미지')} loading="lazy" />
-                <div className="tour-food-card-body"><div><strong>{place.name}</strong><small>{text(`${distanceLabel(distance)} away`, `${distanceLabel(distance)} 거리`)}{place.cuisine ? ` · ${place.cuisine}` : ''}</small></div>
-                  <div className="tour-food-social-links">
-                    <a href={`https://search.naver.com/search.naver?where=blog&query=${query}`} target="_blank" rel="noopener noreferrer">{text('Blog', '블로그')}</a>
-                    <a href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer">Instagram</a>
-                    <a href={`https://www.tiktok.com/search?q=${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer">TikTok</a>
-                  </div>
-                </div>
-              </article>
-            })}
+          {activeFoodBlogState?.status === "loading" && <p className="tour-food-guide-status">{text("Searching Naver blogs...", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8\uB97C \uCC3E\uACE0 \uC788\uC5B4\uC694...")}</p>}
+          {activeFoodBlogState?.status === "unavailable" && <div className="tour-food-guide-status">
+            <p>{text("Blog search is unavailable right now.", "\uBE14\uB85C\uADF8 \uAC80\uC0C9\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC5B4\uC694.")}</p>
+            <a className="tour-map-panel-action" href={"https://search.naver.com/search.naver?where=blog&query=" + encodeURIComponent(foodBlogQuery)} target="_blank" rel="noopener noreferrer">{text("Search Naver blogs", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8\uC5D0\uC11C \uAC80\uC0C9")}</a>
           </div>}
-          <p className="tour-food-guide-disclaimer">{text('Photos are representative menu inspiration. Social links open public search results.', '사진은 메뉴 참고용 이미지이며, 블로그·SNS 버튼은 공개 검색 결과로 이동합니다.')}</p>
+          {activeFoodBlogState?.status === "ready" && activeFoodBlogState.posts.length === 0 && <p className="tour-food-guide-status">{text("No blog posts were found for this area.", "\uC774 \uC8FC\uBCC0\uC758 \uBE14\uB85C\uADF8 \uAE00\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC5B4\uC694.")}</p>}
+          {activeFoodBlogState?.status === "ready" && activeFoodBlogState.posts.length > 0 && <div className="tour-food-guide-list">
+            {activeFoodBlogState.posts.map(post => <a className="tour-food-blog-card" key={post.link} href={post.link} target="_blank" rel="noopener noreferrer">
+              <strong>{post.title.replace(/<\/?b>/gi, "")}</strong>
+              <p>{post.description.replace(/<\/?b>/gi, "")}</p>
+              <small>{post.bloggerName || "Naver Blog"}{post.postDate ? " - " + post.postDate.slice(0, 4) + "-" + post.postDate.slice(4, 6) + "-" + post.postDate.slice(6, 8) : ""}</small>
+            </a>)}
+          </div>}
         </aside>}
         {view !== 'kakao' && <div className={`tour-map-rotate-controls${view === 'city' || view === 'google' ? ' tour-map-rotate-controls--tilt' : ''}`} role="group" aria-label={text('Map camera controls', '지도 방향 조작')}>
           <button type="button" className="tour-map-arrow--up" onClick={() => rotateMap('up')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera up', '카메라 시점을 올리기') : text('Move map north', '지도를 북쪽으로 이동')} title={view === 'city' ? text('Look up to the sky', '하늘 보기') : undefined}>↑</button>
@@ -1099,14 +1133,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             </> : <div className="tour-scenery-placeholder">{text('No nearby public photo is available for this stop.', '이 경유지 주변에서 사용할 수 있는 공개 사진을 찾지 못했습니다.')}</div>}
         </aside>}
       </div>
-      <details className="tour-earth-actions">
-        <summary>{text("Share and export", "\uACF5\uC720\u00B7\uB0B4\uBCF4\uB0B4\uAE30")}</summary>
-        <div className="tour-earth-action-list">
-          <a className="button button--primary" href={googleEarthUrl(route, selectedStop ?? 0)} target="_blank" rel="noopener noreferrer">{text("Open in Google Earth \u2197", "Google Earth\uC5D0\uC11C \uBCF4\uAE30 \u2197")}</a>
-          <button type="button" className="button button--ghost" onClick={() => downloadEarthRoute(route, locale)}>{text("Download route for Earth", "Earth\uC6A9 \uCF54\uC2A4 \uBC1B\uAE30")}</button>
-          <button type="button" className="tour-show-all" onClick={() => selectStop(null)}>{text("Show all stops", "\uC804\uCCB4 \uACBD\uC720\uC9C0 \uBCF4\uAE30")}</button>
-        </div>
-      </details>
       <details className="tour-map-details">
         <summary>{text('Map and route information', '지도 및 코스 안내')}</summary>
         <div>

@@ -2960,7 +2960,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-map-side-panel { position: fixed; z-index: 1350; inset: auto .6rem .6rem; width: auto; max-height: 72vh; border-radius: 14px; }
 }
 
-/* Grouped map controls and a compact, unclipped export menu. */
+/* Grouped map controls for mobile. */
 .tour-screen .tour-map-stage { position: relative; }
 .tour-screen .tour-map-control-rail { position: absolute; z-index: 1305; top: .5rem; right: auto; bottom: .5rem; left: .5rem; width: clamp(174px, 38vw, 220px); max-height: none; height: auto; transform: none; display: flex; flex-direction: column; align-items: stretch; gap: .5rem; padding: .65rem; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #315b44; border-radius: 14px; background: #123b2cf2; box-shadow: 0 8px 28px #10251c55; scrollbar-width: thin; scrollbar-color: #6d9476 transparent; }
 .tour-screen .tour-map-rail-sidebar-toggle, .tour-screen .tour-map-rail-group button, .tour-screen .tour-map-quick-filters button { width: 100%; min-width: 0; min-height: 38px; display: flex; align-items: center; justify-content: flex-start; gap: .7rem; padding: .45rem .6rem; border: 1px solid #315b44; border-radius: 9px; color: #e8f0e7; background: #1a4632; font: 750 .76rem/1.25 "Noto Sans KR", sans-serif; text-align: left; cursor: pointer; }
@@ -3000,3 +3000,143 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-earth-actions > summary { min-height: 38px; padding: .45rem .65rem; font-size: .68rem; }
   .tour-screen .tour-map-side-panel { left: calc(clamp(158px, 42vw, 190px) + .8rem); right: .5rem; width: auto; }
 }
+
+.tour-food-blog-card { min-width: 0; display: grid; gap: .42rem; padding: .72rem; border: 1px solid #e3e6d9; border-radius: 11px; color: inherit; background: #fff; text-decoration: none; }
+.tour-food-blog-card:hover, .tour-food-blog-card:focus-visible { border-color: #79a77e; box-shadow: 0 3px 12px #183a2815; }
+.tour-food-blog-card strong { color: #263c2f; font-size: .76rem; line-height: 1.45; }
+.tour-food-blog-card p { display: -webkit-box; overflow: hidden; margin: 0; color: #657268; font-size: .66rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.tour-food-blog-card small { color: #788174; font-size: .59rem; }
+.tour-screen--dark .tour-food-blog-card { border-color: #3e5146; color: #edf4e8; background: #21332a; }
+.tour-screen--dark .tour-food-blog-card strong { color: #edf4e8; }
+.tour-screen--dark .tour-food-blog-card p, .tour-screen--dark .tour-food-blog-card small { color: #b4c1af; }
+
+.tour-mobile-map-top, .tour-mobile-route-sheet, .tour-bike-splash { display: none; }
+@media (max-width: 700px) {
+  .tour-screen .tour-earth-preview { min-height: 0 !important; }
+  .tour-screen .tour-earth-preview > .tour-ride-toolbar,
+  .tour-screen .tour-earth-preview > .tour-route-summary,
+  .tour-screen .tour-earth-preview > .tour-map-quick-guide { display: none; }
+  .tour-screen .tour-map-stage {
+    position: relative;
+    height: calc(100dvh - 60px) !important;
+    min-height: 500px;
+    display: block;
+    flex: none;
+    overflow: hidden;
+    background: #e8ebdf;
+  }
+  .tour-screen .tour-map-stage > .tour-maplibre-3d,
+  .tour-screen .tour-map-stage > .google-route-3d,
+  .tour-screen .tour-map-stage > .kakao-route-map {
+    position: absolute !important;
+    inset: 0;
+    width: 100%;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  .tour-screen .tour-map-control-rail { display: none; }
+  .tour-screen .tour-mobile-map-top {
+    position: absolute;
+    z-index: 1400;
+    top: max(.65rem, env(safe-area-inset-top));
+    right: .7rem;
+    left: .7rem;
+    display: grid;
+    gap: .55rem;
+    pointer-events: none;
+  }
+  .tour-screen .tour-mobile-map-search {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: 0 .85rem;
+    border: 1px solid #e2e6e1;
+    border-radius: 14px;
+    color: #174632;
+    background: #fffffff5;
+    box-shadow: 0 3px 14px #1a2b2040;
+    pointer-events: auto;
+  }
+  .tour-screen .tour-mobile-map-search > span { font-size: 1rem; }
+  .tour-screen .tour-mobile-map-search input { width: 100%; min-width: 0; border: 0; outline: 0; color: #26352d; background: transparent; font: 650 .87rem "Noto Sans KR", sans-serif; }
+  .tour-screen .tour-mobile-map-search input::placeholder { color: #79827b; }
+  .tour-screen .tour-mobile-map-chips { display: flex; gap: .45rem; overflow-x: auto; scrollbar-width: none; pointer-events: auto; }
+  .tour-screen .tour-mobile-map-chips::-webkit-scrollbar { display: none; }
+  .tour-screen .tour-mobile-map-chips button {
+    min-height: 36px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .68rem;
+    border: 1px solid #d9e1dc;
+    border-radius: 999px;
+    color: #293b31;
+    background: #fffffff2;
+    box-shadow: 0 2px 8px #14251b2e;
+    font: 750 .7rem "Noto Sans KR", sans-serif;
+  }
+  .tour-screen .tour-mobile-map-chips button[aria-pressed="true"] { border-color: #1779dc; color: #fff; background: #1779dc; }
+  .tour-screen .tour-mobile-route-sheet {
+    position: absolute;
+    z-index: 1390;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    gap: .7rem;
+    padding: .35rem .9rem calc(.8rem + env(safe-area-inset-bottom));
+    border-radius: 18px 18px 0 0;
+    color: #26332c;
+    background: #fffffff4;
+    box-shadow: 0 -5px 24px #17231d33;
+    backdrop-filter: blur(15px);
+  }
+  .tour-screen .tour-mobile-sheet-handle { display: flex; justify-content: center; padding: .1rem 0 .2rem; }
+  .tour-screen .tour-mobile-sheet-handle i { width: 38px; height: 4px; border-radius: 99px; background: #aeb6b0; }
+  .tour-screen .tour-mobile-sheet-title { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
+  .tour-screen .tour-mobile-sheet-title > span { min-width: 0; display: grid; gap: .13rem; }
+  .tour-screen .tour-mobile-sheet-title small { color: #78857b; font-size: .57rem; font-weight: 850; letter-spacing: .08em; }
+  .tour-screen .tour-mobile-sheet-title strong { overflow: hidden; font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
+  .tour-screen .tour-mobile-sheet-title button { min-height: 34px; padding: .4rem .65rem; border: 0; border-radius: 8px; color: #1672d0; background: #edf5ff; font: 800 .7rem "Noto Sans KR", sans-serif; }
+  .tour-screen .tour-mobile-sheet-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: .55rem 0; border-top: 1px solid #ecefeb; border-bottom: 1px solid #ecefeb; }
+  .tour-screen .tour-mobile-sheet-metrics span { display: grid; gap: .12rem; padding-left: .65rem; border-left: 1px solid #edf0ed; }
+  .tour-screen .tour-mobile-sheet-metrics span:first-child { padding-left: 0; border: 0; }
+  .tour-screen .tour-mobile-sheet-metrics b { font-size: .77rem; }
+  .tour-screen .tour-mobile-sheet-metrics small { color: #778178; font-size: .59rem; }
+  .tour-screen .tour-mobile-sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .tour-screen .tour-mobile-sheet-actions button { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: .42rem; border: 1px solid #dce6de; border-radius: 10px; color: #24523a; background: #f7faf6; font: 800 .7rem "Noto Sans KR", sans-serif; }
+  .tour-screen .tour-map-stage > .tour-map-locate { right: .8rem; bottom: 14rem; }
+  .tour-screen .tour-map-side-panel { position: absolute; z-index: 1450; inset: auto .5rem 11.8rem; width: auto; max-height: min(54vh, 440px); border-radius: 14px; }
+  .tour-screen .tour-map-stage > .tour-food-guide-panel { z-index: 1450; right: .5rem; bottom: 11.8rem; left: .5rem; width: auto; max-height: min(52vh, 430px); transform: none; }
+  .tour-screen .tour-bike-splash {
+    position: absolute;
+    z-index: 2000;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: #f6fbf4;
+    background: #102c22;
+    animation: tour-bike-splash-out .35s ease 1.08s forwards;
+  }
+  .tour-screen .tour-bike-splash > strong { opacity: 0; font-size: .82rem; letter-spacing: .04em; animation: tour-bike-title-in .35s ease .5s forwards; }
+  .tour-bike-splash-mark { position: relative; width: 76px; height: 76px; display: grid; place-items: center; border: 2px solid #bde8b2; border-radius: 50%; background: linear-gradient(145deg, #178b68, #146044); box-shadow: 0 0 0 9px #bde8b222, 0 10px 30px #061b13aa; animation: tour-bike-mark-pop .55s cubic-bezier(.2,.85,.25,1.2) both; }
+  .tour-bike-splash-mark > span { z-index: 1; font-size: 2.05rem; animation: tour-bike-ride 1s ease-in-out .3s both; }
+  .tour-bike-splash-mark > i { position: absolute; top: 50%; left: 100%; width: 0; height: 2px; background: #bde8b2; animation: tour-bike-trail .48s ease .4s both; }
+  .tour-bike-splash-mark > i:last-child { top: calc(50% + 7px); animation-delay: .52s; }
+  .tour-screen--dark .tour-mobile-route-sheet { color: #e7eee6; border-color: #405249; background: #1d2b28f5; }
+  .tour-screen--dark .tour-mobile-sheet-metrics { border-color: #394c42; }
+  .tour-screen--dark .tour-mobile-sheet-metrics span { border-color: #394c42; }
+  .tour-screen--dark .tour-mobile-sheet-metrics small { color: #afbeb1; }
+  .tour-screen--dark .tour-mobile-sheet-actions button { color: #e4eee4; border-color: #42574c; background: #26382e; }
+  .tour-screen--dark .tour-mobile-map-search, .tour-screen--dark .tour-mobile-map-chips button { color: #e9f0e8; border-color: #43564a; background: #1d2b28f5; }
+}
+@keyframes tour-bike-mark-pop { from { opacity: 0; transform: scale(.35) rotate(-18deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes tour-bike-ride { 0% { transform: translateX(-28px) rotate(-10deg); } 55% { transform: translateX(0) rotate(5deg); } 100% { transform: translateX(0) rotate(0); } }
+@keyframes tour-bike-trail { from { width: 0; opacity: .1; } to { width: 34px; opacity: .8; } }
+@keyframes tour-bike-title-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tour-bike-splash-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
