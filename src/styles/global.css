@@ -2649,3 +2649,24 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-map-stage > .tour-food-guide-panel { left: 4.7rem; top: auto; bottom: 1rem; width: min(350px, calc(100% - 5.2rem)); transform: none; }
   .tour-roadview-caption { top: .45rem; left: .45rem; font-size: .63rem; }
 }
+
+/* Keep route distance/time at the leading edge on desktop and mobile. */
+.tour-route-summary { justify-content: flex-start; gap: 1.1rem; }
+.tour-route-summary-metrics { order: -1; flex: 0 0 auto; gap: .45rem; }
+.tour-route-summary-metrics > span { min-width: 96px; }
+.tour-route-summary-stops { flex: 1 1 auto; }
+@media (max-width: 700px) {
+  .tour-route-summary { align-items: stretch; gap: .45rem; padding: .62rem .75rem; }
+  .tour-route-summary-metrics { width: 100%; flex-wrap: wrap; gap: .4rem; }
+  .tour-route-summary-metrics > span { min-width: 104px; padding: .18rem .5rem; }
+  .tour-route-summary-metrics small { font-size: .56rem; }
+  .tour-route-summary-metrics strong { font-size: .88rem; }
+  .tour-route-summary-stops { min-height: 30px; flex-wrap: wrap; }
+}
+@media (max-width: 400px) {
+  .tour-topbar { padding-right: .45rem; padding-left: .45rem; }
+  .tour-brand { gap: .32rem; font-size: .6rem; }
+  .tour-brand img { width: 29px; height: 29px; }
+  .tour-header-actions { gap: .14rem; }
+  .tour-theme-button, .tour-language-button, .tour-back { padding: .28rem .3rem; font-size: .48rem; }
+}
