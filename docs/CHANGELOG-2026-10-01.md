@@ -28,3 +28,6 @@ Chrome 모바일 에뮬레이션에서 화면 크기 393×852 CSS 픽셀, 기기
 
 GitHub Pages: https://hayul090615.github.io/bicycle/  
 배포는 저장소 main 브랜치에 푸시한 뒤 GitHub Actions Pages 빌드와 배포가 성공했는지 확인합니다.
+
+
+Deployment verification: UI code commit 6fbbf5a was published successfully by GitHub Pages workflow 36807511000 on 2026-10-01; the public page returned HTTP 200.
