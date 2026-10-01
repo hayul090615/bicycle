@@ -2705,3 +2705,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-sidebar-toggle:hover { background: var(--tour-forest-900); }
 .tour-screen--dark .tour-map-quick-filters button[aria-pressed='true'], .tour-screen--dark .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'], .tour-screen--dark .tour-map-control-rail .tour-roadview-toggle[aria-pressed='true'], .tour-screen--dark .tour-map-rail-sidebar-toggle[aria-expanded='true'], .tour-screen--dark .tour-map-settings-button[aria-expanded='true'], .tour-screen--dark .tour-map-view-options button[aria-pressed='true'], .tour-screen--dark .tour-rental-duration button[aria-pressed='true'], .tour-screen--dark .tour-sidebar-toggle { border-color: #49835e; color: #f3f7ef; background: #286344; }
 .tour-screen--dark .tour-map-quick-filters button[aria-pressed='true'] > span, .tour-screen--dark .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span, .tour-screen--dark .tour-map-control-rail .tour-roadview-toggle[aria-pressed='true'] > span, .tour-screen--dark .tour-map-settings-button[aria-expanded='true'] > span { color: #f3f7ef; }
+
+/* Use the full area below the app header for the map itself. */
+.tour-screen .tour-ride-toolbar,
+.tour-screen .tour-route-summary { display: none !important; }
