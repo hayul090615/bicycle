@@ -35,27 +35,7 @@ export interface TouristRoute {
 // Stops are matched to the city's June 2026 station snapshot. Lines between them
 // are a sightseeing preview, not turn-by-turn bicycle directions.
 export const touristRoutes: TouristRoute[] = [
-  {
-    id: 'yeouido',
-    category: 'sightseeing',
-    mostlyFlat: true,
-    title: 'Yeouido river & park',
-    titleKo: '여의도 한강·공원 코스',
-    area: 'Easy city ride',
-    discovery: 'Leave the river path for a park pause, then finish near the National Assembly.',
-    discoveryKo: '강변을 달리다 공원에서 쉬고, 국회의사당 근처까지 이어가요.',
-    areaKo: '도심 산책형',
-    summary: 'Start by the Hangang, pause in Yeouido Park, and finish near the National Assembly.',
-    summaryKo: '한강에서 출발해 여의도공원에 들르고 국회의사당 근처에서 마무리합니다.',
-    suggestedTime: '60–90 min with stops',
-    suggestedTimeKo: '관광 포함 60~90분',
-    source: 'https://english.visitseoul.net/tours/Explore-Seoul-on-a-Seoul-Bike/18469',
-    stops: [
-      { place: 'Yeouinaru & Hangang Park', placeKo: '여의나루·한강공원', detail: 'Pick up a bike near the riverside entrance.', detailKo: '한강공원 입구 가까운 대여소에서 출발하세요.', stationId: '5890' },
-      { place: 'Yeouido Park', placeKo: '여의도공원', detail: 'Park the bike before exploring the footpaths.', detailKo: '공원 산책로를 둘러볼 때는 대여소에 반납하세요.', stationId: '5853' },
-      { place: 'National Assembly area', placeKo: '국회의사당 일대', detail: 'Finish by the National Assembly subway stop.', detailKo: '국회의사당역 근처 대여소에서 마무리합니다.', stationId: '203' },
-    ],
-  },
+
   {
     id: 'seoul-forest',
     category: 'sightseeing',

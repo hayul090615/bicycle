@@ -3011,6 +3011,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-food-blog-card p, .tour-screen--dark .tour-food-blog-card small { color: #b4c1af; }
 
 .tour-mobile-map-top, .tour-mobile-route-sheet, .tour-bike-splash { display: none; }
+.tour-screen .tour-bike-splash { position: fixed; z-index: 5000; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #f6fbf4; background: #102c22; animation: tour-bike-splash-out .35s ease 1.08s forwards; }
+.tour-screen .tour-mobile-destination { display: grid; gap: .3rem; color: #536159; font-size: .65rem; font-weight: 800; }
+.tour-screen .tour-mobile-destination select { width: 100%; min-height: 39px; padding: .4rem .65rem; border: 1px solid #dce6de; border-radius: 9px; color: #26332c; background: #fff; font: 750 .72rem "Noto Sans KR", sans-serif; }
 @media (max-width: 700px) {
   .tour-screen .tour-earth-preview { min-height: 0 !important; }
   .tour-screen .tour-earth-preview > .tour-ride-toolbar,
@@ -3111,17 +3114,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-map-side-panel { position: absolute; z-index: 1450; inset: auto .5rem 11.8rem; width: auto; max-height: min(54vh, 440px); border-radius: 14px; }
   .tour-screen .tour-map-stage > .tour-food-guide-panel { z-index: 1450; right: .5rem; bottom: 11.8rem; left: .5rem; width: auto; max-height: min(52vh, 430px); transform: none; }
   .tour-screen .tour-bike-splash {
-    position: absolute;
+    position: fixed;
     z-index: 2000;
     inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    color: #f6fbf4;
-    background: #102c22;
-    animation: tour-bike-splash-out .35s ease 1.08s forwards;
   }
   .tour-screen .tour-bike-splash > strong { opacity: 0; font-size: .82rem; letter-spacing: .04em; animation: tour-bike-title-in .35s ease .5s forwards; }
   .tour-bike-splash-mark { position: relative; width: 76px; height: 76px; display: grid; place-items: center; border: 2px solid #bde8b2; border-radius: 50%; background: linear-gradient(145deg, #178b68, #146044); box-shadow: 0 0 0 9px #bde8b222, 0 10px 30px #061b13aa; animation: tour-bike-mark-pop .55s cubic-bezier(.2,.85,.25,1.2) both; }
@@ -3133,6 +3128,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen--dark .tour-mobile-sheet-metrics span { border-color: #394c42; }
   .tour-screen--dark .tour-mobile-sheet-metrics small { color: #afbeb1; }
   .tour-screen--dark .tour-mobile-sheet-actions button { color: #e4eee4; border-color: #42574c; background: #26382e; }
+  .tour-screen--dark .tour-mobile-destination { color: #bdcabe; }
+  .tour-screen--dark .tour-mobile-destination select { color: #e7eee6; border-color: #42574c; background: #26382e; }
   .tour-screen--dark .tour-mobile-map-search, .tour-screen--dark .tour-mobile-map-chips button { color: #e9f0e8; border-color: #43564a; background: #1d2b28f5; }
 }
 @keyframes tour-bike-mark-pop { from { opacity: 0; transform: scale(.35) rotate(-18deg); } to { opacity: 1; transform: scale(1) rotate(0); } }

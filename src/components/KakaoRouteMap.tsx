@@ -1,51 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
+import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoOverlay } from '../services/kakaoMaps'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import { createRouteMotion } from '../services/routeMotion'
-import { createRouteTreeMarker } from './routeTreeMarker'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
-import { offsetRouteSample, sampleRouteAtIntervals } from '../utils/routeMapSamples'
+import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
 
 type MapPoint = { lat: number; lng: number }
-
-function routeSamples(path: MapPoint[], spacing: number, offsetMeters: number) {
-  if (path.length < 2) return []
-  const segmentLengths = path.slice(1).map((point, index) => {
-    const previous = path[index]
-    const meanLatitude = (point.lat + previous.lat) / 2 * Math.PI / 180
-    return Math.hypot((point.lng - previous.lng) * 111_000 * Math.cos(meanLatitude), (point.lat - previous.lat) * 111_000)
-  })
-  const total = segmentLengths.reduce((sum, value) => sum + value, 0)
-  const samples: MapPoint[] = []
-  let segmentIndex = 0
-  let segmentStart = 0
-  for (let distance = spacing * .55; distance < total; distance += spacing) {
-    while (segmentIndex < segmentLengths.length - 1 && segmentStart + segmentLengths[segmentIndex] < distance) {
-      segmentStart += segmentLengths[segmentIndex]
-      segmentIndex += 1
-    }
-    const segmentLength = segmentLengths[segmentIndex]
-    if (!segmentLength) continue
-    const from = path[segmentIndex]
-    const to = path[segmentIndex + 1]
-    const ratio = Math.max(0, Math.min(1, (distance - segmentStart) / segmentLength))
-    const meanLatitude = (from.lat + to.lat) / 2 * Math.PI / 180
-    const east = (to.lng - from.lng) * 111_000 * Math.cos(meanLatitude)
-    const north = (to.lat - from.lat) * 111_000
-    const bearing = (Math.atan2(east, north) * 180 / Math.PI + 360) % 360
-    const side = samples.length % 2 === 0 ? 1 : -1
-    const sideRadians = (bearing + 90 * side) * Math.PI / 180
-    const lat = from.lat + (north * ratio + Math.cos(sideRadians) * offsetMeters) / 111_000
-    const lng = from.lng + (east * ratio + Math.sin(sideRadians) * offsetMeters) / (111_000 * Math.max(.2, Math.cos(meanLatitude)))
-    samples.push({ lat, lng })
-  }
-  return samples
-}
 
 function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
   const popup = document.createElement('div')
@@ -77,7 +42,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFocusTree, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
@@ -88,7 +53,6 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   showAmenities: boolean
   bikeStations: NearbyBikeStation[]
   showBikeStations: boolean
-  season: TourSeason
   showRiders: boolean
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
@@ -103,7 +67,6 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   selectedStop: number | null
   onSelectStop: (index: number) => void
   onHoverStop: (index: number | null) => void
-  onFocusTree: (point: LonLat) => void
   onFoodGuideOpen: (point: LonLat) => void
   showRoadview: boolean
   onCloseRoadview: () => void
@@ -168,6 +131,22 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
         mapTypeId: api.MapTypeId.ROADMAP,
         draggable: true,
         scrollwheel: true,
+      })
+      let correctingCenter = false
+      api.addListener(map, 'center_changed', () => {
+        if (correctingCenter) return
+        const bounds = map.getBounds()
+        const southwest = bounds.getSouthWest()
+        const northeast = bounds.getNorthEast()
+        const centerLat = (southwest.getLat() + northeast.getLat()) / 2
+        const centerLng = (southwest.getLng() + northeast.getLng()) / 2
+        const lat = Math.max(37.40, Math.min(37.72, centerLat))
+        const lng = Math.max(126.75, Math.min(127.19, centerLng))
+        if (lat !== centerLat || lng !== centerLng) {
+          correctingCenter = true
+          map.setCenter(new api.LatLng(lat, lng))
+          window.setTimeout(() => { correctingCenter = false }, 0)
+        }
       })
       map.addControl(new api.MapTypeControl(), api.ControlPosition.TOPRIGHT)
       map.addControl(new api.ZoomControl(), api.ControlPosition.RIGHT)
@@ -335,25 +314,12 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
     const routeCoordinates = path.map(point => [point.lng, point.lat] as LonLat)
     const sampledRoute = sampleRouteAtIntervals(routeCoordinates, 100)
-    const treeSamples = sampleRouteAtIntervals(routeCoordinates, 260).map(({ point, bearing }, index) => {
-      const offset = offsetRouteSample(point, bearing, 10, index % 2 === 0 ? 1 : -1)
-      return { lat: offset[1], lng: offset[0] }
-    })
-    const treeElements: HTMLButtonElement[] = []
     const riderOverlays: Array<{ overlay: KakaoOverlay; phase: number; person: HTMLElement }> = []
     let riderFrame = 0
-    treeSamples.forEach((point, index) => {
-      const tree = createRouteTreeMarker(season, locale, index, () => onFocusTree([point.lng, point.lat]))
-      treeElements.push(tree)
-      sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point.lat, point.lng), content: tree, xAnchor: .5, yAnchor: 1, zIndex: 3 }))
-    })
     sampledRoute.forEach(({ point }, index) => {
       const guide = createFoodGuideMarker(locale, index, () => onFoodGuideOpen(point))
       sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point[1], point[0]), content: guide, xAnchor: .5, yAnchor: 1, zIndex: 7 }))
     })
-    const updateLeafMotion = () => treeElements.forEach(tree => tree.classList.toggle('is-close-view', map.getLevel() <= 4))
-    api.addListener(map, 'zoom_changed', updateLeafMotion)
-    updateLeafMotion()
     if (showRiders) {
       const lonLatPath = path.map(point => [point.lng, point.lat] as LonLat)
       const motion = createRouteMotion(lonLatPath)
@@ -389,11 +355,10 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     }
     return () => {
       window.cancelAnimationFrame(riderFrame)
-      api.removeListener(map, 'zoom_changed', updateLeafMotion)
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []
     }
-  }, [locale, onFocusTree, onFoodGuideOpen, points, routePath, season, showCourse, showRiders, status])
+  }, [locale, onFoodGuideOpen, points, routePath, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current

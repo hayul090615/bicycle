@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
+import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
 import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { createRouteTreeMarker } from './routeTreeMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
 
@@ -39,11 +38,10 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
-export function GoogleRoute3D({ route, routePath, accessPath, season, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
+export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   accessPath: LonLat[] | null
-  season: TourSeason
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
@@ -111,7 +109,8 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
     window.addEventListener('seoul-google-maps-error', fail)
     void loadGoogleMaps3D().then(library => {
       if (disposed || failed || !host.current) return
-      map = new library.Map3DElement({ ...cameraRef.current, mode: library.MapMode.HYBRID, gestureHandling: 'COOPERATIVE', description: locale === 'ko' ? route.titleKo : route.title })
+      const mapOptions = { ...cameraRef.current, mode: library.MapMode.HYBRID, gestureHandling: 'COOPERATIVE', bounds: { south: 37.40, west: 126.75, north: 37.72, east: 127.19 }, description: locale === 'ko' ? route.titleKo : route.title }
+      map = new library.Map3DElement(mapOptions)
       map.style.width = '100%'
       map.style.height = '100%'
       map.style.display = 'block'
@@ -185,25 +184,6 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
       ? routePath
       : linePoints.map(point => [point.lng, point.lat] as LonLat)
     if (showCourse && sceneryPath.length >= 2) {
-      const treePositions = sampleRouteAtIntervals(sceneryPath, 260)
-      treeMarkersRef.current = treePositions.map(({ point: [lng, lat] }, index) => {
-        const marker = new library.Marker3DElement({
-          position: { lat, lng },
-          title: locale === 'ko' ? '가을 길의 나무와 떨어지는 잎' : 'Trees and falling leaves along the autumn route',
-          altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
-        })
-        marker.classList.add('tour-tree-marker')
-        const icon = createRouteTreeMarker(season, locale, index, () => {
-          map.flyCameraTo({ endCamera: { center: { lat, lng, altitude: 30 }, range: 1300, tilt: 38, heading: map.heading }, durationMillis: 650 })
-        })
-        icon.classList.add('tour-google-tree-icon')
-        const template = document.createElement('template')
-        template.content.append(icon)
-        marker.append(template)
-        marker.style.display = map.range <= 65000 ? '' : 'none'
-        map.append(marker)
-        return marker
-      })
       foodGuideMarkersRef.current = sampleRouteAtIntervals(sceneryPath, 100).map(({ point: [lng, lat] }, index) => {
         const marker = new library.Marker3DElement({
           position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
@@ -274,7 +254,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, season, routeCondi
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
     }
-  }, [linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, points, route, routePath, season, showCourse, showRiders, status])
+  }, [linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, points, route, routePath, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current
