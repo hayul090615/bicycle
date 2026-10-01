@@ -2,8 +2,7 @@
   "services": {
     "seoul-ttareungi-typing": {
       "root": ".",
-      "framework": "vite",
-      "buildCommand": "npm ci && npm run build"
+      "framework": "vite"
     },
     "seoul-bike-api": {
       "root": "api/",

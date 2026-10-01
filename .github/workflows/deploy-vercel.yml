@@ -31,22 +31,16 @@ jobs:
             exit 1
           fi
 
-      - name: Build static site
+      - name: Link Vercel project
         run: |
-          npm ci
-          npm run build
-          mkdir -p .vercel/output/static
-          cp -R dist/. .vercel/output/static/
           node -e 'require("node:fs").mkdirSync(".vercel", { recursive: true }); require("node:fs").writeFileSync(".vercel/project.json", JSON.stringify({ projectId: process.env.VERCEL_PROJECT_ID, orgId: process.env.VERCEL_ORG_ID }))'
-          cat > .vercel/output/config.json <<'EOF'
-          {
-            "version": 3,
-            "routes": [
-              { "handle": "filesystem" },
-              { "src": "/(.*)", "dest": "/index.html" }
-            ]
-          }
-          EOF
+
+      - name: Build Vercel services
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN1 }}
+        run: |
+          npx --yes vercel@60.1.3 pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@60.1.3 build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy production artifacts
         env:
