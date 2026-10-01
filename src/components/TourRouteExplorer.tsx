@@ -259,7 +259,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [walkingRoute, setWalkingRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [nearbyBikes, setNearbyBikes] = useState<{ key: string; stations: NearbyBikeStation[]; updatedAt: string | null; status: 'loading' | 'live' | 'unavailable' } | null>(null)
   const [selectedBikeStationId, setSelectedBikeStationId] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 901px)').matches)
   const [flatOnly, setFlatOnly] = useState(false)
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
   const [showShadows, setShowShadows] = useState(true)
@@ -885,8 +885,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} treeFocusRequest={treeFocusRequest} onFocusTree={focusTree} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <aside className="tour-map-control-rail" aria-label={text('Map controls', '지도 도구')}>
-          <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={activeMapTool === 'routes'}
-            onClick={() => setActiveMapTool(current => current === 'routes' ? null : 'routes')}><span aria-hidden="true">☷</span>{text('Routes', '코스 목록')}</button>
+          <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={sidebarOpen || activeMapTool === 'routes'}
+            onClick={() => { if (window.matchMedia('(min-width: 901px)').matches) { setSidebarOpen(open => !open); setActiveMapTool(null) } else setActiveMapTool(current => current === 'routes' ? null : 'routes') }}><span aria-hidden="true">☷</span>{text('Routes', '코스 목록')}</button>
           <nav className="tour-map-quick-filters" aria-label={text('Quick map layers', '빠른 지도 필터')}>
             <button type="button" aria-pressed={showCourse} onClick={() => { toggleMapLayer('course'); setActiveMapTool('course') }}><span aria-hidden="true">⌁</span>{text('Route', '코스')}</button>
             <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer('restaurants'); setActiveMapTool('food') }}><span aria-hidden="true">♨</span>{text('Food', '맛집')}</button>
