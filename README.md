@@ -313,3 +313,7 @@ seoul-typing-bike-high-score
 
 + Moved the route elevation profile and cumulative climb into the left route list panel.
 + Enabled mouse-wheel zoom on the base map.
+
+## Left-side map controls (2026-10-01)
+
++ Moved the map control rail to the left edge of the map on desktop and narrow screens.

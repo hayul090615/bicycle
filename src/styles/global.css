@@ -2715,8 +2715,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-explorer-grid { grid-template-columns: minmax(340px, min(26vw, 490px)) minmax(0, 1fr); }
   .tour-screen .tour-itinerary { position: relative; top: auto; right: auto; bottom: auto; left: auto; width: auto; height: 100%; grid-column: 1; grid-row: 1; border-right: 1px solid #d9ddd8; border-left: 0; box-shadow: none; }
   .tour-screen .tour-earth-preview { grid-column: 2; grid-row: 1; }
-  .tour-screen .tour-map-control-rail { right: .65rem; left: auto; }
-  .tour-screen .tour-map-side-panel { right: 5.65rem; left: auto; }
+  .tour-screen .tour-map-control-rail { right: auto; left: .65rem; }
+  .tour-screen .tour-map-side-panel { right: auto; left: 5.65rem; }
   .tour-screen .tour-elevation-card { right: 5.7rem; }
 }
 
@@ -2725,3 +2725,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-itinerary > .tour-elevation-card .tour-elevation-heading small { font-size: .59rem; }
 .tour-screen .tour-itinerary > .tour-elevation-card .tour-elevation-heading strong { font-size: .78rem; }
 .tour-screen .tour-itinerary > .tour-elevation-card svg { height: 64px; }
+
+@media (max-width: 900px) {
+  .tour-screen .tour-map-control-rail { right: auto; left: max(.45rem, env(safe-area-inset-left)); }
+}
