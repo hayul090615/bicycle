@@ -591,7 +591,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       void Promise.allSettled(anchors.map(([lng, lat]) => fetchNearbyBikeStations({ lat, lng }, controller.signal))).then(results => {
         if (!active) return
         const successful = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : [])
-        if (!successful.length) { setCourseBikeStationsState({ routeId: route.id, stations: [], updatedAt: null, status: 'unavailable' }); return }
+        if (!successful.length) {
+          const snapshotStations = anchors.flatMap(([lng, lat]) => nearestSnapshotStations({ lat, lng }))
+            .filter(station => station.distanceMeters <= 1_250)
+          const byId = new Map(snapshotStations.map(station => [station.id, station]))
+          const stations = [...byId.values()].sort((a, b) => a.distanceMeters - b.distanceMeters).slice(0, 14)
+          setCourseBikeStationsState({ routeId: route.id, stations, updatedAt: null, status: 'unavailable' })
+          return
+        }
         const byId = new Map<string, NearbyBikeStation>()
         for (const result of successful) for (const station of result.stations) {
           if (station.distanceMeters > 1_250) continue
@@ -694,7 +701,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         const station = result.stations.filter(item => item.available !== null && item.available > 0).sort((a, b) => a.distanceMeters - b.distanceMeters)[0] ?? null
         setTransferRecommendation({ routeId: route.id, station, status: 'ready' })
       }).catch(() => {
-        if (active) setTransferRecommendation(current => current?.routeId === route.id ? { ...current, status: 'unavailable' } : current)
+        if (active) setTransferRecommendation({ routeId: route.id, station: nearestSnapshotStations({ lat, lng }, 1)[0] ?? null, status: 'unavailable' })
       })
     }
     refresh()
@@ -1001,7 +1008,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                 <div className="tour-rental-duration" role="group" aria-label={text('Rental time limit', '따릉이 이용 시간')}>{([60, 120] as const).map(minutes => <button type="button" key={minutes} aria-pressed={rentalLimitMinutes === minutes} onClick={() => setRentalLimitMinutes(minutes)}>{minutes === 60 ? text('1 hour', '1시간') : text('2 hours', '2시간')}</button>)}</div>
                 {rentalSecondsRemaining !== null && <strong className={`tour-rental-countdown${rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`} role="timer" aria-live="polite">{String(Math.floor(rentalSecondsRemaining / 3600)).padStart(2, '0')}:{String(Math.floor(rentalSecondsRemaining % 3600 / 60)).padStart(2, '0')}:{String(rentalSecondsRemaining % 60).padStart(2, '0')}</strong>}
                 <button type="button" className="tour-map-panel-action" onClick={() => { setRentalNow(Date.now()); setRentalDeadline(current => current === null ? Date.now() + rentalLimitMinutes * 60_000 : null) }}>{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop rental timer', '타이머 종료')}</button>
-                {rentalDeadline !== null && <div className="tour-transfer-recommendation" role="status" aria-live="polite"><small>{text('SUGGESTED RE-RENTAL STOP', '추천 재대여 대여소')}</small>{transferRecommendation?.status === 'loading' ? <strong>{text('Checking live bike availability…', '실시간 잔여 자전거 확인 중…')}</strong> : transferRecommendation?.station ? <><strong>{transferRecommendation.station.name}</strong><span>{transferRecommendation.station.available}{text(' bikes available', '대 대여 가능')} · {distanceLabel(transferRecommendation.station.distanceMeters)} {text('from route', '경로 지점')}</span></> : <strong>{transferRecommendation?.status === 'unavailable' ? text('Live station data could not be reached.', '실시간 대여소 정보를 가져오지 못했습니다.') : text('No available bike station was found near the route point.', '경로 근처에 대여 가능한 대여소를 찾지 못했습니다.')}</strong>}{rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 && <b>{text('Rental time is nearly up. Return and rent again here.', '대여시간이 얼마 남지 않았어요. 이곳에 반납 후 다시 대여하세요.')}</b>}</div>}
+                {rentalDeadline !== null && <div className="tour-transfer-recommendation" role="status" aria-live="polite"><small>{text('SUGGESTED RE-RENTAL STOP', '추천 재대여 대여소')}</small>{transferRecommendation?.status === 'loading' ? <strong>{text('Checking live bike availability…', '실시간 잔여 자전거 확인 중…')}</strong> : transferRecommendation?.station ? <><strong>{transferRecommendation.station.name}</strong><span>{transferRecommendation.station.available === null ? text('Live bike count unavailable', '실시간 잔여 대수 확인 불가') : `${transferRecommendation.station.available}${text(' bikes available', '대 대여 가능')}`} · {distanceLabel(transferRecommendation.station.distanceMeters)} {text('from route', '경로 지점')}</span></> : <strong>{transferRecommendation?.status === 'unavailable' ? text('Live station data could not be reached.', '실시간 대여소 정보를 가져오지 못했습니다.') : text('No available bike station was found near the route point.', '경로 근처에 대여 가능한 대여소를 찾지 못했습니다.')}</strong>}{rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 && <b>{text('Rental time is nearly up. Return and rent again here.', '대여시간이 얼마 남지 않았어요. 이곳에 반납 후 다시 대여하세요.')}</b>}</div>}
               </section>
             </>}
             {activeMapTool === '3d' && <>
