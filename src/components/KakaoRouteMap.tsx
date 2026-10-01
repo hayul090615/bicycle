@@ -602,9 +602,6 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
   }, [locale, status, userLocation])
 
   if (status === 'error') return <div className="kakao-route-map kakao-route-map--error">
-    <p className="tour-earth-notice" role="status">{locale === 'ko'
-      ? <>카카오 지도 인증에 실패해 기본 지도를 표시합니다. 카카오디벨로퍼스의 <strong>앱 → 플랫폼 키 → JavaScript 키 → JavaScript SDK 도메인</strong>에 <code>https://hayul090615.github.io/</code>를 등록하고, <strong>카카오맵 사용 설정을 ON</strong>으로 켜 주세요. GitHub의 <code>VITE_KAKAO_MAP_KEY</code>에는 같은 앱의 JavaScript 키가 들어가야 합니다.</>
-      : <>Kakao Maps authentication failed, so the fallback map is shown. Register <code>https://hayul090615.github.io/</code> under App → Platform keys → JavaScript key → JavaScript SDK domains, turn Kakao Map on, and set the matching app's JavaScript key as GitHub's <code>VITE_KAKAO_MAP_KEY</code>.</>}</p>
     <div className="kakao-route-fallback">{fallback}</div>
   </div>
 

@@ -2729,3 +2729,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 900px) {
   .tour-screen .tour-map-control-rail { right: auto; left: max(.45rem, env(safe-area-inset-left)); }
 }
+
+/* A green edge tab keeps the route list easy to open and collapse. */
+.tour-screen .tour-sidebar-edge-toggle { position: absolute; z-index: 1405; top: 50%; left: calc(max(340px, min(26vw, 490px)) - 14px); width: 28px; height: 64px; display: grid; place-items: center; padding: 0; transform: translateY(-50%); border: 1px solid #4e805f; border-radius: 9px 0 0 9px; color: #f5fbf4; background: #176541; box-shadow: -3px 3px 12px #102b1d42; font: 400 1.8rem/1 'DM Sans', sans-serif; cursor: pointer; }
+.tour-screen .tour-sidebar-edge-toggle:hover, .tour-screen .tour-sidebar-edge-toggle:focus-visible { background: #0d5435; outline: 2px solid #a8d8b4; outline-offset: 2px; }
+.tour-screen .tour-sidebar-edge-toggle[aria-expanded='true'] { border-radius: 9px 0 0 9px; }
+@media (max-width: 900px) {
+  .tour-screen .tour-sidebar-edge-toggle { left: calc(min(390px, 92vw) - 14px); }
+}
+@media (max-width: 600px) {
+  .tour-screen .tour-sidebar-edge-toggle { left: calc(min(380px, 94vw) - 14px); }
+}

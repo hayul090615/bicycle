@@ -1111,6 +1111,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         </div>
       </details>
     </section>
+    <button type="button" className="tour-sidebar-edge-toggle" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
+      aria-label={sidebarOpen ? text('Hide route list', '코스 목록 접기') : text('Show route list', '코스 목록 열기')}
+      onClick={() => { setSidebarOpen(open => !open); setActiveMapTool(null) }}>{sidebarOpen ? '‹' : '›'}</button>
     <aside id="tour-route-sidebar" className="tour-itinerary" aria-label={text('Routes and nearby bikes', '코스와 가까운 따릉이')} hidden={!sidebarOpen}>
       <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => setSidebarOpen(false)} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
       <div className="tour-sidebar-heading">

@@ -317,3 +317,8 @@ seoul-typing-bike-high-score
 ## Left-side map controls (2026-10-01)
 
 + Moved the map control rail to the left edge of the map on desktop and narrow screens.
+
+## Sidebar toggle and map fallback notice (2026-10-01)
+
++ Added a green edge tab at the course panel boundary to open and collapse the route list.
++ Removed the Kakao authorization warning banner while keeping the fallback map available.
