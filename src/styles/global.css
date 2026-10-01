@@ -2798,12 +2798,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 .tour-screen .tour-map-control-rail {
   width: 172px;
+  top: 0;
+  bottom: 0;
+  height: auto;
+  max-height: none;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
+  align-content: space-between;
   align-items: stretch;
   gap: .3rem;
   padding: .42rem;
+  transform: none;
+}
+.tour-screen .tour-map-stage .leaflet-top.leaflet-left {
+  top: .7rem;
+  right: .7rem;
+  left: auto;
 }
 .tour-screen .tour-map-control-rail > .tour-map-rail-sidebar-toggle,
 .tour-screen .tour-map-control-rail > .tour-map-quick-filters,
@@ -2840,4 +2850,67 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 600px) {
   .tour-screen .tour-map-control-rail { width: 142px; }
   .tour-screen .tour-map-control-rail > .tour-map-quick-filters > button { min-height: 40px; font-size: .48rem; }
+}
+
+/* Keep the course panel focused on the route, riding time, climb and useful stops. */
+.tour-screen .tour-sidebar-heading { padding: .75rem .85rem .65rem; }
+.tour-screen .tour-sidebar-heading > .tour-card-kicker,
+.tour-screen .tour-sidebar-heading > p,
+.tour-screen .tour-sidebar-heading > div:not(.tour-bike-time) { display: none; }
+.tour-screen .tour-sidebar-heading h1 { margin: 0 0 .45rem; font-size: 1.12rem; }
+.tour-screen .tour-sidebar-heading > .tour-bike-time { margin-top: 0; padding: .55rem .65rem; }
+.tour-screen .tour-itinerary > .tour-elevation-card { margin: .55rem .7rem; gap: .35rem; padding: .55rem .65rem; }
+.tour-screen .tour-itinerary > .tour-elevation-card svg { height: 48px; }
+.tour-screen .tour-nearby-stations { padding: .65rem .8rem; }
+.tour-screen .tour-nearby-stations > p { margin-top: .3rem; }
+.tour-screen .tour-sidebar-seasons { padding: .65rem .8rem; }
+.tour-screen .tour-sidebar-seasons > strong { margin-bottom: .35rem; }
+.tour-screen .tour-sidebar-seasons button { min-height: 54px; }
+.tour-screen .tour-sidebar-season-scene { flex-basis: 34px; width: 34px; height: 36px; }
+.tour-screen .tour-sidebar-season-copy small { display: none; }
+
+.tour-screen .tour-map-control-rail .tour-map-3d-button,
+.tour-screen .tour-map-control-rail .tour-map-2d-button {
+  min-height: 58px;
+  border: 1px solid #6f987b;
+  border-radius: 11px;
+  color: #eff8ef;
+  background: #1d5b3d;
+  font-size: .62rem;
+  font-weight: 850;
+}
+.tour-screen .tour-map-control-rail .tour-map-3d-button > span,
+.tour-screen .tour-map-control-rail .tour-map-2d-button > span { color: #c5ebbd; font-size: 1.25rem; font-weight: 950; line-height: 1; }
+.tour-screen .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'],
+.tour-screen .tour-map-control-rail .tour-map-2d-button[aria-pressed='true'] { border-color: #c7ebae; color: #123b28; background: #d7efc5; box-shadow: inset 0 0 0 1px #f0f9e8; }
+.tour-screen .tour-map-control-rail .tour-map-3d-button[aria-pressed='true'] > span,
+.tour-screen .tour-map-control-rail .tour-map-2d-button[aria-pressed='true'] > span { color: #155d3e; }
+
+/* On phones, give the map its own area and put map actions in the next row. */
+@media (max-width: 900px) {
+  .tour-screen .tour-map-first-panel { overflow: visible; }
+  .tour-screen .tour-explorer-grid { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible; }
+  .tour-screen .tour-earth-preview { display: flex; height: auto !important; min-height: 0 !important; overflow: visible; }
+  .tour-screen .tour-map-stage { display: flex; height: auto !important; min-height: 0; flex: none; flex-direction: column; overflow: visible; }
+  .tour-screen .tour-map-stage > .tour-maplibre-3d,
+  .tour-screen .tour-map-stage > .google-route-3d,
+  .tour-screen .tour-map-stage > .kakao-route-map {
+    width: 100%;
+    height: min(58vh, 600px) !important;
+    min-height: 360px !important;
+    flex: none !important;
+  }
+  .tour-screen .tour-map-stage > .tour-map-control-rail {
+    position: relative;
+    inset: auto;
+    width: auto;
+    height: auto;
+    max-height: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    margin: .55rem;
+    overflow: visible;
+    transform: none;
+  }
+  .tour-screen .tour-map-side-panel { position: fixed; z-index: 1350; inset: auto .6rem .6rem; width: auto; max-height: 72vh; border-radius: 14px; }
 }

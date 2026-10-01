@@ -894,14 +894,17 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <label className="tour-map-mode-select"><span>{text('Map view', '지도 보기')}</span>
             <select value={view} aria-label={text('Choose a map view', '지도 종류 선택')} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
               {hasKakaoMapsKey && <option value="kakao">{text('Kakao map · street view', '카카오 지도 · 도로')}</option>}
-              <option value="city">{text('3D city', '3D 도시')}</option>
+              <option value="city">{text('City', '\uB3C4\uC2DC')}</option>
               <option value="satellite">{text('2D satellite', '2D 위성')}</option>
               <option value="map">{text('Flat map', '평면 지도')}</option>
               {hasGoogleMapsKey && <option value="google">Google 3D</option>}
             </select>
           </label>
-          <button type="button" className="tour-map-3d-button" aria-pressed={view === 'city'} onClick={() => { chooseMapView('city'); setActiveMapTool('3d') }}>
-            <span aria-hidden="true">3D</span>{text('3D city', '3D 도시')}
+          <button type="button" className="tour-map-3d-button" aria-pressed={view === 'city'} onClick={() => { setActiveMapTool(null); chooseMapView('city') }}>
+            <span aria-hidden="true">3D</span>{text('City', '\uB3C4\uC2DC')}
+          </button>
+          <button type="button" className="tour-map-2d-button" aria-pressed={view === 'satellite' || view === 'map'} onClick={() => { setActiveMapTool(null); chooseMapView('satellite') }}>
+            <span aria-hidden="true">2D</span>{text('Map', '\uC9C0\uB3C4')}
           </button>
           {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewOpen}
             onClick={() => { setActiveMapTool(null); setFoodGuideOpen(false); setView('kakao'); setRoadviewOpen(true) }}>
@@ -995,7 +998,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <section className="tour-map-panel-section"><h3>{text('Map style', '지도 종류')}</h3>
                 <div className="tour-map-view-options">
                   {hasKakaoMapsKey && <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseMapView('kakao')}>{text('Kakao street', '카카오 도로')}</button>}
-                  <button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>3D {text('City', '도시')}</button>
+                  <button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>3D {text('City', '\uB3C4\uC2DC')}</button>
                   <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('Satellite', '위성')}</button>
                   <button type="button" aria-pressed={view === 'map'} onClick={() => chooseMapView('map')}>{text('Flat map', '평면')}</button>
                   {hasGoogleMapsKey && <button type="button" aria-pressed={view === 'google'} onClick={() => chooseMapView('google')}>Google 3D</button>}
@@ -1033,7 +1036,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             </>}
             {activeMapTool === '3d' && <>
               <p>{text('Explore the route with raised buildings and the 3D camera controls.', '건물 입체 표현과 카메라 조작으로 코스를 살펴보세요.')}</p>
-              <div className="tour-map-view-options"><button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>{text('3D city', '3D 도시')}</button>
+              <div className="tour-map-view-options"><button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>{text('City', '\uB3C4\uC2DC')}</button>
                 <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('2D satellite', '2D 위성')}</button></div>
             </>}
           </div>

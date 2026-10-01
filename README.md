@@ -351,3 +351,13 @@ seoul-typing-bike-high-score
 + The route panel now starts closed, leaving the map visible across the full viewport.
 + The green map tools use a wider two-column layout so common controls are easier to scan.
 + Hidden route-panel space is removed from the layout to prevent an empty strip beside the map.
+
+## 지도·모바일 조작 업데이트 (2026-10-01)
+
++ 첫 화면에서 코스 패널을 접고 지도를 전체 폭으로 표시합니다. 초록 도구 막대는 두 칸 버튼 배열로 넓혔고, 왼쪽 코스 열기 손잡이와 같은 세로 길이를 사용합니다.
++ 지도 확대·축소 버튼을 지도 오른쪽 위로 옮겨 도구 버튼과 겹치지 않게 했습니다.
++ 모바일에서는 지도를 먼저 보여주고 지도 도구를 바로 아래에 배치합니다. 지도 높이는 화면 높이에 맞추고 버튼은 두 칸으로 눌러 쓰기 쉽게 정렬합니다.
++ 3D 도시와 2D 위성 보기 버튼을 나눴습니다. 누르면 흰색 설명 패널을 열지 않고 지도만 전환하며, 선택 상태를 초록 강조색으로 표시합니다.
++ 코스 패널에는 코스명·거리/예상 시간·오르막 그래프·주변 대여소·계절 선택 등 핵심 정보가 먼저 보이도록 정리했습니다.
++ 위치 권한을 허용하고 내 위치를 누르면 브라우저 위치 추적을 시작합니다. 위치 마커는 위치 업데이트를 따라가며 방향 센서 정보가 없을 때 이동 방향을 계산해 화살표를 돌립니다.
++ 모바일 Chrome 에뮬레이션(393×852)에서 지도와 버튼의 위아래 배치, 3D/2D 전환, 모의 GPS 이동에 따른 위치·방향 화살표 갱신을 확인했습니다. 상세 결과는 [2026-10-01 변경 기록](docs/CHANGELOG-2026-10-01.md)에 적었습니다.
