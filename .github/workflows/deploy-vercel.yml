@@ -38,5 +38,10 @@ jobs:
       - name: Deploy Vercel services
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN1 }}
+          SEOUL_TOILET_API_KEY: ${{ secrets.SEOUL_TOILET_API_KEY }}
         run: |
-          npx --yes vercel@60.1.3 deploy --prod --yes --token="$VERCEL_TOKEN"
+          if [ -z "$SEOUL_TOILET_API_KEY" ]; then
+            echo "::error::Add the SEOUL_TOILET_API_KEY Actions secret before deploying."
+            exit 1
+          fi
+          npx --yes vercel@60.1.3 deploy --prod --yes --env "SEOUL_TOILET_API_KEY=$SEOUL_TOILET_API_KEY" --token="$VERCEL_TOKEN"
