@@ -211,7 +211,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       })
   }, [linePoints])
   const activeTreeFocus = treeFocusRequest?.routeId === route.id ? treeFocusRequest : null
-  if (initialCenter.current === null) initialCenter.current = [points[0].lng, points[0].lat]
+  if (initialCenter.current === null) initialCenter.current = [126.978, 37.5665]
 
   useEffect(() => {
     if (!host.current) return
@@ -224,7 +224,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       container: host.current,
       style: STYLE_URL,
       center: initialCenter.current ?? [points[0].lng, points[0].lat],
-      zoom: 14,
+      zoom: 11.2,
       pitch: is3DView ? 50 : 0,
       bearing: is3DView ? -10 : 0,
       maxZoom: 23,
@@ -453,13 +453,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready' || !showAmenities) return
-    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '⚙', water: '💧', toilet: 'WC', convenience: '24' }
-    const labels = locale === 'ko' ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '한강 편의점' }
-      : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' }
+    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' }
+    const labels = locale === 'ko' ? { pump: '공기주입기', water: '음수대', toilet: '화장실', convenience: '편의점' }
+      : { pump: 'Bike pump', water: 'Water', toilet: 'Toilet', convenience: 'Shop' }
+    const shortLabels = locale === 'ko' ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' }
+      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' }
     const markers = amenities.map(amenity => {
       const element = document.createElement('span')
       element.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
-      element.textContent = glyphs[amenity.kind]
+      element.innerHTML = `<span>${glyphs[amenity.kind]}</span><b>${shortLabels[amenity.kind]}</b>`
       element.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
       element.setAttribute('role', 'img')
       element.setAttribute('aria-label', element.title)
@@ -739,6 +741,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     })
     if (activeTreeFocus) return
     if (locationFocusRequest > 0 && selectedStop === null && userLocation) return
+    if (locationFocusRequest === 0 && selectedStop === null) return
     if (accessPath && accessPath.length >= 2) {
       const bounds = new maplibregl.LngLatBounds()
       ;(selectedStop === null ? [...linePoints, ...accessPath, ...(walkPath ?? [])] : [...accessPath, ...(walkPath ?? [])]).forEach(point => bounds.extend(point))

@@ -253,6 +253,11 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       }))
     })
 
+    if (locationFocusRequest === 0 && selectedStop === null) {
+      map.setLevel(8, { animate: false })
+      map.setCenter(new api.LatLng(37.5665, 126.978))
+      return
+    }
     if (accessPath && accessPath.length >= 2) {
       const framed = selectedStop === null ? [...linePoints, ...accessPath.map(([lng, lat]) => ({ lng, lat }))] : accessPath.map(([lng, lat]) => ({ lng, lat }))
       const south = Math.min(...framed.map(point => point.lat)), north = Math.max(...framed.map(point => point.lat))
@@ -273,7 +278,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [accessPath, linePoints, locale, onHoverStop, onSelectStop, points, route, selectedStop, status])
+  }, [accessPath, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, points, route, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -445,14 +450,17 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
     if (!showAmenities) return
-    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '⚙', water: '💧', toilet: 'WC', convenience: '24' }
+    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' }
     const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
       ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' }
       : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' }
+    const shortLabels: Record<RouteAmenity['kind'], string> = locale === 'ko'
+      ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' }
+      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' }
     const overlays = amenities.map(amenity => {
       const marker = document.createElement('span')
       marker.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
-      marker.textContent = glyphs[amenity.kind]
+      marker.innerHTML = `<span>${glyphs[amenity.kind]}</span><b>${shortLabels[amenity.kind]}</b>`
       marker.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
       marker.setAttribute('role', 'img')
       marker.setAttribute('aria-label', marker.title)
