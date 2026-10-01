@@ -2719,3 +2719,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-map-side-panel { right: 5.65rem; left: auto; }
   .tour-screen .tour-elevation-card { right: 5.7rem; }
 }
+
+/* Keep route terrain details with the itinerary, away from the map controls. */
+.tour-screen .tour-itinerary > .tour-elevation-card { position: relative; inset: auto; z-index: auto; width: auto; max-width: none; margin: .75rem .9rem; gap: .55rem; padding: .8rem .9rem; border-radius: 8px; box-shadow: 0 2px 8px #183a2810; backdrop-filter: none; }
+.tour-screen .tour-itinerary > .tour-elevation-card .tour-elevation-heading small { font-size: .59rem; }
+.tour-screen .tour-itinerary > .tour-elevation-card .tour-elevation-heading strong { font-size: .78rem; }
+.tour-screen .tour-itinerary > .tour-elevation-card svg { height: 64px; }

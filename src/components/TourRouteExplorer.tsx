@@ -801,7 +801,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     iconSize: [34, 39],
     iconAnchor: [17, 20],
   }), [locationHeading])
-  const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom={false}>
+  const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#fff', weight: 14, opacity: .98 }} />}
@@ -866,10 +866,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           {pickupStation && <span className="tour-route-summary-bikes"><small>{text('BIKES NEARBY', '대여 가능')}</small><strong>{pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</strong></span>}
         </div>
       </div>
-      <aside className="tour-elevation-card" aria-label={text('Route elevation profile', '코스 고도 그래프')}>
-        <div className="tour-elevation-heading"><div><small>{text('ROUTE ELEVATION', '코스 고도')}</small><strong>{activeElevation?.status === 'loading' ? text('Loading profile…', '고도 정보를 불러오는 중…') : activeElevation?.status === 'unavailable' ? text('Profile unavailable', '고도 정보 없음') : text(`Total climb ${Math.round(totalAscent)} m`, `누적 오르막 ${Math.round(totalAscent)} m`)}</strong></div><span>{elevationPoints.length ? `${Math.round(elevationMinimum)}–${Math.round(elevationMaximum)} m` : ''}</span></div>
-        {elevationProfileLine && <svg viewBox="0 0 320 84" preserveAspectRatio="none" role="img" aria-label={text('Elevation changes over the route', '전체 경로의 고도 변화')}><path d={`M ${elevationProfileLine.replaceAll(' ', ' L ')} L 320 82 L 0 82 Z`} className="tour-elevation-fill" /><polyline points={elevationProfileLine} className="tour-elevation-line" /></svg>}
-      </aside>
+
       <div className="tour-map-quick-guide" aria-label={text('How to start', '빠른 이용 안내')}>
         <span><b>1</b>{text('Choose a route', '코스를 골라요')}</span><i aria-hidden="true">›</i>
         <span><b>2</b>{text('Check the map', '지도를 살펴봐요')}</span><i aria-hidden="true">›</i>
@@ -1123,6 +1120,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <div><span>◷ {text(route.suggestedTime, route.suggestedTimeKo)}</span><span>{route.stops.length} {text('stops', '곳 경유')}</span></div>
         <div className="tour-bike-time" role="status"><strong>{routeDistanceEstimated ? '≈ ' : ''}{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by Ttareungi`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</strong><small>{text('At 12 km/h · riding only, without sightseeing stops', '시속 12km 기준 · 관광·신호 대기 제외')}{routeDistanceEstimated ? text(' · distance estimate', ' · 거리 추정치') : ''}</small></div>
       </div>
+      <aside className="tour-elevation-card" aria-label={text('Route elevation profile', '코스 고도 그래프')}>
+        <div className="tour-elevation-heading"><div><small>{text('ROUTE ELEVATION', '코스 고도')}</small><strong>{activeElevation?.status === 'loading' ? text('Loading profile…', '고도 정보를 불러오는 중…') : activeElevation?.status === 'unavailable' ? text('Profile unavailable', '고도 정보 없음') : text(`Total climb ${Math.round(totalAscent)} m`, `누적 오르막 ${Math.round(totalAscent)} m`)}</strong></div><span>{elevationPoints.length ? `${Math.round(elevationMinimum)}–${Math.round(elevationMaximum)} m` : ''}</span></div>
+        {elevationProfileLine && <svg viewBox="0 0 320 84" preserveAspectRatio="none" role="img" aria-label={text('Elevation changes over the route', '전체 경로의 고도 변화')}><path d={`M ${elevationProfileLine.replaceAll(' ', ' L ')} L 320 82 L 0 82 Z`} className="tour-elevation-fill" /><polyline points={elevationProfileLine} className="tour-elevation-line" /></svg>}
+      </aside>
       <section className="tour-nearby-stations" aria-live="polite">
         <div className="tour-itinerary-heading"><h3>{text('Nearby Ttareungi', '내 근처 따릉이')}</h3><span>{activeNearbyBikes?.status === 'live' ? text('LIVE', '실시간') : activeNearbyBikes?.status === 'unavailable' ? text('OFFLINE', '연결 대기') : text('LOCATION', '위치')}</span></div>
         {!userLocation ? <p>{text('Tap My location to find the nearest rental station.', '내 위치를 누르면 가까운 대여소와 자전거 수를 찾아드려요.')}</p>

@@ -308,3 +308,8 @@ seoul-typing-bike-high-score
 
 + 데스크톱에서 코스·검색·경유지 목록을 왼쪽 고정 패널로 옮기고 지도를 오른쪽 넓은 영역에 배치했습니다.
 + 지도 도구와 고도 정보는 지도 우측 가장자리에서 사용할 수 있도록 정렬했습니다. 모바일에서는 코스 목록을 접고 지도 화면을 우선합니다.
+
+## Route list, elevation and map zoom (2026-10-01)
+
++ Moved the route elevation profile and cumulative climb into the left route list panel.
++ Enabled mouse-wheel zoom on the base map.
