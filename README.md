@@ -327,3 +327,16 @@ seoul-typing-bike-high-score
 
 + Put the route list on the right and the green map toolbar on the left.
 + When the route panel is closed on desktop, the map expands across the freed column so no blank white strip remains.
+
+## Tall route panel handle (2026-10-01)
+
++ Anchored the route list toggle at the left map edge and extended it into a tall vertical handle.
+
+## Full-height route tab (2026-10-01)
+
++ Stretched the route panel toggle down the map's left edge and kept map tools together on the opposite edge.
+
+## Translucent route panel over full map (2026-10-01)
+
++ Kept the map full-width and made the right route panel translucent so map details remain visible behind it.
++ Closing the route panel now reveals the map across the previously blank area.

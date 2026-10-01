@@ -2712,9 +2712,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 
 /* Naver-like desktop layout: browse routes on the left, keep the map on the right. */
 @media (min-width: 901px) {
-  .tour-screen .tour-explorer-grid { grid-template-columns: minmax(0, 1fr) minmax(340px, min(26vw, 490px)); }
-  .tour-screen .tour-explorer-grid:not(.tour-explorer-grid--sidebar-open) { grid-template-columns: minmax(0, 1fr); }
-  .tour-screen .tour-itinerary { position: relative; top: auto; right: auto; bottom: auto; left: auto; width: auto; height: 100%; grid-column: 2; grid-row: 1; border-right: 0; border-left: 1px solid #d9ddd8; box-shadow: none; }
+  .tour-screen .tour-explorer-grid { grid-template-columns: minmax(0, 1fr); }
+  .tour-screen .tour-itinerary { position: absolute; z-index: 1310; top: 0; right: 0; bottom: 0; left: auto; width: min(490px, 42vw); height: auto; grid-column: auto; grid-row: auto; border-right: 0; border-left: 1px solid #d9ddd8; background: #ffffffc9; box-shadow: -12px 0 30px #142f2218; backdrop-filter: blur(7px); }
   .tour-screen .tour-earth-preview { grid-column: 1; grid-row: 1; }
   .tour-screen .tour-map-control-rail { right: auto; left: .65rem; }
   .tour-screen .tour-map-side-panel { right: auto; left: 5.65rem; }
@@ -2740,4 +2739,18 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 @media (max-width: 600px) {
   .tour-screen .tour-sidebar-edge-toggle { left: calc(100% - min(380px, 94vw) - 14px); }
+}
+
+/* Keep the route-panel handle tall and fixed to the map's left edge. */
+.tour-screen .tour-sidebar-edge-toggle { top: 50%; left: max(0px, env(safe-area-inset-left)); width: 32px; height: clamp(160px, 36vh, 340px); min-height: 160px; transform: translateY(-50%); border-left: 0; border-right: 1px solid #4e805f; border-radius: 0 12px 12px 0; }
+/* The edge tab spans the map height; leave the full control rail on the opposite edge. */
+.tour-screen .tour-sidebar-edge-toggle { top: 0; right: auto; bottom: 0; left: 0; width: 28px; height: auto; min-height: 0; transform: none; border-radius: 0 12px 12px 0; }
+@media (min-width: 901px) {
+  .tour-screen .tour-map-control-rail { right: .65rem; left: auto; }
+  .tour-screen .tour-map-side-panel { right: 5.65rem; left: auto; }
+}
+@media (max-width: 900px) {
+  .tour-screen .tour-map-control-rail { right: max(.45rem, env(safe-area-inset-right)); left: auto; }
+  .tour-screen .tour-map-side-panel { right: 4.7rem; left: auto; }
+  .tour-screen .tour-itinerary { z-index: 1310; }
 }
