@@ -98,9 +98,6 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
           <span>{textFor(locale, 'Destination', '도착지')}</span>
           <strong>{textFor(locale, 'Choose any point on map', '지도에서 원하는 곳 선택')}</strong>
         </button>
-        <label className="tour-journey-via"><span>{textFor(locale, 'Via point', '중간지점 설정')}</span><select value={viaStopIndex ?? ''} onChange={event => setViaStopIndex(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))}>
-          <option value="">{textFor(locale, 'No stop', '경유지 없음')}</option>{route.stops.map((stop, index) => <option key={`via-${stop.stationId}`} value={index} disabled={index === originStopIndex || index === destinationStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
-        </select></label>
       </div>
       <div className="tour-header-actions">
         <button type="button" className="tour-theme-button" aria-pressed={darkMode} onClick={onToggleTheme}>{darkMode ? textFor(locale, '☀ Light', '☀ 라이트') : textFor(locale, '☾ Dark', '☾ 다크')}</button>
