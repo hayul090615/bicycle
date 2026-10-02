@@ -62,6 +62,7 @@ export default async function handler(request, response) {
   if (request.method !== 'GET') return response.status(405).json({ error: 'method_not_allowed' })
   const lat = Number(request.query.lat)
   const lng = Number(request.query.lng)
+  const radiusMeters = request.query.radius === '500' ? 500 : 5_000
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < 37.3 || lat > 37.75 || lng < 126.6 || lng > 127.4) {
     return response.status(400).json({ error: 'location_outside_seoul' })
   }
@@ -70,9 +71,9 @@ export default async function handler(request, response) {
   try {
     const data = await loadStations(key)
     const stations = data.rows.map(station => ({ ...station, distanceMeters: metersBetween({ lat, lng }, station) }))
-      .filter(station => station.distanceMeters <= 5_000)
+      .filter(station => station.distanceMeters <= radiusMeters)
       .sort((first, second) => first.distanceMeters - second.distanceMeters)
-      .slice(0, 5)
+      .slice(0, radiusMeters === 500 ? undefined : 5)
     return response.status(200).json({ stations, updatedAt: new Date(data.updatedAt).toISOString(), live: true })
   } catch {
     return response.status(502).json({ error: 'bike_data_unavailable' })

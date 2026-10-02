@@ -24,7 +24,7 @@ export function metersBetween(from: MapCoordinate, to: MapCoordinate) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc))
 }
 
-export function nearestSnapshotStations(location: MapCoordinate, count = 5): NearbyBikeStation[] {
+export function nearestSnapshotStations(location: MapCoordinate, count = 5, radiusMeters = 5_000): NearbyBikeStation[] {
   return bundledBikeStations.map(station => ({
     id: station.id,
     name: station.name,
@@ -32,14 +32,14 @@ export function nearestSnapshotStations(location: MapCoordinate, count = 5): Nea
     lng: station.lng,
     distanceMeters: metersBetween(location, station),
     available: null,
-  })).filter(station => station.distanceMeters <= 5_000)
+  })).filter(station => station.distanceMeters <= radiusMeters)
     .sort((first, second) => first.distanceMeters - second.distanceMeters)
     .slice(0, count)
 }
 
-export async function fetchNearbyBikeStations(location: MapCoordinate, signal: AbortSignal): Promise<NearbyBikeResult> {
+export async function fetchNearbyBikeStations(location: MapCoordinate, signal: AbortSignal, radiusMeters = 5_000): Promise<NearbyBikeResult> {
   const origin = window.location.hostname.endsWith('github.io') ? 'https://seoul-ttareungi-typing.vercel.app' : ''
-  const url = `${origin}/api/nearby-bikes?lat=${location.lat.toFixed(6)}&lng=${location.lng.toFixed(6)}`
+  const url = `${origin}/api/nearby-bikes?lat=${location.lat.toFixed(6)}&lng=${location.lng.toFixed(6)}&radius=${radiusMeters}`
   const response = await fetch(url, { signal, cache: 'no-store' })
   if (!response.ok) throw new Error(`Live bike availability ${response.status}`)
   const result = await response.json() as NearbyBikeResult

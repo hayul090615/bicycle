@@ -748,7 +748,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
     element.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
     element.title = userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`
-    userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
+    userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
       .setLngLat([userLocation.lng, userLocation.lat]).addTo(map)
   }, [locale, status, userLocation])
 

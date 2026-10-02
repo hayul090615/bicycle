@@ -7,6 +7,7 @@ interface SeoulDistrictMapProps {
   selected: SeoulDistrict | null
   onSelect: (district: SeoulDistrict) => void
   playedStationCounts: Partial<Record<SeoulDistrict, number>>
+  userLocation?: { lat: number; lng: number } | null
 }
 
 const riverPolygonToSvgPath = (rings: (readonly [number, number])[][]) => rings.map((ring) => ring.map((coordinate, index) => {
@@ -14,7 +15,7 @@ const riverPolygonToSvgPath = (rings: (readonly [number, number])[][]) => rings.
   return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
 }).join(' ') + ' Z').join(' ')
 
-export function SeoulDistrictMap({ selected, onSelect, playedStationCounts }: SeoulDistrictMapProps) {
+export function SeoulDistrictMap({ selected, onSelect, playedStationCounts, userLocation }: SeoulDistrictMapProps) {
   return <div className="seoul-map-wrap">
     <svg className="seoul-district-map" viewBox={SEOUL_MAP_VIEWBOX} role="img" aria-label="서울 25개 자치구 선택 지도">
       <defs>
@@ -56,6 +57,7 @@ export function SeoulDistrictMap({ selected, onSelect, playedStationCounts }: Se
           </g>}
         </g>
       })}
+      {userLocation && <circle className="seoul-current-location-dot" cx={projectCoordinate([userLocation.lng, userLocation.lat])[0]} cy={projectCoordinate([userLocation.lng, userLocation.lat])[1]} r="7" aria-label="내 위치" />}
     </svg>
     <p className="map-help"><span>●</span> 지도에서 자치구를 선택하세요 <small>한강 수면 © OpenStreetMap contributors</small></p>
   </div>

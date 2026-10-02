@@ -1359,6 +1359,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-journey-pin::before { position: absolute; top: 10px; left: 5px; width: 36px; height: 36px; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; background: var(--pin-color); transform: rotate(-45deg); content: ''; }
 .tour-journey-pin > span { position: relative; z-index: 1; width: 28px; height: 28px; margin-top: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--pin-color); background: #fff; font: 900 10px/1 'Noto Sans KR', sans-serif; white-space: nowrap; }
 .tour-journey-pin--destination > span { width: 36px; color: #fff; background: transparent; font-size: 11px; text-shadow: 0 1px 2px #a51717aa; }
+.tour-journey-pin--start { width: 20px; height: 20px; filter: drop-shadow(0 2px 4px #481d1d88); }
+.tour-journey-pin--start::before { top: 1px; left: 1px; width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%; background: #ed3636; transform: none; box-shadow: 0 0 0 2px #ed363655; }
+.tour-journey-pin--start > span { display: none; }
 .tour-leaflet-location-icon { border: 0 !important; background: transparent !important; }
 @media (max-width: 990px) {
   .tour-route-finder { margin-bottom: 1rem; }
@@ -1922,6 +1925,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-nearby-stations > p { margin: .5rem 0 0; color: #66766c; font-size: .71rem; line-height: 1.5; }
 .tour-nearby-stations .tour-bikes-source { display: inline-block; margin-top: .45rem; color: #42735a; font-size: .61rem; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .tour-nearby-list { display: grid; gap: .4rem; }
+.tour-nearby-list { max-height: 320px; overflow-y: auto; }
+.seoul-current-location-dot { fill: #ed3636; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 2px 3px #541b1b99); pointer-events: none; }
+.typing-nearby-stations { position: absolute; z-index: 4; top: 4.4rem; right: 1rem; width: min(265px, 42%); max-height: min(280px, 38vh); padding: .65rem; overflow-y: auto; border: 1px solid #cfe0d1; border-radius: 12px; background: #ffffffed; box-shadow: 0 8px 20px #1a342933; }
+.typing-nearby-stations h3 { margin: 0 0 .45rem; color: #18533a; font-size: .76rem; }
+.typing-nearby-stations h3 small { display: block; color: #607668; font-size: .61rem; }
+.typing-nearby-stations p { margin: .35rem 0; color: #607668; font-size: .65rem; }
+.typing-nearby-stations-list { display: grid; gap: .3rem; }
+.typing-nearby-stations-list button { display: grid; gap: .12rem; padding: .4rem .5rem; border: 1px solid #d9e7db; border-radius: 7px; color: #214a35; background: #fff; text-align: left; cursor: pointer; }
+.typing-nearby-stations-list button span { color: #66796d; font-size: .61rem; }
+@media (max-width: 700px) { .typing-nearby-stations { top: 4.1rem; right: .5rem; width: min(205px, 54%); max-height: 220px; padding: .48rem; } }
 .tour-nearby-list button { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 58px; padding: .55rem .7rem; border: 1px solid #d7e2d8; border-radius: 7px; background: #fff; text-align: left; cursor: pointer; }
 .tour-nearby-list button[aria-pressed='true'] { border-color: #138b65; background: #e9f6ec; box-shadow: inset 3px 0 #138b65; }
 .tour-nearby-list button:disabled { opacity: .52; cursor: not-allowed; }

@@ -44,7 +44,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -53,6 +53,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   viaStopIndex: number | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
+  walkPath: LonLat[] | null
   bikeLanes: RouteBikeLane[]
   showBikeLanes: boolean
   amenities: RouteAmenity[]
@@ -87,6 +88,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const apiRef = useRef<KakaoMapsApi | null>(null)
   const routeOverlaysRef = useRef<KakaoOverlay[]>([])
   const accessOverlaysRef = useRef<KakaoOverlay[]>([])
+  const walkOverlaysRef = useRef<KakaoOverlay[]>([])
   const conditionOverlaysRef = useRef<KakaoOverlay[]>([])
   const restaurantOverlaysRef = useRef<KakaoOverlay[]>([])
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
@@ -364,6 +366,18 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 9, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 5, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
   }, [accessEstimated, accessPath, showCourse, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    walkOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    walkOverlaysRef.current = []
+    if (!map || !api || status !== 'ready' || !showCourse || !walkPath || walkPath.length < 2) return
+    const path = walkPath.map(([lng, lat]) => new api.LatLng(lat, lng))
+    walkOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: 'solid' }))
+    walkOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#e33d3d', strokeOpacity: 1, strokeStyle: 'shortdash' }))
+    return () => { walkOverlaysRef.current.forEach(overlay => overlay.setMap(null)); walkOverlaysRef.current = [] }
+  }, [showCourse, status, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
@@ -658,7 +672,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       position: new api.LatLng(userLocation.lat, userLocation.lng),
       content: marker,
       xAnchor: .5,
-      yAnchor: 1,
+      yAnchor: .5,
       zIndex: 12,
     })
   }, [locale, status, userLocation])
