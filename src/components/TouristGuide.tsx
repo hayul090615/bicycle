@@ -76,8 +76,8 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
 
   useEffect(() => {
     document.documentElement.lang = locale
-    document.title = locale === 'en' ? 'Seoul Bike Journeys | Ttareungi' : '따릉이 서울 여행 코스'
-    return () => { document.documentElement.lang = 'ko'; document.title = '서울 타자 라이딩' }
+    document.title = locale === 'en' ? 'Ttareungi Seoul Journey' : '따릉이 서울 여행'
+    return () => { document.documentElement.lang = 'ko'; document.title = '따릉이 서울 여행' }
   }, [locale])
 
   const toggleLanguage = () => {
@@ -90,7 +90,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
 
   return <main className={`tour-screen${darkMode ? ' tour-screen--dark' : ''}`}>
     <header className="tour-topbar">
-      <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'SEOUL BIKE JOURNEYS', '따릉이 서울 여행')}<small>{textFor(locale, 'Explore Seoul with Ttareungi', '따릉이로 서울을 둘러보세요')}</small></span></div>
+      <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'TTAREUNGI SEOUL JOURNEY', '따릉이 서울 여행')}<small>{textFor(locale, 'Find your bike route through Seoul', '서울에서 자전거 길을 찾아보세요')}</small></span></div>
       <div className="tour-journey-planner" aria-label={textFor(locale, 'Plan your bike journey', '자전거 경로 설정')}>
         <label><span>{textFor(locale, 'Start', '출발')}</span><select value={originStopIndex === null ? 'location' : String(originStopIndex)} onChange={event => { const next = event.currentTarget.value === 'location' ? null : Number(event.currentTarget.value); setOriginStopIndex(next); if (next === viaStopIndex) setViaStopIndex(null) }}>
           <option value="location">{textFor(locale, 'My location', '내 위치')}</option>{route.stops.map((stop, index) => <option key={`origin-${stop.stationId}`} value={index} disabled={index === destinationStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}

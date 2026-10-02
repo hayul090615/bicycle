@@ -81,7 +81,7 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
       </svg>
     </div>
     <header className="start-topbar">
-      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
+      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>따릉이 서울 여행</b><small>TTAREUNGI SEOUL JOURNEY</small></div></div>
       <nav className="typing-main-nav" aria-label="주 메뉴">
         {mainTabs.map((tab) => <button key={tab} type="button" className={activeTab === tab ? 'is-active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => selectMainTab(tab)}>{tab}</button>)}
       </nav>

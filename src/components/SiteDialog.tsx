@@ -15,7 +15,7 @@ export function SiteDialog({ kind, userEmail, onClose }: {
   return <div className="site-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="site-dialog" role="dialog" aria-modal="true" aria-labelledby="site-dialog-title">
       <button className="site-dialog-close" type="button" aria-label="닫기" onClick={onClose}>×</button>
-      <p className="site-dialog-kicker">SEOUL TYPING RIDE</p>
+      <p className="site-dialog-kicker">TTAREUNGI SEOUL JOURNEY</p>
       <h2 id="site-dialog-title">{headings[kind]}</h2>
       {kind === 'logout' ? <>
         <p className="site-dialog-copy">현재 {userEmail ? `${userEmail} 계정으로 로그인되어 있습니다.` : '로그인된 계정이 없습니다.'}</p>

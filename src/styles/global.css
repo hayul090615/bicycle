@@ -3439,7 +3439,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-rental-header-widget {
   position: absolute;
   z-index: 2;
-  top: calc(100% + .45rem);
+  top: calc(100% + 1.2rem);
   right: 0;
   width: min(282px, calc(100vw - .9rem));
   display: grid;
@@ -3477,7 +3477,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   align-items: flex-start;
   padding-bottom: 0;
 }
-.tour-screen:has(.tour-rental-header-widget) .tour-road-sign { top: 11.5rem; }
+@media (min-width: 701px) {
+  .tour-screen:has(.tour-rental-header-widget) .tour-road-sign { top: 13rem; }
+}
 .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-map-pick {
   min-width: 0;
   min-height: 34px;
@@ -3525,7 +3527,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @keyframes site-bike-splash-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 
 @media (max-width: 700px) {
-  .tour-rental-header-widget { top: calc(100% + .35rem); width: min(270px, calc(100vw - .7rem)); gap: .4rem; padding: .6rem; }
+  .tour-rental-header-widget { top: calc(100% + 1.1rem); width: min(270px, calc(100vw - .7rem)); gap: .4rem; padding: .6rem; }
   .tour-rental-header-widget .tour-rental-duration button { min-height: 34px; padding: .3rem .35rem; font-size: .65rem; }
   .tour-rental-header-widget .tour-rental-clock-row { gap: .38rem; }
   .tour-rental-header-widget .tour-rental-digital-panel { width: 164px; min-width: 0; }

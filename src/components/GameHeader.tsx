@@ -16,7 +16,7 @@ export function GameHeader(props: GameHeaderProps) {
   return <header className="game-header">
     <div className="game-title-block">
       <div className="game-brand-row">
-        <span className="eyebrow">SEOUL TYPING RIDE</span>
+        <span className="eyebrow">TTAREUNGI SEOUL JOURNEY</span>
         <small>대여소: 서울 열린데이터광장 · 지도: OpenStreetMap contributors</small>
       </div>
       <h1>{props.district} 코스</h1>

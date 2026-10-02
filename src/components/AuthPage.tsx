@@ -52,17 +52,17 @@ export function AuthPage({ kind, onHome, onNavigate }: {
   return <main className="auth-screen">
     <div className="auth-scenery" aria-hidden="true"><SeoulRideIllustration /></div>
     <header className="auth-topbar">
-      <button type="button" className="auth-brand start-brand" onClick={onHome} aria-label="서울 타자 라이딩 홈">
+      <button type="button" className="auth-brand start-brand" onClick={onHome} aria-label="따릉이 서울 여행 홈">
         <span className="brand-bike" aria-hidden="true">🚲</span>
-        <div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div>
+        <div><b>따릉이 서울 여행</b><small>TTAREUNGI SEOUL JOURNEY</small></div>
       </button>
       <button type="button" className="button button--ghost" onClick={onHome}>홈으로</button>
     </header>
     <section className="auth-card" aria-labelledby="auth-title">
       <span className="auth-icon" aria-hidden="true">{isSignup ? '🌱' : '🚲'}</span>
-      <p className="eyebrow">SEOUL TYPING RIDE</p>
+      <p className="eyebrow">TTAREUNGI SEOUL JOURNEY</p>
       <h1 id="auth-title">{isSignup ? '회원가입' : '로그인'}</h1>
-      <p className="auth-description">{isSignup ? '서울 타자 라이딩에 오신 것을 환영합니다.' : '다시 만나 반가워요. 오늘도 서울을 달려볼까요?'}</p>
+      <p className="auth-description">{isSignup ? '따릉이 서울 여행에 오신 것을 환영합니다.' : '다시 만나 반가워요. 오늘도 서울을 달려볼까요?'}</p>
       {emailSent ? <div className="auth-success" role="status">
         <h2>이메일을 확인해 주세요</h2>
         <p>가입 확인 메일을 보냈습니다. 메일의 링크를 눌러 가입을 완료한 뒤 로그인해 주세요.</p>

@@ -88,7 +88,7 @@ export function TextPractice({ district: initialDistrict, onDistrictChange, embe
   if (embedded) return <section className="text-practice-panel" id="district-text-practice" aria-label="자치구 시 타자 연습">{content}</section>
   return <main className="text-practice-screen">
     <header className="text-practice-topbar">
-      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>서울 타자 라이딩</b><small>SEOUL TYPING RIDE</small></div></div>
+      <div className="start-brand"><span className="brand-bike">🚲</span><div><b>따릉이 서울 여행</b><small>TTAREUNGI SEOUL JOURNEY</small></div></div>
       {onBack && <button type="button" className="button button--ghost" onClick={onBack}>← 타자 연습으로</button>}
     </header>
     {content}
