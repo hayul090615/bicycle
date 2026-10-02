@@ -7,7 +7,7 @@ import { castBuildingShadow } from '../utils/buildingShadow'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
-import { SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
@@ -344,6 +344,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
           source: 'tour-seoul-outside-mask',
           paint: { 'fill-color': '#f1f2ec', 'fill-opacity': .76, 'fill-antialias': false },
         })
+        map.addSource('tour-seoul-boundary', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: SEOUL_BOUNDARY } },
+        })
+        map.addLayer({
+          id: 'tour-seoul-boundary-line',
+          type: 'line',
+          source: 'tour-seoul-boundary',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#111511', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.25, 14, 2.2, 18, 3.6], 'line-opacity': .96 },
+        })
         if (showSatellite) {
           for (const layer of layers) {
             const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined
@@ -671,6 +682,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
       })
     }
     map.on('zoom', updateVisibility)
+    map.on('zoomend', updateVisibility)
+    map.on('moveend', updateVisibility)
     map.on('move', updateVisibility)
     map.on('idle', updateVisibility)
     updateVisibility()
@@ -678,6 +691,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
       window.cancelAnimationFrame(riderFrame)
       window.cancelAnimationFrame(frame)
       map.off('zoom', updateVisibility)
+      map.off('zoomend', updateVisibility)
+      map.off('moveend', updateVisibility)
       map.off('move', updateVisibility)
       map.off('idle', updateVisibility)
       peopleMarkersRef.current.forEach(marker => marker.remove())

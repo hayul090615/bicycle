@@ -8,7 +8,7 @@ import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
-import { SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
@@ -145,6 +145,15 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
       cityMask.path = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => ({ lat, lng, altitude: 0 })))
       map.append(cityMask)
       cityMaskRef.current = cityMask
+      const cityBoundary = new library.Polygon3DElement({
+        fillColor: '#00000000',
+        strokeColor: '#111511FF',
+        strokeWidth: 2.5,
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+        drawsOccludedSegments: true,
+      })
+      cityBoundary.path = SEOUL_BOUNDARY.map(([lng, lat]) => ({ lat, lng, altitude: 0 }))
+      map.append(cityBoundary)
       map.addEventListener('gmp-steadychange', event => {
         if (!disposed && !failed && (event as Event & { isSteady: boolean }).isSteady) {
           window.clearTimeout(timeout)

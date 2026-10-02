@@ -16,12 +16,13 @@ import { clusterPublicCameras, publicCamerasAlongRoute } from '../services/publi
 import { fetchRouteAmenities, fetchRouteBikeLanes, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteRestaurants, fetchRouteSignals, type RouteAmenity, type RouteBikeLane, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
 import { NaverBlogSearchError, searchNaverBlogs, type NaverBlogPost } from '../services/naverBlogs'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
-import { isInsideSeoul, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { isInsideSeoul, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
 const SEOUL_BOUNDS: [[number, number], [number, number]] = [[37.40, 126.75], [37.72, 127.19]]
 const SEOUL_MASK_LATLNG = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as LatLngExpression))
+const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
 type Coordinates = { lat: number; lng: number; heading?: number; accuracy?: number }
 type BikeUseMode = 'ttareungi' | 'personal'
 type RotationRequest = { direction: 'left' | 'right' | 'up' | 'down'; serial: number }
@@ -278,6 +279,31 @@ function DestinationPickerMapEvents({ enabled, onPick }: { enabled: boolean; onP
   return null
 }
 
+const TIMER_DIGIT_SEGMENTS: Record<string, string> = {
+  '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd',
+  '4': 'fgbc', '5': 'afgcd', '6': 'afgecd', '7': 'abc', '8': 'abcdefg', '9': 'abfgcd',
+}
+
+function SegmentedDigits({ value }: { value: string }) {
+  return <span className="tour-rental-digits" aria-hidden="true">{value.split('').map((digit, digitIndex) => <span className="tour-rental-digit" key={`${digit}-${digitIndex}`}>
+    {'abcdefg'.split('').map(segment => <i key={segment} className={`tour-rental-segment tour-rental-segment--${segment}${TIMER_DIGIT_SEGMENTS[digit]?.includes(segment) ? ' is-lit' : ''}`} />)}
+  </span>)}</span>
+}
+
+function RentalDigitalDisplay({ seconds }: { seconds: number }) {
+  const safeSeconds = Math.max(0, seconds)
+  const hours = String(Math.floor(safeSeconds / 3600)).padStart(2, '0')
+  const minutes = String(Math.floor(safeSeconds % 3600 / 60)).padStart(2, '0')
+  const remainingSeconds = String(safeSeconds % 60).padStart(2, '0')
+  return <div className="tour-rental-digital-display" aria-hidden="true">
+    <span className="tour-rental-digital-group"><SegmentedDigits value={hours} /><small>H</small></span>
+    <span className="tour-rental-digital-colon">:</span>
+    <span className="tour-rental-digital-group"><SegmentedDigits value={minutes} /><small>M</small></span>
+    <span className="tour-rental-digital-colon">:</span>
+    <span className="tour-rental-digital-group"><SegmentedDigits value={remainingSeconds} /><small>S</small></span>
+  </div>
+}
+
 export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange }: {
   route: TouristRoute
   routes: TouristRoute[]
@@ -528,7 +554,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <small>≈ {distanceLabel(remainingRouteMeters)} {text('remaining · estimated', '남음 · 예상 거리')}</small>
       </div>
   const rentalSecondsRemaining = rentalDeadline === null ? null : Math.max(0, Math.ceil((rentalDeadline - rentalNow) / 1000))
-  const rentalElapsedSeconds = rentalDeadline === null ? 0 : Math.max(0, rentalLimitMinutes * 60 - (rentalSecondsRemaining ?? 0))
   const elevationPoints = activeElevation?.points ?? []
   const elevationMinimum = elevationPoints.length ? Math.min(...elevationPoints.map(point => point.elevationMeters)) : 0
   const elevationMaximum = elevationPoints.length ? Math.max(...elevationPoints.map(point => point.elevationMeters)) : 0
@@ -1090,6 +1115,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
     </CircleMarker>)}
     <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ color: '#f1f2ec', weight: 0, fillColor: '#f1f2ec', fillOpacity: .76, fillRule: 'evenodd' }} interactive={false} />
+    <Polyline positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ color: '#111511', weight: 2.5, opacity: .95, lineCap: 'round', lineJoin: 'round' }} interactive={false} />
   </MapContainer>
 
   return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}`}>
@@ -1116,17 +1142,16 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {bikeUseMode === 'ttareungi' && <section className="tour-rental-map-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
           <div className="tour-rental-map-copy"><h3>{text('Rental return reminder', '반납 시간 알림')}</h3><p>{text('Choose your pass length. Keep this page open for alerts before your rental expires.', '이용권 시간을 선택하세요. 화면을 열어두면 만료 전에 알림을 보내드립니다.')}</p></div>
           <div className="tour-rental-duration" role="group" aria-label={text('Rental time limit', '따릉이 이용 시간')}>{([60, 120] as const).map(minutes => <button type="button" key={minutes} aria-pressed={rentalLimitMinutes === minutes} disabled={rentalDeadline !== null} onClick={() => { setRentalLimitMinutes(minutes); if (rentalDeadline === null) void startRentalTimer(minutes) }}>{minutes === 60 ? text('1 hour', '1시간') : text('2 hours', '2시간')}</button>)}</div>
-          <div className="tour-rental-clock-row">
-            <svg className={rentalDeadline === null ? 'tour-rental-clock' : 'tour-rental-clock is-running'} viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" /><line x1="12" y1="12" x2="12" y2="6" className="tour-rental-clock-minute-hand" />
-              <line x1="12" y1="12" x2="12" y2="4" className="tour-rental-clock-second-hand" style={{ transform: `rotate(${(rentalElapsedSeconds % 60) * 6}deg)` }} />
-              <circle cx="12" cy="12" r="1.15" className="tour-rental-clock-pin" />
-            </svg>
-            {rentalSecondsRemaining !== null
-              ? <strong className={`tour-rental-countdown${rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`} role="timer" aria-live="polite">{String(Math.floor(rentalSecondsRemaining / 3600)).padStart(2, '0')}:{String(Math.floor(rentalSecondsRemaining % 3600 / 60)).padStart(2, '0')}:{String(rentalSecondsRemaining % 60).padStart(2, '0')}</strong>
-              : <span>{text(`${rentalLimitMinutes / 60} hour reminder`, `${rentalLimitMinutes / 60}시간 타이머 준비됨`)}</span>}
+          <div className={`tour-rental-clock-row${rentalDeadline !== null ? ' is-running' : ''}${rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`}>
+            <div className="tour-rental-digital-panel" role="timer" aria-live="off" aria-label={`${text('Time remaining', '남은 시간')} ${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) / 3600)).padStart(2, '0')}:${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 3600 / 60)).padStart(2, '0')}:${String((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 60).padStart(2, '0')}`}>
+              <RentalDigitalDisplay seconds={rentalSecondsRemaining ?? rentalLimitMinutes * 60} />
+            </div>
+            <span className="tour-rental-timer-status"><i aria-hidden="true" />{rentalDeadline === null ? text('READY', '대기') : text('RUNNING', '작동 중')}</span>
           </div>
-          <button type="button" className="tour-rental-start-button" onClick={() => { if (rentalDeadline === null) void startRentalTimer(); else { setRentalDeadline(null); setRentalReminderStatus('idle') } }}>{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')}</button>
+          <button type="button" className="tour-rental-start-button" aria-label={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} title={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} onClick={() => { if (rentalDeadline === null) void startRentalTimer(); else { setRentalDeadline(null); setRentalReminderStatus('idle') } }}>
+            <span className="tour-rental-button-label">{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')}</span>
+            <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
+          </button>
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
         </section>}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}

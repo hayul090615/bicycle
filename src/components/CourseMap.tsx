@@ -7,6 +7,9 @@ import type { StationDataStatus } from '../hooks/useBikeStations'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { districtFeatureMap, getFeatureCoordinates, type Coordinate, type DistrictGeoFeature } from '../data/districtGeoData'
 import type { SeoulDistrict } from '../data/districtCourses'
+import { SEOUL_BOUNDARY } from '../data/seoulBoundary'
+
+const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
 
 interface CourseMapProps {
   course: DistrictCourse
@@ -75,10 +78,20 @@ function FollowCourse({ course, stationIndex }: { course: DistrictCourse; statio
 }
 
 function ZoomObserver({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const zoomBand = useRef<number | null>(null)
   const map = useMapEvents({
     zoomstart: () => map.getContainer().classList.add('map-is-zooming'),
+    zoom: () => {
+      const zoom = map.getZoom()
+      const nextBand = zoom <= 12.5 ? 0 : zoom <= 14 ? 1 : 2
+      if (nextBand !== zoomBand.current) {
+        zoomBand.current = nextBand
+        onZoomChange(zoom)
+      }
+    },
     zoomend: () => {
       map.getContainer().classList.remove('map-is-zooming')
+      zoomBand.current = map.getZoom() <= 12.5 ? 0 : map.getZoom() <= 14 ? 1 : 2
       onZoomChange(map.getZoom())
     },
   })
@@ -188,6 +201,7 @@ export function CourseMap({ course, stationIndex, segmentProgress, isWrong, erro
         </CircleMarker>
       })}
 
+      <Polyline positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ color: '#111511', weight: 2.5, opacity: .95, lineCap: 'round', lineJoin: 'round' }} interactive={false} />
       <Marker key={`bike-${errorPulse}-${arrivalPulse}`} position={[position.lat, position.lng]} icon={bikeIcon} zIndexOffset={1000} />
     </MapContainer>
   </section>

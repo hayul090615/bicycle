@@ -9,7 +9,7 @@ import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
-import { SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 type MapPoint = { lat: number; lng: number }
 
@@ -93,6 +93,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const userAccuracyOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
+  const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
@@ -152,6 +153,14 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
         fillColor: '#f1f2ec',
         fillOpacity: .76,
       })
+      cityBoundaryOverlayRef.current = new api.Polyline({
+        map,
+        path: SEOUL_BOUNDARY.map(([lng, lat]) => new api.LatLng(lat, lng)),
+        strokeWeight: 3,
+        strokeColor: '#111511',
+        strokeOpacity: .96,
+        strokeStyle: 'solid',
+      })
       let correctingCenter = false
       api.addListener(map, 'center_changed', () => {
         if (correctingCenter) return
@@ -196,6 +205,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       userOverlayRef.current?.setMap(null)
       userAccuracyOverlayRef.current?.setMap(null)
       cityMaskOverlayRef.current?.setMap(null)
+      cityBoundaryOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       routeOverlaysRef.current = []
       accessOverlaysRef.current = []
@@ -207,6 +217,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       userOverlayRef.current = null
       userAccuracyOverlayRef.current = null
       cityMaskOverlayRef.current = null
+      cityBoundaryOverlayRef.current = null
       activePopupRef.current = null
       activePopupIdRef.current = null
       mapRef.current = null
