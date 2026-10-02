@@ -92,6 +92,7 @@ export interface KakaoMapsApi {
   services: {
     Status: { OK: string; ZERO_RESULT: string }
     Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number }) : void }
+    Geocoder: new () => { addressSearch(query: string, callback: (addresses: Array<{ address_name: string; x: string; y: string }>, status: string) => void): void }
   }
 }
 
@@ -142,12 +143,28 @@ export function loadKakaoMaps(): Promise<KakaoMapsApi> {
 
 export async function searchSeoulPlaces(query: string): Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>> {
   const api = await loadKakaoMaps()
-  return new Promise((resolve, reject) => {
-    new api.services.Places().keywordSearch(query.includes('서울') || /\bseoul\b/i.test(query) ? query : `서울 ${query}`, (places, status) => {
+  const places = new api.services.Places()
+  const geocoder = new api.services.Geocoder()
+  const searchKeyword = (term: string) => new Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>((resolve, reject) => {
+    places.keywordSearch(term, (results, status) => {
       if (status === api.services.Status.ZERO_RESULT) { resolve([]); return }
       if (status !== api.services.Status.OK) { reject(new Error('place search unavailable')); return }
-      resolve(places.map(place => ({ id: place.id, name: place.place_name, address: place.road_address_name || place.address_name, lat: Number(place.y), lng: Number(place.x) }))
+      resolve(results.map(place => ({ id: place.id, name: place.place_name, address: place.road_address_name || place.address_name, lat: Number(place.y), lng: Number(place.x) }))
         .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng)))
     }, { size: 15 })
   })
+  const inSeoul = (place: { lat: number; lng: number }) => place.lat >= 37.41 && place.lat <= 37.72 && place.lng >= 126.76 && place.lng <= 127.19
+  const exactArea = query.replace(/\s+/g, '') === '여의도'
+  const addressQuery = exactArea ? '서울특별시 영등포구 여의도동' : query
+  const addressResults = await new Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>(resolve => {
+    geocoder.addressSearch(addressQuery, (results, status) => {
+      if (status !== api.services.Status.OK) { resolve([]); return }
+      resolve(results.map((address, index) => ({ id: `address-${addressQuery}-${index}`, name: exactArea ? '여의도' : address.address_name, address: address.address_name, lat: Number(address.y), lng: Number(address.x) }))
+        .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng) && inSeoul(place)))
+    })
+  })
+  const keywordResults = await searchKeyword(query)
+  const seoulResults = keywordResults.filter(inSeoul)
+  if (seoulResults.length || addressResults.length) return [...addressResults, ...seoulResults]
+  return (await searchKeyword(query.includes('서울') || /\bseoul\b/i.test(query) ? query : `서울 ${query}`)).filter(inSeoul)
 }

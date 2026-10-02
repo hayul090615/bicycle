@@ -238,10 +238,10 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     activePopupIdRef.current = null
 
     const path = linePoints.map(point => new api.LatLng(point.lat, point.lng))
-    const casing = new api.Polyline({ map: showCourse ? map : null, path, strokeWeight: 15, strokeColor: '#294c3a', strokeOpacity: .98, strokeStyle: 'solid' })
+    const casing = new api.Polyline({ map: showCourse ? map : null, path, strokeWeight: 9, strokeColor: '#294c3a', strokeOpacity: .98, strokeStyle: 'solid' })
     routeOverlaysRef.current.push(casing)
     for (const segment of coloredRouteSegments(routePath ?? [], elevationProfile)) {
-      routeOverlaysRef.current.push(new api.Polyline({ map: showCourse ? map : null, path: segment.path.map(([lng, lat]) => new api.LatLng(lat, lng)), strokeWeight: 8, strokeColor: segment.color, strokeOpacity: 1, strokeStyle: 'solid' }))
+      routeOverlaysRef.current.push(new api.Polyline({ map: showCourse ? map : null, path: segment.path.map(([lng, lat]) => new api.LatLng(lat, lng)), strokeWeight: 5, strokeColor: segment.color, strokeOpacity: 1, strokeStyle: 'solid' }))
     }
     activeStopIndexes.forEach(index => {
       const stop = route.stops[index]
@@ -361,8 +361,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     accessOverlaysRef.current = []
     if (!showCourse || !accessPath || accessPath.length < 2) return
     const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
-    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 15, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
-    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 9, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 5, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
   }, [accessEstimated, accessPath, showCourse, status])
 
   useEffect(() => {

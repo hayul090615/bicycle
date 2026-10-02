@@ -3451,7 +3451,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-topbar { z-index: 1600; overflow: visible; }
 .tour-typing-action { position: static; flex: 0 0 auto; }
 .tour-rental-widget-slot { display: contents; }
-.tour-rental-guidance-stack { position: absolute; z-index: 2; top: calc(100% + 1.5rem); right: 1.25rem; width: min(282px, calc(100vw - 2.5rem)); display: grid; gap: .7rem; }
+.tour-rental-guidance-stack { position: absolute; z-index: 2; top: calc(100% + 1.5rem); right: 1.25rem; width: min(282px, calc(100vw - 2.5rem)); max-height: calc(100dvh - 112px); display: grid; align-content: start; gap: .7rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #a3c9ad transparent; }
 .tour-rental-guidance-stack .tour-road-sign { position: relative; top: auto; right: auto; left: auto; width: 100%; }
 .tour-journey-start { min-width: 0; flex: 1 1 0; display: grid; gap: .2rem; }
 .tour-journey-start > span { padding-left: .15rem; color: #64756a; font: 800 .58rem 'Noto Sans KR', sans-serif; }
@@ -3584,7 +3584,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-topbar:has(.tour-rental-header-widget) { min-height: 104px; }
   .tour-journey-start > span { font-size: .53rem; }
   .tour-journey-start > strong { height: 32px; padding: 0 .35rem; font-size: .58rem; }
-  .tour-rental-guidance-stack { top: calc(100% + 1.25rem); right: .5rem; width: min(270px, calc(100vw - 1rem)); gap: .55rem; }
+  .tour-rental-guidance-stack { top: calc(100% + 1.25rem); right: .5rem; width: min(270px, calc(100vw - 1rem)); max-height: calc(100dvh - 140px); gap: .55rem; }
   .tour-rental-header-widget { gap: .4rem; padding: .6rem; }
   .tour-rental-header-widget .tour-rental-duration button { min-height: 34px; padding: .3rem .35rem; font-size: .65rem; }
   .tour-rental-header-widget .tour-rental-clock-row { gap: .38rem; }

@@ -1067,10 +1067,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     <DestinationPickerMapEvents enabled={destinationPicking} onPick={chooseCustomDestination} />
-    {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 13, opacity: .95 }} />}
-    {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 8, opacity: 1 }} />)}
-    {showRidingRoute && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 13, opacity: .95 }} />}
-    {showRidingRoute && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 8, opacity: 1 }} />}
+    {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
+    {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 5, opacity: 1 }} />)}
+    {showRidingRoute && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
+    {showRidingRoute && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
     {showBikeStations && courseBikeStations.map(station => <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}

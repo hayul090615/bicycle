@@ -210,7 +210,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     markersRef.current.forEach(marker => marker.remove())
     if (showCourse) {
       routeLineRef.current = coloredRouteSegments(routePath ?? [], elevationProfile).map(segment => {
-        const line = new library.Polyline3DElement({ path: segment.path.map(([lng, lat]) => ({ lat, lng })), altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: segment.color, strokeWidth: 8, drawsOccludedSegments: false })
+        const line = new library.Polyline3DElement({ path: segment.path.map(([lng, lat]) => ({ lat, lng })), altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: segment.color, strokeWidth: 5, drawsOccludedSegments: false })
         map.append(line)
         return line
       })
@@ -369,7 +369,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     accessLineRef.current = null
     if (!showCourse || !accessPath || accessPath.length < 2) return
     accessLineRef.current = new library.Polyline3DElement({ path: accessPath.map(([lng, lat]) => ({ lat, lng })),
-      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ffffff', strokeWidth: 8, drawsOccludedSegments: false })
+      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ffffff', strokeWidth: 5, drawsOccludedSegments: false })
     map.append(accessLineRef.current)
   }, [accessPath, showCourse, status])
 

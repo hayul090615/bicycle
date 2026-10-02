@@ -377,7 +377,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: {
             'line-color': '#ffffff',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 5, 17, 10] as ExpressionSpecification,
+            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 17, 6] as ExpressionSpecification,
             'line-opacity': 1,
           },
         }
@@ -388,20 +388,20 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: {
             'line-color': '#294c3a',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 10, 17, 15] as ExpressionSpecification,
+            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 6, 17, 9] as ExpressionSpecification,
             'line-opacity': 0.96,
           },
         }
         if (map.getLayer('building-3d')) map.setLayoutProperty('building-3d', 'visibility', is3DView ? 'visible' : 'none')
         const accessCasing = { id: 'tour-access-casing', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#fffdf5', 'line-width': 14, 'line-opacity': .98 } }
+          paint: { 'line-color': '#fffdf5', 'line-width': 9, 'line-opacity': .98 } }
         const accessLine = { id: 'tour-access-solid', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 1 } }
+          paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 1 } }
         const accessDashed = { id: 'tour-access-dashed', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
+          paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
         const walkLine = { id: 'tour-walk-line', type: 'line' as const, source: 'tour-walk-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: { 'line-color': '#506b7b', 'line-width': 4, 'line-opacity': 1, 'line-dasharray': [1.2, 1.2] } }
