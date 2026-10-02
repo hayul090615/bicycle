@@ -638,7 +638,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       setTransferRecommendation(null)
     }
   }
-  const startRentalTimer = async () => {
+  const startRentalTimer = async (minutes = rentalLimitMinutes) => {
+    rentalNoticeRef.current = { fiveMinutes: false, expired: false }
+    const now = Date.now()
+    setRentalNow(now)
+    setRentalDeadline(now + minutes * 60_000)
     let notificationsGranted = false
     if ('Notification' in window) {
       try {
@@ -646,11 +650,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         notificationsGranted = permission === 'granted'
       } catch { /* The visible countdown still works if browser alerts are unavailable. */ }
     }
-    rentalNoticeRef.current = { fiveMinutes: false, expired: false }
     setRentalReminderStatus(notificationsGranted ? 'idle' : 'permission_denied')
-    const now = Date.now()
-    setRentalNow(now)
-    setRentalDeadline(now + rentalLimitMinutes * 60_000)
   }
   const chooseDestination = (index: number | null) => {
     setDestinationError(false)
@@ -1115,7 +1115,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}`} onMouseLeave={() => hoverStop(null)}>
         {bikeUseMode === 'ttareungi' && <section className="tour-rental-map-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
           <div className="tour-rental-map-copy"><h3>{text('Rental return reminder', '반납 시간 알림')}</h3><p>{text('Choose your pass length. Keep this page open for alerts before your rental expires.', '이용권 시간을 선택하세요. 화면을 열어두면 만료 전에 알림을 보내드립니다.')}</p></div>
-          <div className="tour-rental-duration" role="group" aria-label={text('Rental time limit', '따릉이 이용 시간')}>{([60, 120] as const).map(minutes => <button type="button" key={minutes} aria-pressed={rentalLimitMinutes === minutes} disabled={rentalDeadline !== null} onClick={() => setRentalLimitMinutes(minutes)}>{minutes === 60 ? text('1 hour', '1시간') : text('2 hours', '2시간')}</button>)}</div>
+          <div className="tour-rental-duration" role="group" aria-label={text('Rental time limit', '따릉이 이용 시간')}>{([60, 120] as const).map(minutes => <button type="button" key={minutes} aria-pressed={rentalLimitMinutes === minutes} disabled={rentalDeadline !== null} onClick={() => { setRentalLimitMinutes(minutes); if (rentalDeadline === null) void startRentalTimer(minutes) }}>{minutes === 60 ? text('1 hour', '1시간') : text('2 hours', '2시간')}</button>)}</div>
           <div className="tour-rental-clock-row">
             <svg className={rentalDeadline === null ? 'tour-rental-clock' : 'tour-rental-clock is-running'} viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9" /><line x1="12" y1="12" x2="12" y2="6" className="tour-rental-clock-minute-hand" />
