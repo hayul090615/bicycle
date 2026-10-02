@@ -14,7 +14,15 @@ export type RouteRestaurant = {
 }
 
 export type RouteBikeLane = { id: string; points: LonLat[]; kind: 'cycleway' | 'lane' }
-export type RouteAmenity = { id: string; name: string; lat: number; lng: number; kind: 'pump' | 'water' | 'toilet' | 'convenience'; distanceMeters: number }
+export type RouteAmenity = {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  kind: 'pump' | 'water' | 'toilet' | 'convenience' | 'parking' | 'repair' | 'visit'
+  distanceMeters: number
+  openingHours?: string
+}
 export type RouteElevationPoint = { distanceMeters: number; elevationMeters: number }
 
 type Sample = { point: LonLat; distance: number }
@@ -163,7 +171,7 @@ export async function fetchRouteAmenities(path: LonLat[], signal: AbortSignal): 
   const samples = routeSamples(path, 600, 28)
   if (samples.length < 2) return []
   const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
-  const query = `[out:json][timeout:12];(node["amenity"~"^(bicycle_repair_station|drinking_water|toilets)$"](around:140,${pairs});way["amenity"~"^(bicycle_repair_station|drinking_water|toilets)$"](around:140,${pairs});node["shop"="convenience"](around:140,${pairs});way["shop"="convenience"](around:140,${pairs});node["service:bicycle:pump"="yes"](around:140,${pairs});way["service:bicycle:pump"="yes"](around:140,${pairs});node["compressed_air"="yes"](around:140,${pairs}););out center 120;`
+  const query = `[out:json][timeout:12];(nwr["amenity"~"^(bicycle_repair_station|bicycle_parking|drinking_water|toilets|restaurant|cafe|fast_food|food_court)$"](around:160,${pairs});nwr["shop"~"^(convenience|bicycle)$"](around:160,${pairs});nwr["tourism"~"^(attraction|museum|gallery|viewpoint)$"](around:160,${pairs});nwr["service:bicycle:pump"="yes"](around:160,${pairs});nwr["compressed_air"="yes"](around:160,${pairs}););out center tags 160;`
   const data = await queryOverpass(query, signal)
   const amenities: RouteAmenity[] = []
   for (const item of data.elements ?? []) {
@@ -171,12 +179,16 @@ export async function fetchRouteAmenities(path: LonLat[], signal: AbortSignal): 
     const lng = item.lon ?? item.center?.lon
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
     const tags = item.tags ?? {}
-    const kind: RouteAmenity['kind'] = tags.shop === 'convenience' ? 'convenience'
-      : tags.amenity === 'toilets' ? 'toilet'
-        : tags.amenity === 'drinking_water' ? 'water' : 'pump'
+    const kind: RouteAmenity['kind'] = tags.amenity === 'bicycle_parking' ? 'parking'
+      : tags.amenity === 'bicycle_repair_station' || tags.shop === 'bicycle' ? 'repair'
+        : tags.tourism ? 'visit'
+          : ['restaurant', 'cafe', 'fast_food', 'food_court'].includes(tags.amenity ?? '') ? 'visit'
+            : tags.shop === 'convenience' ? 'convenience'
+              : tags.amenity === 'toilets' ? 'toilet'
+                : tags.amenity === 'drinking_water' ? 'water' : 'pump'
     const closest = distanceAlongRoute([lng!, lat!], path)
     if (closest.gap > 170) continue
-    amenities.push({ id: `amenity-${item.type ?? 'node'}-${item.id}`, name: tags.name?.trim() || '', lat: lat!, lng: lng!, kind, distanceMeters: closest.along })
+    amenities.push({ id: `amenity-${item.type ?? 'node'}-${item.id}`, name: tags.name?.trim() || '', lat: lat!, lng: lng!, kind, distanceMeters: closest.along, openingHours: tags.opening_hours?.trim() || undefined })
   }
   const result = amenities.sort((a, b) => a.distanceMeters - b.distanceMeters).filter((item, index, all) =>
     all.findIndex(other => other.kind === item.kind && segmentLength([other.lng, other.lat], [item.lng, item.lat]) < 30) === index).slice(0, 60)

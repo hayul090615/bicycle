@@ -9,18 +9,19 @@ import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
-import { fetchBikePath, fetchBikeRoute, fetchWalkingPath, type BikeRouteInstruction, type LonLat } from '../services/bikeRoute'
+import { fetchBikePath, fetchWalkingPath, type BikeRouteInstruction, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
 import { clusterPublicCameras, publicCamerasAlongRoute } from '../services/publicCctv'
 import { fetchRouteAmenities, fetchRouteBikeLanes, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteRestaurants, fetchRouteSignals, type RouteAmenity, type RouteBikeLane, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
-import { searchNaverBlogs, type NaverBlogPost } from '../services/naverBlogs'
+import { NaverBlogSearchError, searchNaverBlogs, type NaverBlogPost } from '../services/naverBlogs'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
 const SEOUL_BOUNDS: [[number, number], [number, number]] = [[37.40, 126.75], [37.72, 127.19]]
 type Coordinates = { lat: number; lng: number; heading?: number }
+type BikeUseMode = 'ttareungi' | 'personal'
 type RotationRequest = { direction: 'left' | 'right' | 'up' | 'down'; serial: number }
 type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | 'bikeLanes' | 'amenities' | 'bikeStations'
 type MapTool = 'routes' | 'course' | 'food' | 'bikeLanes' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | 'facilities'
@@ -79,11 +80,21 @@ function nearestStopDistance(route: TouristRoute, location: Coordinates) {
 function distanceLabel(meters: number) {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
 }
+function readBikeUseMode(): BikeUseMode {
+  try { return localStorage.getItem('seoul-bike-use-mode') === 'personal' ? 'personal' : 'ttareungi' }
+  catch { return 'ttareungi' }
+}
+function readRentalDeadline(): number | null {
+  try {
+    const value = Number(localStorage.getItem('seoul-bike-rental-deadline'))
+    return Number.isFinite(value) && value > 0 ? value : null
+  } catch { return null }
+}
 
 function amenityTitle(amenity: RouteAmenity, locale: 'en' | 'ko') {
-  const labels = locale === 'ko'
-    ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' }
-    : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' }
+  const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
+    ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
+    : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}
   return `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
 }
 
@@ -92,6 +103,10 @@ const AMENITY_DISPLAY = {
   water: { icon: '💧', shortKo: '음수대', shortEn: 'Water' },
   toilet: { icon: '🚻', shortKo: '화장실', shortEn: 'Toilet' },
   convenience: { icon: '🏪', shortKo: '편의점', shortEn: 'Shop' },
+
+  parking: { icon: '🚲', shortKo: '주차', shortEn: 'Park' },
+  repair: { icon: '🛠️', shortKo: '수리', shortEn: 'Repair' },
+  visit: { icon: '📍', shortKo: '명소', shortEn: 'Visit' },
 } as const
 
 function distanceMetersBetween(a: LonLat, b: LonLat) {
@@ -140,6 +155,34 @@ function bikeMinutes(meters: number) {
 function pathDistance(points: LonLat[]) {
   return points.slice(1).reduce((total, [lng, lat], index) => total + distanceMeters(
     { lng: points[index][0], lat: points[index][1] }, { lng, lat }), 0)
+}
+
+function nearestRouteProgress(location: Coordinates, path: LonLat[]) {
+  const latitudeScale = 111_320
+  let cumulative = 0
+  let closestGap = Infinity
+  let closestProgress = 0
+  for (let index = 1; index < path.length; index++) {
+    const [fromLng, fromLat] = path[index - 1]
+    const [toLng, toLat] = path[index]
+    const referenceLat = (location.lat + fromLat + toLat) / 3 * Math.PI / 180
+    const xScale = latitudeScale * Math.cos(referenceLat)
+    const ax = (fromLng - location.lng) * xScale, ay = (fromLat - location.lat) * latitudeScale
+    const bx = (toLng - fromLng) * xScale, by = (toLat - fromLat) * latitudeScale
+    const segmentLength = Math.hypot(bx, by)
+    const fraction = Math.max(0, Math.min(1, -(ax * bx + ay * by) / Math.max(1, segmentLength * segmentLength)))
+    const gap = Math.hypot(ax + bx * fraction, ay + by * fraction)
+    if (gap < closestGap) { closestGap = gap; closestProgress = cumulative + segmentLength * fraction }
+    cumulative += segmentLength
+  }
+  return closestGap > 250 ? 0 : closestProgress
+}
+
+function estimatedRouteMinutes(route: TouristRoute) {
+  const stops = route.stops.map(stop => getTouristStation(stop.stationId))
+  const straightDistance = stops.slice(1).reduce((total, stop, index) => total + distanceMetersBetween(
+    [stops[index].lng, stops[index].lat], [stop.lng, stop.lat]), 0)
+  return bikeMinutes(straightDistance * 1.3)
 }
 
 function seasonForToday(): TourSeason {
@@ -219,7 +262,7 @@ function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedS
   return null
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -227,6 +270,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   locale: 'en' | 'ko'
   shadowDate: string
   shadowMinutes: number
+  originStopIndex: number | null
+  destinationStopIndex: number | null
+  viaStopIndex: number | null
+  onOriginStopChange: (index: number | null) => void
+  onDestinationStopChange: (index: number | null) => void
+  onViaStopChange: (index: number | null) => void
 }) {
   const [showBikeSplash, setShowBikeSplash] = useState(true)
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
@@ -241,7 +290,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
   const [nearestResult, setNearestResult] = useState<{ routeId: string; distance: number } | null>(null)
-  const [routeGeometry, setRouteGeometry] = useState<{ routeId: string; points: LonLat[]; distanceMeters: number; instructions: BikeRouteInstruction[] } | null>(null)
+  const [routeGeometry, setRouteGeometry] = useState<{ key: string; points: LonLat[]; distanceMeters: number; instructions: BikeRouteInstruction[] } | null>(null)
   const [routeGuidanceStatus, setRouteGuidanceStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
   const [amenitiesState, setAmenitiesState] = useState<{ routeId: string; places: RouteAmenity[]; status: 'loading' | 'ready' | 'unavailable' } | null>(null)
   const [elevationState, setElevationState] = useState<{ routeId: string; points: RouteElevationPoint[]; status: 'loading' | 'ready' | 'unavailable' } | null>(null)
@@ -256,8 +305,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [walkingRoute, setWalkingRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [nearbyBikes, setNearbyBikes] = useState<{ key: string; stations: NearbyBikeStation[]; updatedAt: string | null; status: 'loading' | 'live' | 'unavailable' } | null>(null)
   const [selectedBikeStationId, setSelectedBikeStationId] = useState<string | null>(null)
+  const [bikeUseMode, setBikeUseMode] = useState<BikeUseMode>(readBikeUseMode)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
   const [flatOnly, setFlatOnly] = useState(false)
+  const [durationFilter, setDurationFilter] = useState<30 | 60 | null>(null)
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
   const [showShadows, setShowShadows] = useState(true)
   const [locationFocusRequest, setLocationFocusRequest] = useState(0)
@@ -267,9 +319,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
   const [foodGuideOpen, setFoodGuideOpen] = useState(false)
-  const [foodBlogState, setFoodBlogState] = useState<{ query: string; posts: NaverBlogPost[]; status: 'idle' | 'loading' | 'ready' | 'unavailable' }>({ query: '', posts: [], status: 'idle' })
+  const [foodBlogState, setFoodBlogState] = useState<{ query: string; posts: NaverBlogPost[]; status: 'idle' | 'loading' | 'ready' | 'not_configured' | 'unavailable' }>({ query: '', posts: [], status: 'idle' })
   const [rentalLimitMinutes, setRentalLimitMinutes] = useState<60 | 120>(60)
-  const [rentalDeadline, setRentalDeadline] = useState<number | null>(null)
+  const [rentalDeadline, setRentalDeadline] = useState<number | null>(readRentalDeadline)
+  const [rentalReminderStatus, setRentalReminderStatus] = useState<'idle' | 'five_minutes' | 'expired' | 'permission_denied'>('idle')
   const [rentalNow, setRentalNow] = useState(Date.now())
   const [transferRecommendation, setTransferRecommendation] = useState<{ routeId: string; station: NearbyBikeStation | null; status: 'loading' | 'ready' | 'unavailable' } | null>(null)
   const [foodGuideAnchorOverride, setFoodGuideAnchorOverride] = useState<LonLat | null>(null)
@@ -279,6 +332,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const previousLocationRef = useRef<Coordinates | null>(null)
   const distanceSinceMovementTickRef = useRef(0)
   const promptedStopsRef = useRef(new Set<string>())
+  const rentalNoticeRef = useRef({ fiveMinutes: false, expired: false })
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
@@ -318,18 +372,32 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const destinationIndex = selectedStop ?? route.stops.length - 1
   const destinationStop = route.stops[destinationIndex]
   const destinationStation = getTouristStation(destinationStop.stationId)
+  const originStation = originStopIndex === null ? null : getTouristStation(route.stops[originStopIndex]?.stationId ?? route.stops[0].stationId)
+  const fallbackOriginStation = getTouristStation(route.stops[0].stationId)
+  const routeOrigin: LonLat = originStation ? [originStation.lng, originStation.lat]
+    : userLocation ? [userLocation.lng, userLocation.lat] : [fallbackOriginStation.lng, fallbackOriginStation.lat]
+  const routeWaypoints = useMemo<LonLat[]>(() => {
+    const waypoints: LonLat[] = [routeOrigin]
+    if (viaStopIndex !== null && viaStopIndex !== originStopIndex && viaStopIndex !== destinationIndex) {
+      const via = getTouristStation(route.stops[viaStopIndex].stationId)
+      waypoints.push([via.lng, via.lat])
+    }
+    waypoints.push([destinationStation.lng, destinationStation.lat])
+    return waypoints
+  }, [destinationIndex, destinationStation.lat, destinationStation.lng, originStopIndex, route.stops, routeOrigin[0], routeOrigin[1], viaStopIndex])
   const locationLat = userLocation ? Number(userLocation.lat.toFixed(4)) : null
   const locationLng = userLocation ? Number(userLocation.lng.toFixed(4)) : null
   const locationKey = locationLat === null || locationLng === null ? null : `${locationLat}:${locationLng}`
+  const routeGuidanceKey = `${route.id}:${originStopIndex ?? `loc-${locationKey ?? 'na'}`}:${destinationIndex}:${viaStopIndex ?? 'none'}`
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
   const nearbyStations = activeNearbyBikes?.status === 'live' ? activeNearbyBikes.stations : snapshotNearby
-  const pickupStation = nearbyStations.find(station => station.id === selectedBikeStationId && (station.available === null || station.available > 0))
+  const pickupStation = bikeUseMode === 'personal' ? null : nearbyStations.find(station => station.id === selectedBikeStationId && (station.available === null || station.available > 0))
     ?? nearbyStations.find(station => station.available === null || station.available > 0)
     ?? (activeNearbyBikes?.status === 'live' ? null : nearbyStations[0] ?? null)
-  const approachKey = pickupStation ? `${route.id}:${selectedStop ?? 'all'}:${pickupStation.id}` : null
-  const walkingKey = locationKey && pickupStation ? `${locationKey}:${pickupStation.id}` : null
+  const approachKey = originStopIndex === null && pickupStation ? `${route.id}:${selectedStop ?? 'all'}:${pickupStation.id}` : null
+  const walkingKey = originStopIndex === null && locationKey && pickupStation ? `${locationKey}:${pickupStation.id}` : null
   const activeApproachRoute = approachRoute?.key === approachKey ? approachRoute : null
   const approachPath = activeApproachRoute?.points ?? null
   const activeWalkingRoute = walkingRoute?.key === walkingKey ? walkingRoute : null
@@ -340,8 +408,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     ? distanceMeters(userLocation, pickupStation) * 1.25 : null)
   const selectStop = useCallback((index: number | null) => {
     setSelection(index === null ? null : { routeId: route.id, index })
+    onDestinationStopChange(index)
+    setMapLayers(current => ({ ...current, course: index !== null }))
     if (userLocation) setLocationFocusRequest(request => request + 1)
-  }, [route.id, userLocation])
+  }, [onDestinationStopChange, route.id, userLocation])
+  useEffect(() => {
+    setSelection(destinationStopIndex === null ? null : { routeId: route.id, index: destinationStopIndex })
+    setMapLayers(current => ({ ...current, course: destinationStopIndex !== null }))
+    if (destinationStopIndex !== null && destinationStopIndex === viaStopIndex) onViaStopChange(null)
+  }, [destinationStopIndex, onViaStopChange, route.id, viaStopIndex])
   const hoverStop = useCallback((index: number | null) => {
     setHover(index === null ? null : { routeId: route.id, index })
   }, [route.id])
@@ -349,8 +424,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const station = getTouristStation(stop.stationId)
     return [station.lat, station.lng]
   }), [route])
-  const routedPath = routeGeometry?.routeId === route.id ? routeGeometry.points : null
-  const routeInstructions = routeGeometry?.routeId === route.id ? routeGeometry.instructions : []
+  const routedPath = routeGeometry?.key === routeGuidanceKey ? routeGeometry.points : null
+  const routeInstructions = routeGeometry?.key === routeGuidanceKey ? routeGeometry.instructions : []
   const activeElevation = elevationState?.routeId === route.id ? elevationState : null
   const routeAmenities = amenitiesState?.routeId === route.id ? amenitiesState.places : []
   const courseBikeStations = courseBikeStationsState?.routeId === route.id ? courseBikeStationsState.stations : []
@@ -386,29 +461,43 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     : activeRoadConditions?.gradesStatus === 'ready' ? String(routeGrades.filter(item => item.kind === 'uphill').length) : '—'
   const downhillCountLabel = !routedPath || activeRoadConditions?.gradesStatus === 'loading' ? '…'
     : activeRoadConditions?.gradesStatus === 'ready' ? String(routeGrades.filter(item => item.kind === 'downhill').length) : '—'
-  const routeDistance = routeGeometry?.routeId === route.id
+  const routeDistance = routeGeometry?.key === routeGuidanceKey
     ? routeGeometry.distanceMeters
-    : route.distance && Number.isFinite(Number.parseFloat(route.distance))
-      ? Number.parseFloat(route.distance) * 1000
-      : pathDistance(route.stops.map(stop => {
-        const station = getTouristStation(stop.stationId)
-        return [station.lng, station.lat] as LonLat
-      })) * 1.3
-  const routeDistanceEstimated = routeGeometry?.routeId !== route.id
-  const journeyOrigin = userLocation && pickupStation ? text('My location', '내 위치') : text(route.stops[0].place, route.stops[0].placeKo)
-  const journeyDistance = userLocation && pickupStation && approachDistance !== null ? approachDistance + (walkingDistance ?? 0) : routeDistance
-  const journeyMinutes = userLocation && pickupStation && approachDistance !== null
-    ? bikeMinutes(approachDistance) + Math.ceil((walkingDistance ?? 0) / 75)
-    : bikeMinutes(routeDistance)
+    : pathDistance(routeWaypoints) * 1.3
+  const routeDistanceEstimated = routeGeometry?.key !== routeGuidanceKey || (originStopIndex === null && !userLocation)
+  const journeyOrigin = originStopIndex !== null ? text(route.stops[originStopIndex]?.place ?? route.stops[0].place, route.stops[originStopIndex]?.placeKo ?? route.stops[0].placeKo)
+    : userLocation ? text('My location', '내 위치') : text(route.stops[0].place, route.stops[0].placeKo)
+  const journeyDistance = routeDistance
+  const journeyMinutes = bikeMinutes(routeDistance)
+  const routeProgressMeters = userLocation && routedPath ? nearestRouteProgress(userLocation, routedPath) : 0
+  const remainingRouteMeters = Math.max(0, (routedPath?.length ? pathDistance(routedPath) : routeDistance) - routeProgressMeters)
+  let nextInstructionOffset = 0
+  const nextInstruction = routeInstructions.map(instruction => {
+    const step = { instruction, offsetMeters: nextInstructionOffset }
+    nextInstructionOffset += instruction.distanceMeters
+    return step
+  }).find(step => step.offsetMeters + 10 >= routeProgressMeters)
+  const navigationCue = selectedStop === null ? null : routeInstructions.length
+    ? <div className="tour-route-next-guidance" role="status" aria-live="polite">
+        <span>{text('NEXT DIRECTION', '다음 이동 방향')}</span>
+        <strong>{instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale)}</strong>
+        <small>{distanceLabel(Math.max(0, (nextInstruction?.offsetMeters ?? routeDistance) - routeProgressMeters))} {text('to next turn', '뒤 다음 안내')} · {distanceLabel(remainingRouteMeters)} {text('remaining', '남음')}</small>
+      </div>
+    : <div className="tour-route-next-guidance" role="status" aria-live="polite">
+        <span>{text('NEXT DIRECTION', '다음 이동 방향')}</span>
+        <strong>{routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 길 안내를 불러오는 중…') : text('Turn-by-turn directions unavailable', '상세 방향 안내를 사용할 수 없어요')}</strong>
+        <small>≈ {distanceLabel(remainingRouteMeters)} {text('remaining · estimated', '남음 · 예상 거리')}</small>
+      </div>
   const rentalSecondsRemaining = rentalDeadline === null ? null : Math.max(0, Math.ceil((rentalDeadline - rentalNow) / 1000))
   const elevationPoints = activeElevation?.points ?? []
   const elevationMinimum = elevationPoints.length ? Math.min(...elevationPoints.map(point => point.elevationMeters)) : 0
   const elevationMaximum = elevationPoints.length ? Math.max(...elevationPoints.map(point => point.elevationMeters)) : 0
   const elevationProfileLine = elevationPoints.map((point, index) => `${(index / Math.max(1, elevationPoints.length - 1) * 320).toFixed(1)},${(76 - (point.elevationMeters - elevationMinimum) / Math.max(1, elevationMaximum - elevationMinimum) * 58).toFixed(1)}`).join(' ')
   const totalAscent = elevationPoints.slice(1).reduce((total, point, index) => total + Math.max(0, point.elevationMeters - elevationPoints[index].elevationMeters), 0)
-  const linePoints = useMemo<LatLngExpression[]>(() => routedPath
-    ? routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)
-    : points, [routedPath, points])
+  const displayRoutePath = routedPath ?? routeWaypoints
+  const displayStopIndexes = selectedStop === null ? route.stops.map((_, index) => index)
+    : [...new Set([originStopIndex ?? (userLocation ? null : 0), viaStopIndex, selectedStop].filter((index): index is number => index !== null))]
+  const linePoints = useMemo<LatLngExpression[]>(() => displayRoutePath.map(([lng, lat]) => [lat, lng] as LatLngExpression), [displayRoutePath])
   const approachPoints = useMemo<LatLngExpression[]>(() => approachPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [approachPath])
   const walkingPoints = useMemo<LatLngExpression[]>(() => walkingPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [walkingPath])
   const cctvData = usePublicCctvData()
@@ -435,7 +524,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     .sort((first, second) => userLocation ? nearestStopDistance(first, userLocation) - nearestStopDistance(second, userLocation) : 0)
   const routeChoices = flatOnly ? routes.filter(candidate => candidate.mostlyFlat)
     .sort((first, second) => userLocation ? nearestStopDistance(first, userLocation) - nearestStopDistance(second, userLocation) : 0) : categoryRoutes
-  const visibleRoutes = routeChoices.filter(candidate => `${candidate.title} ${candidate.titleKo} ${candidate.area} ${candidate.areaKo}`
+  const durationRoutes = durationFilter === null ? routeChoices : routeChoices.filter(candidate => {
+    const minutes = estimatedRouteMinutes(candidate)
+    return durationFilter === 30 ? minutes <= 40 : minutes > 40 && minutes <= 75
+  })
+  const visibleRoutes = durationRoutes.filter(candidate => `${candidate.title} ${candidate.titleKo} ${candidate.area} ${candidate.areaKo}`
     .toLocaleLowerCase().includes(routeSearch.trim().toLocaleLowerCase()))
   const locateNearestRoute = (chooseNearest = true) => {
     if (!navigator.geolocation) {
@@ -472,14 +565,37 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const navigateRouteFromLocation = (routeId: string) => {
     setMapLayers(current => ({ ...current, course: true }))
-    if (!userLocation) locateNearestRoute(false)
+    if (originStopIndex === null && !userLocation) locateNearestRoute(false)
     else setLocationFocusRequest(request => request + 1)
     onRouteSelect(routeId)
+  }
+  const changeBikeUseMode = (mode: BikeUseMode) => {
+    setBikeUseMode(mode)
+    if (mode === 'personal') {
+      setRentalDeadline(null)
+      setRentalReminderStatus('idle')
+      setTransferRecommendation(null)
+    }
+  }
+  const startRentalTimer = async () => {
+    let notificationsGranted = false
+    if ('Notification' in window) {
+      try {
+        const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
+        notificationsGranted = permission === 'granted'
+      } catch { /* The visible countdown still works if browser alerts are unavailable. */ }
+    }
+    rentalNoticeRef.current = { fiveMinutes: false, expired: false }
+    setRentalReminderStatus(notificationsGranted ? 'idle' : 'permission_denied')
+    const now = Date.now()
+    setRentalNow(now)
+    setRentalDeadline(now + rentalLimitMinutes * 60_000)
   }
   const chooseDestination = (index: number | null) => {
     setMapLayers(current => ({ ...current, course: index !== null }))
     selectStop(index)
-    if (index !== null && !userLocation) locateNearestRoute(false)
+    if (viaStopIndex === index) onViaStopChange(null)
+    if (index !== null && originStopIndex === null && !userLocation) locateNearestRoute(false)
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   const chooseMapView = (nextView: 'city' | 'satellite' | 'map' | 'google' | 'kakao') => {
@@ -496,6 +612,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   useEffect(() => {
     try { localStorage.setItem('seoul-bike-map-layers-v3', JSON.stringify(mapLayers)) } catch { /* Map controls remain available without storage. */ }
   }, [mapLayers])
+  useEffect(() => {
+    try { localStorage.setItem('seoul-bike-use-mode', bikeUseMode) } catch { /* Preference is optional. */ }
+  }, [bikeUseMode])
+  useEffect(() => {
+    try {
+      if (rentalDeadline === null) localStorage.removeItem('seoul-bike-rental-deadline')
+      else localStorage.setItem('seoul-bike-rental-deadline', String(rentalDeadline))
+    } catch { /* The in-page timer still works if storage is blocked. */ }
+  }, [rentalDeadline])
   useEffect(() => {
     if (!trackingLocation || !navigator.geolocation) return
     const watchId = navigator.geolocation.watchPosition(position => {
@@ -532,12 +657,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 12000)
     setRouteGuidanceStatus('loading')
-    void fetchBikeRoute(route, controller.signal)
-      .then(result => { if (!controller.signal.aborted) { setRouteGeometry({ routeId: route.id, points: result.geometry, distanceMeters: result.distanceMeters ?? pathDistance(result.geometry), instructions: result.instructions }); setRouteGuidanceStatus('ready') } })
+    void fetchBikePath(routeWaypoints, controller.signal)
+      .then(result => { if (!controller.signal.aborted) { setRouteGeometry({ key: routeGuidanceKey, points: result.geometry, distanceMeters: result.distanceMeters ?? pathDistance(result.geometry), instructions: result.instructions }); setRouteGuidanceStatus('ready') } })
       .catch(() => { if (!controller.signal.aborted) { setRouteGeometry(null); setRouteGuidanceStatus('unavailable') } })
       .finally(() => window.clearTimeout(timeout))
     return () => { window.clearTimeout(timeout); controller.abort() }
-  }, [route])
+  }, [routeGuidanceKey, routeWaypoints])
   useEffect(() => {
     if (!routedPath || routedPath.length < 2) {
       setBikeLanesState(null)
@@ -588,7 +713,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return () => { active = false; window.clearTimeout(timeout); controller.abort() }
   }, [route.id, routedPath])
   useEffect(() => {
-    if (!routedPath || routedPath.length < 2) return
+    if (bikeUseMode === 'personal' || !routedPath || routedPath.length < 2) { setCourseBikeStationsState(null); return }
     const controller = new AbortController()
     let active = true
     const anchors = [0, routeDistance * .5, routeDistance].map(distance => coordinateAtDistance(routedPath, distance))
@@ -619,7 +744,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     refresh()
     const interval = window.setInterval(refresh, 90_000)
     return () => { active = false; window.clearInterval(interval); controller.abort() }
-  }, [route.id, routeDistance, routedPath])
+  }, [bikeUseMode, route.id, routeDistance, routedPath])
   useEffect(() => {
     if (!routedPath || routedPath.length < 2) {
       setRoadConditions({ routeId: route.id, signals: [], grades: [], signalsStatus: 'idle', gradesStatus: 'idle' })
@@ -675,13 +800,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setFoodBlogState({ query: foodBlogQuery, posts: [], status: 'loading' })
     void searchNaverBlogs(foodBlogQuery, controller.signal).then(posts => {
       if (!controller.signal.aborted) setFoodBlogState({ query: foodBlogQuery, posts, status: 'ready' })
-    }).catch(() => {
-      if (!controller.signal.aborted) setFoodBlogState({ query: foodBlogQuery, posts: [], status: 'unavailable' })
+    }).catch(error => {
+      if (!controller.signal.aborted) setFoodBlogState({ query: foodBlogQuery, posts: [], status: error instanceof NaverBlogSearchError ? error.code : 'unavailable' })
     })
     return () => controller.abort()
   }, [foodGuideOpen, foodBlogQuery])
   useEffect(() => {
-    if (!locationKey || locationLat === null || locationLng === null) {
+    if (bikeUseMode === 'personal' || !locationKey || locationLat === null || locationLng === null) {
       setNearbyBikes(null)
       return
     }
@@ -699,12 +824,32 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     refresh()
     const interval = window.setInterval(refresh, 60_000)
     return () => { active = false; window.clearInterval(interval); controller.abort() }
-  }, [locationKey, locationLat, locationLng])
+  }, [bikeUseMode, locationKey, locationLat, locationLng])
   useEffect(() => {
     if (rentalDeadline === null) return
     const interval = window.setInterval(() => setRentalNow(Date.now()), 1000)
     return () => window.clearInterval(interval)
   }, [rentalDeadline])
+  useEffect(() => {
+    if (rentalDeadline === null || rentalSecondsRemaining === null) return
+    const sendNotification = (title: string, body: string) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(title, { body, tag: 'ttareungi-return-reminder' }) } catch { /* Keep the in-page alert as a fallback. */ }
+      } else {
+        setRentalReminderStatus('permission_denied')
+        try { navigator.vibrate?.([180, 90, 180]) } catch { /* Vibration is optional. */ }
+      }
+    }
+    if (rentalSecondsRemaining === 0 && !rentalNoticeRef.current.expired) {
+      rentalNoticeRef.current.expired = true
+      setRentalReminderStatus('expired')
+      sendNotification(text('Ttareungi rental time is up', '따릉이 이용 시간이 끝났어요'), text('Return the bike or rent again before continuing.', '자전거를 반납하거나 다시 대여해 주세요.'))
+    } else if (rentalSecondsRemaining <= 300 && !rentalNoticeRef.current.fiveMinutes) {
+      rentalNoticeRef.current.fiveMinutes = true
+      setRentalReminderStatus('five_minutes')
+      sendNotification(text('Five minutes left on your Ttareungi pass', '따릉이 이용 시간이 5분 남았어요'), text('Check the nearest return station along your route.', '경로 주변 반납 대여소를 확인하세요.'))
+    }
+  }, [rentalDeadline, rentalSecondsRemaining, text])
   useEffect(() => {
     if (rentalDeadline === null || !routedPath?.length) { setTransferRecommendation(null); return }
     const [lng, lat] = coordinateAtDistance(routedPath, Math.min(routeDistance, rentalLimitMinutes * 200 * .8))
@@ -817,10 +962,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const locationIcon = useMemo(() => divIcon({
     className: 'tour-leaflet-location-icon',
     html: `<span class="tour-user-location-marker" style="--tour-user-heading:${locationHeading}deg"></span>`,
-    iconSize: [34, 39],
-    iconAnchor: [17, 20],
+    iconSize: [48, 56],
+    iconAnchor: [24, 28],
   }), [locationHeading])
-  const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
+  const map = <MapContainer className="tour-explorer-map" center={points[0]} zoom={13} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     {showCourse && <Polyline positions={linePoints} pathOptions={{ color: '#fff', weight: 14, opacity: .98 }} />}
@@ -834,7 +979,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <Tooltip>{station.name} · {station.available === null ? '—' : station.available} {text('bikes available', '대 대여 가능')}</Tooltip>
     </Marker>)}
     {showAmenities && routeAmenities.map(amenity => <Marker key={amenity.id} position={[amenity.lat, amenity.lng]}
-      icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? ({ pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' } as const)[amenity.kind] : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
+      icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
       <Tooltip>{amenityTitle(amenity, locale)} · {distanceLabel(amenity.distanceMeters)}</Tooltip>
     </Marker>)}
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
@@ -866,8 +1011,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </Popup>
       <Tooltip direction="top">CCTV {cluster.cameras.length > 1 ? cluster.cameras.length : ''}</Tooltip>
     </CircleMarker>)}
-    {showCourse && route.stops.map((stop, index) => <CircleMarker key={stop.stationId} center={points[index]} radius={selectedStop === index ? 13 : 9}
-      eventHandlers={{ click: () => selectStop(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : '#08765b', fillOpacity: 1 }}>
+    {showCourse && route.stops.map((stop, index) => displayStopIndexes.includes(index) && <CircleMarker key={stop.stationId} center={points[index]} radius={selectedStop === index || originStopIndex === index || viaStopIndex === index ? 13 : 9}
+      eventHandlers={{ click: () => chooseDestination(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : viaStopIndex === index ? '#7657bd' : originStopIndex === index || (originStopIndex === null && !userLocation && index === 0) ? '#1677e8' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
     </CircleMarker>)}
   </MapContainer>
@@ -880,10 +1025,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </div>
       <div className="tour-route-summary" aria-label={text('Selected route overview', '선택한 경로 안내')}>
         <div className="tour-route-summary-stops"><span>{journeyOrigin}</span><i aria-hidden="true">→</i><strong>{text(destinationStop.place, destinationStop.placeKo)}</strong></div>
-        <div className="tour-route-summary-metrics"><span><small>{text('DISTANCE', '거리')}</small><strong>{(userLocation && pickupStation ? activeApproachRoute?.estimated !== false : routeDistanceEstimated) ? '≈ ' : ''}{distanceLabel(journeyDistance)}</strong></span>
+        <div className="tour-route-summary-metrics"><span><small>{text('DISTANCE', '거리')}</small><strong>{routeDistanceEstimated ? '≈ ' : ''}{distanceLabel(journeyDistance)}</strong></span>
           <span><small>{text('ESTIMATED TIME', '예상 시간')}</small><strong>{text(`About ${journeyMinutes} min`, `약 ${journeyMinutes}분`)}</strong></span>
           {pickupStation && <span className="tour-route-summary-bikes"><small>{text('BIKES NEARBY', '대여 가능')}</small><strong>{pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</strong></span>}
         </div>
+        {navigationCue}
       </div>
 
       <div className="tour-map-quick-guide" aria-label={text('How to start', '빠른 이용 안내')}>
@@ -893,12 +1039,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </div>
       <div className={`tour-map-stage tour-map-stage--${mapWeather}`} onMouseLeave={() => hoverStop(null)}>
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={displayRoutePath} activeStopIndexes={displayStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={routedPath} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} showRoadview={roadviewOpen} onCloseRoadview={() => setRoadviewOpen(false)} fallback={map} />}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} activeStopIndexes={displayStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} activeStopIndexes={displayStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} showRoadview={roadviewOpen} onCloseRoadview={() => setRoadviewOpen(false)} fallback={map} />}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={routedPath} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} activeStopIndexes={displayStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} bikeLanes={routeBikeLanes} showBikeLanes={showBikeLanes} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={courseBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showCourse} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         <div className="tour-mobile-map-top" role="search">
           <label className="tour-mobile-map-search"><span aria-hidden="true">&#x1F50D;</span><input value={routeSearch} onChange={event => setRouteSearch(event.currentTarget.value)} placeholder={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} aria-label={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} /></label>
@@ -906,20 +1052,33 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer("course")}><span aria-hidden="true">&#x1F6B2;</span>{text("Bike routes", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</button>
             <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer("restaurants"); setFoodGuideOpen(true) }}><span aria-hidden="true">&#x1F35C;</span>{text("Food", "\uB9DB\uC9D1")}</button>
             <button type="button" aria-pressed={activeMapTool === "facilities"} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Toilets", "\uD654\uC7A5\uC2E4")}</button>
+            <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
           </nav>
         </div>
-        <section className="tour-mobile-route-sheet" aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
+        <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
           <div className="tour-mobile-sheet-handle" aria-hidden="true"><i /></div>
           <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
-          <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
+        <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
+        {navigationCue}
           <label className="tour-mobile-destination">{text("Destination", "\uB3C4\uCC29\uC9C0")}
             <select value={selectedStop ?? ''} onChange={event => chooseDestination(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))}>
               <option value="">{text("Choose a stop on this route", "\uCF54\uC2A4\uC758 \uB3C4\uCC29\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694")}</option>
               {route.stops.map((stop, index) => <option key={stop.stationId} value={index}>{index + 1}. {text(stop.place, stop.placeKo)}</option>)}
             </select>
           </label>
-          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || selectedStop === null}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
+          {mobileSheetExpanded && <label className="tour-mobile-bike-mode">{text('Bike mode', '자전거 이용 모드')}
+            <select value={bikeUseMode} onChange={event => changeBikeUseMode(event.currentTarget.value as BikeUseMode)}>
+              <option value="ttareungi">{text('Ttareungi', '따릉이')}</option><option value="personal">{text('My bicycle', '내 자전거')}</option>
+            </select>
+          </label>}
+          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || selectedStop === null}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
+          {mobileSheetExpanded && <nav className="tour-mobile-destination-list" aria-label={text("Route destinations", "\uCF54\uC2A4 \uB3C4\uCC29\uC9C0")}>
+            {route.stops.map((stop, index) => <button type="button" key={stop.stationId} aria-pressed={selectedStop === index} onClick={() => chooseDestination(index)}><b>{index + 1}</b><span>{text(stop.place, stop.placeKo)}</span><small>{selectedStop === index ? text("Selected", "\uC120\uD0DD\uB428") : text("Set destination", "\uB3C4\uCC29\uC9C0\uB85C \uC124\uC815")}</small></button>)}
+          </nav>}
         </section>
+        <button type="button" className="tour-mobile-sheet-expand" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded}
+          aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
+          onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
         {showBikeSplash && <div className="tour-bike-splash" role="status" aria-label={text("Loading bike map", "\uC790\uC804\uAC70 \uC9C0\uB3C4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911")}>
           <div className="tour-bike-splash-mark"><span aria-hidden="true">&#x1F6B2;</span><i /><i /></div><strong>{text("Seoul by bike", "\uC790\uC804\uAC70\uB85C \uC990\uAE30\uB294 \uC11C\uC6B8")}</strong>
         </div>}
@@ -936,6 +1095,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <button type="button" aria-current={activeMapTool === "bikeLanes" ? "true" : undefined} onClick={() => { toggleMapLayer("bikeLanes"); setActiveMapTool("bikeLanes") }}><span aria-hidden="true">&#x2197;</span>{text("Bike paths", "\uC790\uC804\uAC70\uB3C4\uB85C")}</button>
               <button type="button" aria-current={activeMapTool === "facilities" ? "true" : undefined} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x2316;</span>{text("Facilities", "\uC2DC\uC124")}</button>
               <button type="button" aria-current={activeMapTool === "cctv" ? "true" : undefined} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool("cctv") }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
+              <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
             </nav>
           </section>
           <section className="tour-map-rail-group tour-map-rail-group--map">
@@ -966,7 +1126,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             </button>
           </section>
         </aside>
-        <button type="button" className="tour-map-locate" onClick={() => locateNearestRoute(false)} disabled={locating} aria-label={text("Find a nearby Ttareungi station and show my route", "\uAC00\uAE4C\uC6B4 \uB530\uB989\uC774 \uB300\uC5EC\uC18C\uC640 \uC774\uB3D9 \uACBD\uB85C \uCC3E\uAE30")}>
+        <button type="button" className="tour-map-locate" onClick={() => { setActiveMapTool('location'); locateNearestRoute(false) }} disabled={locating} aria-label={text("Show my location and nearby bikes", "\uB0B4 \uC704\uCE58\uC640 \uC8FC\uBCC0 \uB300\uC5EC\uC18C \uBCF4\uAE30")}>
           <span aria-hidden="true">&#x25CE;</span>{locating ? text("Locating...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("My location", "\uB0B4 \uC704\uCE58")}
         </button>
         {activeMapTool && <aside className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
@@ -986,10 +1146,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             {activeMapTool === 'routes' && <>
               <div className="tour-map-panel-feature"><small>{text('SELECTED ROUTE', '선택한 코스')}</small><strong>{text(route.title, route.titleKo)}</strong>
                 <span>{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by bike`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</span></div>
-              <section className="tour-course-bike-stations"><h3>{text('Live bikes along this course', '코스 주변 실시간 대여소')}</h3>
+              {bikeUseMode === 'ttareungi' && <section className="tour-course-bike-stations"><h3>{text('Live bikes along this course', '코스 주변 실시간 대여소')}</h3>
                 <p>{courseBikeStationsState?.status === 'loading' ? text('Checking nearby stations…', '주변 대여소를 확인 중입니다…') : courseBikeStationsState?.status === 'unavailable' ? text('Live station counts are temporarily unavailable.', '실시간 대여소 정보를 가져올 수 없습니다.') : text(`${courseBikeStations.length} stations near this route`, `경로 주변 ${courseBikeStations.length}곳`)}</p>
                 {courseBikeStations.length > 0 && <ul>{courseBikeStations.slice(0, 8).map(station => <li key={station.id}><span><strong>{station.name}</strong><small>{distanceLabel(station.distanceMeters)} {text('from route', '경로 근처')}</small></span><b className={station.available === 0 ? 'is-empty' : ''}>{station.available ?? '—'}<small>{text('bikes', '대')}</small></b></li>)}</ul>}
-              </section>
+              </section>}
               <section className="tour-destination-list"><h3>{text('Choose your destination', '가고 싶은 곳을 선택하세요')}</h3><p>{text('Directions begin after you pick a stop.', '목적지를 선택하면 길 안내가 시작됩니다.')}</p>
                 {route.stops.map((stop, index) => <button type="button" key={stop.stationId} aria-pressed={selectedStop === index} onClick={() => chooseDestination(index)}><b>{index + 1}</b><span>{text(stop.place, stop.placeKo)}</span><small>{selectedStop === index ? text('Selected', '선택됨') : text('Choose', '선택')}</small></button>)}
               </section>
@@ -1037,6 +1197,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               </section>
             </>}
             {activeMapTool === 'settings' && <>
+              <section className="tour-map-panel-section"><h3>{text('Bike mode', '자전거 이용 모드')}</h3>
+                <div className="tour-bike-mode-picker" role="group" aria-label={text('Choose a bike mode', '자전거 이용 모드 선택')}>
+                  <button type="button" aria-pressed={bikeUseMode === 'ttareungi'} onClick={() => changeBikeUseMode('ttareungi')}>{text('Ttareungi', '따릉이')}</button>
+                  <button type="button" aria-pressed={bikeUseMode === 'personal'} onClick={() => changeBikeUseMode('personal')}>{text('My bicycle', '내 자전거')}</button>
+                </div>
+                <p className="tour-map-panel-note">{bikeUseMode === 'personal' ? text('Rental stations, bike counts and return reminders are hidden.', '내 자전거 모드에서는 대여소·잔여 수·반납 알림을 숨깁니다.') : text('Rental stations, live bike counts and return reminders are shown.', '따릉이 대여소와 실시간 잔여 수, 반납 알림을 표시합니다.')}</p>
+              </section>
               <section className="tour-map-panel-section"><h3>{text('Map style', '지도 종류')}</h3>
                 <div className="tour-map-view-options">
                   {hasKakaoMapsKey && <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseMapView('kakao')}>{text('Kakao street', '카카오 도로')}</button>}
@@ -1071,15 +1238,18 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               </section>
             </>}
             {activeMapTool === 'location' && <>
-              <p>{userLocation ? text('Your current location is on the map.', '현재 위치를 지도에 표시했습니다.') : text('Allow location access to find the nearest rental station.', '가까운 대여소를 찾으려면 위치 접근을 허용해 주세요.')}</p>
+              <p>{bikeUseMode === 'personal'
+                ? userLocation ? text('Your location is on the map. Rental information is hidden in My bicycle mode.', '내 자전거 모드입니다. 현재 위치를 표시하고 대여 정보는 숨겼어요.') : text('Allow location access to show your starting point. Rental information stays hidden.', '출발지를 표시하려면 위치 접근을 허용해 주세요. 대여 정보는 숨겨져 있어요.')
+                : userLocation ? text('Your current location is on the map.', '현재 위치를 지도에 표시했습니다.') : text('Allow location access to find the nearest rental station.', '가까운 대여소를 찾으려면 위치 접근을 허용해 주세요.')}</p>
               <button type="button" className="tour-map-panel-action" onClick={() => locateNearestRoute(false)} disabled={locating}>{locating ? text('Finding your location…', '위치 확인 중…') : text('Find bikes near me', '내 주변 대여소 찾기')}</button>
-              {pickupStation && <div className="tour-map-panel-feature"><small>{text('NEAREST RENTAL STATION', '가까운 대여소')}</small><strong>{pickupStation.name}</strong><span>{pickupStation.available === null ? text('Live count unavailable', '실시간 잔여 수 확인 불가') : text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)}</span></div>}
-              <section className="tour-rental-timer"><h3>{text('Rental return reminder', '재대여 알림 타이머')}</h3><p>{text('Choose your pass length. We will find a live station near the route before it expires.', '이용권 시간을 고르면 만료 전에 경로 주변 실시간 대여소를 찾아드립니다.')}</p>
+              {bikeUseMode === 'ttareungi' && pickupStation && <div className="tour-map-panel-feature"><small>{text('NEAREST RENTAL STATION', '가까운 대여소')}</small><strong>{pickupStation.name}</strong><span>{pickupStation.available === null ? text('Live count unavailable', '실시간 잔여 수 확인 불가') : text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)}</span></div>}
+              {bikeUseMode === 'ttareungi' && <section className="tour-rental-timer"><h3>{text('Rental return reminder', '반납 시간 알림')}</h3><p>{text('Choose your pass length. With this page open, a browser alert warns you five minutes before the limit and again when it expires.', '이용권 시간을 선택하세요. 화면을 열어두면 만료 5분 전과 만료 시 브라우저 알림을 보냅니다.')}</p>
                 <div className="tour-rental-duration" role="group" aria-label={text('Rental time limit', '따릉이 이용 시간')}>{([60, 120] as const).map(minutes => <button type="button" key={minutes} aria-pressed={rentalLimitMinutes === minutes} onClick={() => setRentalLimitMinutes(minutes)}>{minutes === 60 ? text('1 hour', '1시간') : text('2 hours', '2시간')}</button>)}</div>
                 {rentalSecondsRemaining !== null && <strong className={`tour-rental-countdown${rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`} role="timer" aria-live="polite">{String(Math.floor(rentalSecondsRemaining / 3600)).padStart(2, '0')}:{String(Math.floor(rentalSecondsRemaining % 3600 / 60)).padStart(2, '0')}:{String(rentalSecondsRemaining % 60).padStart(2, '0')}</strong>}
-                <button type="button" className="tour-map-panel-action" onClick={() => { setRentalNow(Date.now()); setRentalDeadline(current => current === null ? Date.now() + rentalLimitMinutes * 60_000 : null) }}>{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop rental timer', '타이머 종료')}</button>
-                {rentalDeadline !== null && <div className="tour-transfer-recommendation" role="status" aria-live="polite"><small>{text('SUGGESTED RE-RENTAL STOP', '추천 재대여 대여소')}</small>{transferRecommendation?.status === 'loading' ? <strong>{text('Checking live bike availability…', '실시간 잔여 자전거 확인 중…')}</strong> : transferRecommendation?.station ? <><strong>{transferRecommendation.station.name}</strong><span>{transferRecommendation.station.available === null ? text('Live bike count unavailable', '실시간 잔여 대수 확인 불가') : `${transferRecommendation.station.available}${text(' bikes available', '대 대여 가능')}`} · {distanceLabel(transferRecommendation.station.distanceMeters)} {text('from route', '경로 지점')}</span></> : <strong>{transferRecommendation?.status === 'unavailable' ? text('Live station data could not be reached.', '실시간 대여소 정보를 가져오지 못했습니다.') : text('No available bike station was found near the route point.', '경로 근처에 대여 가능한 대여소를 찾지 못했습니다.')}</strong>}{rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 && <b>{text('Rental time is nearly up. Return and rent again here.', '대여시간이 얼마 남지 않았어요. 이곳에 반납 후 다시 대여하세요.')}</b>}</div>}
-              </section>
+                <button type="button" className="tour-map-panel-action" onClick={() => { if (rentalDeadline === null) void startRentalTimer(); else { setRentalDeadline(null); setRentalReminderStatus('idle') } }}>{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop rental timer', '타이머 종료')}</button>
+                {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <p role="alert" className="tour-rental-permission-note">{text('Browser notifications are off; the countdown will remain visible in this page.', '브라우저 알림이 꺼져 있어요. 이 화면의 남은 시간을 확인해 주세요.')}</p>}
+                {rentalDeadline !== null && <div className="tour-transfer-recommendation" role="status" aria-live="polite"><small>{text('SUGGESTED RE-RENTAL STOP', '추천 재대여 대여소')}</small>{transferRecommendation?.status === 'loading' ? <strong>{text('Checking live bike availability…', '실시간 잔여 자전거 확인 중…')}</strong> : transferRecommendation?.station ? <><strong>{transferRecommendation.station.name}</strong><span>{transferRecommendation.station.available === null ? text('Live bike count unavailable', '실시간 잔여 대수 확인 불가') : `${transferRecommendation.station.available}${text(' bikes available', '대 대여 가능')}`} · {distanceLabel(transferRecommendation.station.distanceMeters)} {text('from route', '경로 지점')}</span></> : <strong>{transferRecommendation?.status === 'unavailable' ? text('Live station data could not be reached.', '실시간 대여소 정보를 가져오지 못했습니다.') : text('No available bike station was found near the route point.', '경로 근처에 대여 가능한 대여소를 찾지 못했습니다.')}</strong>}{rentalSecondsRemaining !== null && rentalSecondsRemaining === 0 && <b>{text('Rental time is up. Return the bike or rent again.', '이용 시간이 끝났어요. 자전거를 반납하거나 다시 대여해 주세요.')}</b>}{rentalSecondsRemaining !== null && rentalSecondsRemaining > 0 && rentalSecondsRemaining <= 900 && <b>{text('Rental time is nearly up. Return and rent again here.', '대여시간이 얼마 남지 않았어요. 이곳에 반납 후 다시 대여하세요.')}</b>}</div>}
+              </section>}
             </>}
             {activeMapTool === '3d' && <>
               <p>{text('Explore the route with raised buildings and the 3D camera controls.', '건물 입체 표현과 카메라 조작으로 코스를 살펴보세요.')}</p>
@@ -1088,7 +1258,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             </>}
           </div>
         </aside>}
-        {pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
+        {bikeUseMode === 'ttareungi' && pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
           <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
             ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
             : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
@@ -1100,7 +1270,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </div>
           {activeFoodBlogState?.status === "loading" && <p className="tour-food-guide-status">{text("Searching Naver blogs...", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8\uB97C \uCC3E\uACE0 \uC788\uC5B4\uC694...")}</p>}
           {activeFoodBlogState?.status === "unavailable" && <div className="tour-food-guide-status">
-            <p>{text("Blog search is unavailable right now.", "\uBE14\uB85C\uADF8 \uAC80\uC0C9\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC5B4\uC694.")}</p>
+            <p>{text("Naver Blog search could not be reached. You can still open Naver's search page.", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8 API\uC5D0 \uC5F0\uACB0\uD558\uC9C0 \uBABB\uD588\uC5B4\uC694. \uB124\uC774\uBC84 \uAC80\uC0C9 \uD398\uC774\uC9C0\uB294 \uC5F4 \uC218 \uC788\uC5B4\uC694.")}</p>
+            <a className="tour-map-panel-action" href={"https://search.naver.com/search.naver?where=blog&query=" + encodeURIComponent(foodBlogQuery)} target="_blank" rel="noopener noreferrer">{text("Search Naver blogs", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8\uC5D0\uC11C \uAC80\uC0C9")}</a>
+          </div>}
+          {activeFoodBlogState?.status === "not_configured" && <div className="tour-food-guide-status">
+            <p>{text("Naver Blog API credentials are missing from this deployment. The search fallback still works below.", "\uBC30\uD3EC \uC124\uC815\uC5D0 \uB124\uC774\uBC84 \uBE14\uB85C\uADF8 API \uD0A4\uAC00 \uC5C6\uC5B4 \uAC80\uC0C9 \uACB0\uACFC\uB97C \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uC544\uB798 \uBC84\uD2BC\uC73C\uB85C \uB124\uC774\uBC84\uC5D0\uC11C \uBC14\uB85C \uAC80\uC0C9\uD560 \uC218 \uC788\uC5B4\uC694.")}</p>
             <a className="tour-map-panel-action" href={"https://search.naver.com/search.naver?where=blog&query=" + encodeURIComponent(foodBlogQuery)} target="_blank" rel="noopener noreferrer">{text("Search Naver blogs", "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8\uC5D0\uC11C \uAC80\uC0C9")}</a>
           </div>}
           {activeFoodBlogState?.status === "ready" && activeFoodBlogState.posts.length === 0 && <p className="tour-food-guide-status">{text("No blog posts were found for this area.", "\uC774 \uC8FC\uBCC0\uC758 \uBE14\uB85C\uADF8 \uAE00\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC5B4\uC694.")}</p>}
@@ -1147,9 +1321,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         </div>
       </details>
     </section>
-    <button type="button" className="tour-sidebar-edge-toggle" aria-controls="tour-route-sidebar" aria-expanded={sidebarOpen}
-      aria-label={sidebarOpen ? text('Hide route list', '코스 목록 접기') : text('Show route list', '코스 목록 열기')}
-      onClick={() => { setSidebarOpen(open => !open); setActiveMapTool(null) }}>{sidebarOpen ? '‹' : '›'}</button>
     <aside id="tour-route-sidebar" className="tour-itinerary" aria-label={text('Routes and nearby bikes', '코스와 가까운 따릉이')} hidden={!sidebarOpen}>
       <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => setSidebarOpen(false)} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
       <div className="tour-sidebar-heading">
@@ -1277,6 +1448,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button type="button" className="tour-flat-toggle" aria-pressed={flatOnly} onClick={() => { setFlatOnly(value => !value); setRouteSearch('') }}>
           <span aria-hidden="true">↔</span>{text('Mostly flat riverside routes', '강변 평탄 코스')}
         </button>
+        <div className="tour-duration-filters" role="group" aria-label={text('Choose by ride time', '주행 시간으로 코스 선택')}>
+          <button type="button" aria-pressed={durationFilter === 30} onClick={() => setDurationFilter(current => current === 30 ? null : 30)}>{text('About 30 min', '30분 가볍게')}</button>
+          <button type="button" aria-pressed={durationFilter === 60} onClick={() => setDurationFilter(current => current === 60 ? null : 60)}>{text('About 1 hour', '1시간 둘러보기')}</button>
+        </div>
+        {durationFilter !== null && <p className="tour-duration-note">{text('Estimated riding time from route stops; breaks and traffic can change the total.', '경유지 사이 거리로 계산한 예상 주행 시간입니다. 휴식과 교통 상황에 따라 달라질 수 있어요.')}</p>}
         <div className="tour-finder-categories" role="group" aria-label={text('Route categories', '코스 종류')}>
           {(Object.keys(categoryNames) as TourCategory[]).map(key => <button key={key} type="button" aria-pressed={!flatOnly && category === key}
             onClick={() => { setFlatOnly(false); setRouteSearch(''); const next = routes.find(candidate => candidate.category === key); if (next) navigateRouteFromLocation(next.id) }}>
@@ -1287,7 +1463,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <strong>{text(candidate.title, candidate.titleKo)}</strong>
             <small>{text(candidate.mostlyFlat ? 'Mostly flat · ' : '', candidate.mostlyFlat ? '대체로 평탄 · ' : '')}{userLocation ? `${distanceLabel(nearestStopDistance(candidate, userLocation))} · ` : ''}{text(candidate.suggestedTime, candidate.suggestedTimeKo)}</small>
           </button>)}
-          {visibleRoutes.length === 0 && <p className="tour-no-routes">{text('No routes match this search.', '검색 결과가 없습니다.')}</p>}
+          {visibleRoutes.length === 0 && <p className="tour-no-routes">{durationFilter !== null
+            ? text('No route in this selection is close to that ride time. Try another time or category.', '이 코스 종류에는 해당 시간대에 맞는 경로가 없어요. 시간이나 코스 종류를 바꿔보세요.')
+            : text('No routes match this search.', '검색 결과가 없습니다.')}</p>}
         </div>
         {category === 'seasonal' && route.season && <section className={`tour-season-guide tour-season-guide--${route.season}`} aria-live="polite" aria-atomic="true">
           <div className="tour-season-guide-heading"><span>{text('SEASONAL RIDE NOTES', '계절 라이딩 노트')}</span><b>{text(route.season.toUpperCase(), `${route.season === 'spring' ? '봄' : route.season === 'summer' ? '여름' : route.season === 'autumn' ? '가을' : '겨울'} 시즌`)}</b></div>

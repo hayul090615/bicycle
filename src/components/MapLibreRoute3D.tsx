@@ -140,10 +140,13 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
+  activeStopIndexes: number[]
+  originStopIndex: number | null
+  viaStopIndex: number | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
   walkPath: LonLat[] | null
@@ -226,7 +229,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
       maxBounds: [[126.75, 37.40], [127.19, 37.72]],
       pitch: is3DView ? 68 : 0,
       bearing: is3DView ? -10 : 0,
-      maxZoom: 23,
+      maxZoom: 18,
       maxPitch: 85,
       attributionControl: {},
       canvasContextAttributes: { antialias: true },
@@ -290,7 +293,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
           type: 'raster',
           tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
           tileSize: 256,
-          maxzoom: 23,
+          maxzoom: 18,
           attribution: IMAGERY_ATTRIBUTION,
         })
         map.addLayer({
@@ -452,11 +455,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready' || !showAmenities) return
-    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' }
-    const labels = locale === 'ko' ? { pump: '공기주입기', water: '음수대', toilet: '화장실', convenience: '편의점' }
-      : { pump: 'Bike pump', water: 'Water', toilet: 'Toilet', convenience: 'Shop' }
-    const shortLabels = locale === 'ko' ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' }
-      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' }
+    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' , parking: '🚲', repair: '🛠️', visit: '📍'}
+    const labels = locale === 'ko' ? { pump: '공기주입기', water: '음수대', toilet: '화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
+      : { pump: 'Bike pump', water: 'Water', toilet: 'Toilet', convenience: 'Shop' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}
+    const shortLabels = locale === 'ko' ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'}
+      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}
     const markers = amenities.map(amenity => {
       const element = document.createElement('span')
       element.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
@@ -696,11 +699,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
     })
     markersRef.current.forEach(marker => marker.remove())
     markersRef.current = []
-    if (showCourse) route.stops.forEach((stop, index) => {
+    if (showCourse) activeStopIndexes.forEach(index => {
+      const stop = route.stops[index]
+      if (!stop || !points[index]) return
       const label = locale === 'ko' ? stop.placeKo : stop.place
       const element = document.createElement('button')
       element.type = 'button'
-      element.className = 'tour-3d-stop-marker'
+      element.className = `tour-3d-stop-marker${selectedStop === index ? ' is-selected' : ''}${viaStopIndex === index ? ' is-via' : ''}${originStopIndex === index ? ' is-origin' : ''}`
       element.setAttribute('aria-label', `${index + 1}. ${label}`)
       element.title = label
       const number = document.createElement('b')
@@ -716,7 +721,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, accessPath, access
         .setLngLat([points[index].lng, points[index].lat])
         .addTo(map))
     })
-  }, [linePoints, locale, onHoverStop, onSelectStop, points, route, showCourse, status])
+  }, [activeStopIndexes, linePoints, locale, onHoverStop, onSelectStop, originStopIndex, points, route, selectedStop, showCourse, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current

@@ -42,9 +42,12 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
+  activeStopIndexes: number[]
+  originStopIndex: number | null
+  viaStopIndex: number | null
   accessPath: LonLat[] | null
   accessEstimated: boolean
   bikeLanes: RouteBikeLane[]
@@ -205,11 +208,12 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     const casing = new api.Polyline({ map, path, strokeWeight: 15, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' })
     const line = new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ff3b30', strokeOpacity: 1, strokeStyle: 'solid' })
     routeOverlaysRef.current.push(casing, line)
-    route.stops.forEach((stop, index) => {
+    activeStopIndexes.forEach(index => {
+      const stop = route.stops[index]
       const label = locale === 'ko' ? stop.placeKo : stop.place
       const button = document.createElement('button')
       button.type = 'button'
-      button.className = `tour-3d-stop-marker kakao-stop-marker${selectedStop === index ? ' is-selected' : ''}`
+      button.className = `tour-3d-stop-marker kakao-stop-marker${selectedStop === index ? ' is-selected' : ''}${viaStopIndex === index ? ' is-via' : ''}${originStopIndex === index ? ' is-origin' : ''}`
       button.setAttribute('aria-label', `${index + 1}. ${label}`)
       button.title = label
       const number = document.createElement('b')
@@ -257,7 +261,7 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [accessPath, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, points, route, selectedStop, status])
+  }, [accessPath, activeStopIndexes, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, selectedStop, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -415,13 +419,13 @@ export function KakaoRouteMap({ route, routePath, accessPath, accessEstimated, b
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
     if (!showAmenities) return
-    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' }
+    const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' , parking: '🚲', repair: '🛠️', visit: '📍'}
     const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
-      ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' }
-      : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' }
+      ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
+      : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}
     const shortLabels: Record<RouteAmenity['kind'], string> = locale === 'ko'
-      ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' }
-      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' }
+      ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'}
+      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}
     const overlays = amenities.map(amenity => {
       const marker = document.createElement('span')
       marker.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`

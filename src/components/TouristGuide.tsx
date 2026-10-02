@@ -16,6 +16,9 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
   const [category, setCategory] = useState<TourCategory>(initialRoute.category)
   const [routeId, setRouteId] = useState(initialRoute.id)
+  const [originStopIndex, setOriginStopIndex] = useState<number | null>(null)
+  const [destinationStopIndex, setDestinationStopIndex] = useState<number | null>(null)
+  const [viaStopIndex, setViaStopIndex] = useState<number | null>(null)
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
   useEffect(() => {
@@ -48,6 +51,9 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
     const url = new URL(window.location.href)
     url.searchParams.set('route', route.id)
     window.history.replaceState(null, '', url)
+    setOriginStopIndex(null)
+    setDestinationStopIndex(null)
+    setViaStopIndex(null)
   }, [route.id])
 
   const chooseRoute = (id: string) => {
@@ -83,6 +89,18 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   return <main className={`tour-screen${darkMode ? ' tour-screen--dark' : ''}`}>
     <header className="tour-topbar">
       <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'SEOUL BIKE JOURNEYS', '따릉이 서울 여행')}<small>{textFor(locale, 'Explore Seoul with Ttareungi', '따릉이로 서울을 둘러보세요')}</small></span></div>
+      <div className="tour-journey-planner" aria-label={textFor(locale, 'Plan your bike journey', '자전거 경로 설정')}>
+        <label><span>{textFor(locale, 'Start', '출발')}</span><select value={originStopIndex === null ? 'location' : String(originStopIndex)} onChange={event => { const next = event.currentTarget.value === 'location' ? null : Number(event.currentTarget.value); setOriginStopIndex(next); if (next === viaStopIndex) setViaStopIndex(null) }}>
+          <option value="location">{textFor(locale, 'My location', '내 위치')}</option>{route.stops.map((stop, index) => <option key={`origin-${stop.stationId}`} value={index} disabled={index === destinationStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
+        </select></label>
+        <span className="tour-journey-arrow" aria-hidden="true">→</span>
+        <label><span>{textFor(locale, 'Destination', '도착')}</span><select value={destinationStopIndex ?? ''} onChange={event => { const next = event.currentTarget.value === '' ? null : Number(event.currentTarget.value); setDestinationStopIndex(next); if (next === viaStopIndex) setViaStopIndex(null) }}>
+          <option value="">{textFor(locale, 'Choose destination', '도착지 선택')}</option>{route.stops.map((stop, index) => <option key={`destination-${stop.stationId}`} value={index} disabled={index === originStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
+        </select></label>
+        <label className="tour-journey-via"><span>{textFor(locale, 'Via point', '중간지점 설정')}</span><select value={viaStopIndex ?? ''} onChange={event => setViaStopIndex(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))}>
+          <option value="">{textFor(locale, 'No stop', '경유지 없음')}</option>{route.stops.map((stop, index) => <option key={`via-${stop.stationId}`} value={index} disabled={index === originStopIndex || index === destinationStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
+        </select></label>
+      </div>
       <div className="tour-header-actions">
         <button type="button" className="tour-theme-button" aria-pressed={darkMode} onClick={onToggleTheme}>{darkMode ? textFor(locale, '☀ Light', '☀ 라이트') : textFor(locale, '☾ Dark', '☾ 다크')}</button>
         <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
@@ -92,6 +110,8 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
     <div className="tour-content">
       <section className="tour-route-panel tour-map-first-panel" id="tour-detail" tabIndex={-1} aria-label={textFor(locale, `${route.title} itinerary`, `${route.titleKo} 일정`)}>
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
+          originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
+          onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
           locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} />
       </section>
       <details className="tour-more-details" id="tour-routes">

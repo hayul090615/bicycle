@@ -6,10 +6,17 @@ export interface NaverBlogPost {
   postDate: string
 }
 
+export class NaverBlogSearchError extends Error {
+  constructor(readonly code: 'not_configured' | 'unavailable') {
+    super(code)
+    this.name = 'NaverBlogSearchError'
+  }
+}
+
 export async function searchNaverBlogs(query: string, signal: AbortSignal): Promise<NaverBlogPost[]> {
   const params = new URLSearchParams({ query })
   const response = await fetch('/api/blog-search?' + params, { signal })
-  if (!response.ok) throw new Error('BLOG_SEARCH_UNAVAILABLE')
-  const data = await response.json() as { items?: NaverBlogPost[] }
+  const data = await response.json().catch(() => ({})) as { items?: NaverBlogPost[]; error?: string }
+  if (!response.ok) throw new NaverBlogSearchError(data.error === 'blog_api_not_configured' ? 'not_configured' : 'unavailable')
   return data.items ?? []
 }

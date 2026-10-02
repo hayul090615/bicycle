@@ -38,9 +38,12 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
-export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
+export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
+  activeStopIndexes: number[]
+  originStopIndex: number | null
+  viaStopIndex: number | null
   accessPath: LonLat[] | null
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
@@ -166,9 +169,11 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
       routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ff3b30', strokeWidth: 8, drawsOccludedSegments: false })
       map.append(routeLineRef.current)
     }
-    markersRef.current = showCourse ? points.map((position, index) => {
+    markersRef.current = showCourse ? activeStopIndexes.map(index => {
+      const position = points[index]
       const stop = route.stops[index]
-      const label = `${index + 1}. ${locale === 'ko' ? stop.placeKo : stop.place}`
+      const prefix = viaStopIndex === index ? (locale === 'ko' ? '경유' : 'Via') : originStopIndex === index ? (locale === 'ko' ? '출발' : 'Start') : selectedStop === index ? (locale === 'ko' ? '도착' : 'End') : `${index + 1}.`
+      const label = `${prefix} ${locale === 'ko' ? stop.placeKo : stop.place}`
       const marker = new library.Marker3DInteractiveElement({ position, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
       marker.addEventListener('gmp-click', () => onSelectStop(index))
       marker.addEventListener('pointerenter', () => onHoverStop(index))
@@ -254,7 +259,7 @@ export function GoogleRoute3D({ route, routePath, accessPath, routeConditions, r
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
     }
-  }, [linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, points, route, routePath, showCourse, showRiders, status])
+  }, [activeStopIndexes, linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, showRiders, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current

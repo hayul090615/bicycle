@@ -1,6 +1,9 @@
 name: Deploy to Vercel
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -39,9 +42,19 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN1 }}
           SEOUL_TOILET_API_KEY: ${{ secrets.SEOUL_TOILET_API_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
         run: |
           if [ -z "$SEOUL_TOILET_API_KEY" ]; then
             echo "::error::Add the SEOUL_TOILET_API_KEY Actions secret before deploying."
             exit 1
           fi
-          npx --yes vercel@60.1.3 deploy --prod --yes --env "SEOUL_TOILET_API_KEY=$SEOUL_TOILET_API_KEY" --token="$VERCEL_TOKEN"
+          if [ -z "$VITE_KAKAO_MAP_KEY" ]; then
+            echo "::error::Add the VITE_KAKAO_MAP_KEY Actions secret before deploying."
+            exit 1
+          fi
+          if [ -n "$NAVER_CLIENT_ID" ] && [ -n "$NAVER_CLIENT_SECRET" ]; then
+            npx --yes vercel@60.1.3 deploy --prod --yes --build-env "VITE_KAKAO_MAP_KEY=$VITE_KAKAO_MAP_KEY" --env "SEOUL_TOILET_API_KEY=$SEOUL_TOILET_API_KEY" --env "NAVER_CLIENT_ID=$NAVER_CLIENT_ID" --env "NAVER_CLIENT_SECRET=$NAVER_CLIENT_SECRET" --token="$VERCEL_TOKEN"
+          else
+            npx --yes vercel@60.1.3 deploy --prod --yes --build-env "VITE_KAKAO_MAP_KEY=$VITE_KAKAO_MAP_KEY" --env "SEOUL_TOILET_API_KEY=$SEOUL_TOILET_API_KEY" --token="$VERCEL_TOKEN"
+          fi
