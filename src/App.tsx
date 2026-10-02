@@ -163,6 +163,9 @@ export default function App() {
   const openToursWithStation = (stationId: string) => {
     try { localStorage.setItem('seoul-bike-selected-pickup-station', stationId) } catch { /* Continue to the route planner. */ }
     openTours()
+    const url = new URL(window.location.href)
+    url.searchParams.set('lang', 'ko')
+    window.history.replaceState(null, '', url)
   }
   const openAuth = (kind: AuthPageKind) => {
     const url = new URL(window.location.href)
