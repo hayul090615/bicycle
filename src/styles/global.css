@@ -3567,7 +3567,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   inset: 0;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, #d8f4b7 0%, #79bd78 45%, #104c36 100%);
+  background: linear-gradient(145deg, #edf9df 0%, #b9dfa9 48%, #579675 100%);
   animation: site-bike-splash-out .45s ease 1.2s forwards;
 }
 .site-bike-splash-mark { width: min(152px, 44vw); overflow: visible; animation: site-bike-splash-in .72s cubic-bezier(.2,.85,.25,1.15) both; }

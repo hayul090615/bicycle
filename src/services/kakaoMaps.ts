@@ -91,7 +91,7 @@ export interface KakaoMapsApi {
   MapTypeId: { ROADMAP: string }
   services: {
     Status: { OK: string; ZERO_RESULT: string }
-    Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number }) : void }
+    Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number; page?: number }) : void }
     Geocoder: new () => { addressSearch(query: string, callback: (addresses: Array<{ address_name: string; x: string; y: string }>, status: string) => void): void }
   }
 }
@@ -141,33 +141,78 @@ export function loadKakaoMaps(): Promise<KakaoMapsApi> {
   return loading
 }
 
-export async function searchSeoulPlaces(query: string): Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>> {
-  const normalizedQuery = query.replace(/\s+/g, '').toLocaleLowerCase()
-  if (normalizedQuery === '여의도' || normalizedQuery === 'yeouido' || normalizedQuery === '여의도동') {
-    return [{ id: 'seoul-yeouido', name: '여의도', address: '서울특별시 영등포구 여의도동', lat: 37.5219, lng: 126.9245 }]
-  }
+type SearchPlace = { id: string; name: string; address: string; lat: number; lng: number }
+
+async function searchKakaoPlaces(query: string): Promise<SearchPlace[]> {
   const api = await loadKakaoMaps()
   const places = new api.services.Places()
-  const geocoder = new api.services.Geocoder()
-  const searchKeyword = (term: string) => new Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>((resolve, reject) => {
+  const searchKeyword = (term: string, page: number) => new Promise<SearchPlace[]>((resolve, reject) => {
     places.keywordSearch(term, (results, status) => {
       if (status === api.services.Status.ZERO_RESULT) { resolve([]); return }
       if (status !== api.services.Status.OK) { reject(new Error('place search unavailable')); return }
       resolve(results.map(place => ({ id: place.id, name: place.place_name, address: place.road_address_name || place.address_name, lat: Number(place.y), lng: Number(place.x) }))
         .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng)))
-    }, { size: 15 })
+    }, { size: 15, page })
   })
-  const inSeoul = (place: { lat: number; lng: number }) => place.lat >= 37.41 && place.lat <= 37.72 && place.lng >= 126.76 && place.lng <= 127.19
-  const addressQuery = query
-  const addressResults = await new Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>(resolve => {
-    try { geocoder.addressSearch(addressQuery, (results, status) => {
-      if (status !== api.services.Status.OK) { resolve([]); return }
-      resolve(results.map((address, index) => ({ id: `address-${addressQuery}-${index}`, name: address.address_name, address: address.address_name, lat: Number(address.y), lng: Number(address.x) }))
-        .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng) && inSeoul(place)))
-    }) } catch { resolve([]) }
+  const searchAddress = (term: string) => new Promise<SearchPlace[]>(resolve => {
+    try {
+      new api.services.Geocoder().addressSearch(term, (results, status) => {
+        if (status !== api.services.Status.OK) { resolve([]); return }
+        resolve(results.map((address, index) => ({ id: `address-${term}-${index}`, name: address.address_name, address: address.address_name, lat: Number(address.y), lng: Number(address.x) }))
+          .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng)))
+      })
+    } catch { resolve([]) }
   })
-  const keywordResults = await searchKeyword(query)
-  const seoulResults = keywordResults.filter(inSeoul)
-  if (seoulResults.length || addressResults.length) return [...addressResults, ...seoulResults]
-  return (await searchKeyword(query.includes('서울') || /\bseoul\b/i.test(query) ? query : `서울 ${query}`)).filter(inSeoul)
+  const hasSeoulPrefix = /서울|seoul/i.test(query)
+  const keywordTerms = hasSeoulPrefix ? [query] : [query, `서울 ${query}`]
+  const addressTerms = hasSeoulPrefix ? [query] : [query, `서울특별시 ${query}`]
+  const results = await Promise.allSettled([
+    ...keywordTerms.flatMap(term => [1, 2, 3].map(page => searchKeyword(term, page))),
+    ...addressTerms.map(searchAddress),
+  ])
+  const unique = new Map<string, SearchPlace>()
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue
+    for (const place of result.value) {
+      if (place.lat < 37.41 || place.lat > 37.72 || place.lng < 126.76 || place.lng > 127.19) continue
+      unique.set(`${place.lat.toFixed(6)},${place.lng.toFixed(6)}`, place)
+    }
+  }
+  if (!unique.size && results.every(result => result.status === 'rejected')) throw new Error('place search unavailable')
+  return [...unique.values()].slice(0, 45)
+}
+
+async function searchOpenStreetMapPlaces(query: string): Promise<SearchPlace[]> {
+  const url = new URL('https://photon.komoot.io/api/')
+  url.searchParams.set('q', query)
+  url.searchParams.set('bbox', '126.76,37.41,127.19,37.72')
+  url.searchParams.set('limit', '30')
+  const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (!response.ok) throw new Error('place search unavailable')
+  const data = await response.json() as { features?: Array<{ geometry?: { coordinates?: number[] }; properties?: { osm_id?: number; name?: string; street?: string; district?: string; city?: string } }> }
+  return (data.features ?? []).flatMap((feature, index) => {
+    const [lng, lat] = feature.geometry?.coordinates ?? []
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return []
+    const properties = feature.properties ?? {}
+    return [{ id: `osm-${properties.osm_id ?? index}`, name: properties.name || query, address: [properties.street, properties.district, properties.city].filter(Boolean).join(', ') || '서울', lat, lng }]
+  })
+}
+
+export async function searchSeoulPlaces(query: string): Promise<SearchPlace[]> {
+  const normalized = query.replace(/\s+/g, '').toLocaleLowerCase()
+  if (normalized === '여의도' || normalized === '여의도동' || normalized === 'yeouido') {
+    return [{ id: 'seoul-yeouido', name: '여의도', address: '서울특별시 영등포구 여의도동', lat: 37.5219, lng: 126.9245 }]
+  }
+  const results = await Promise.allSettled([searchKakaoPlaces(query), searchOpenStreetMapPlaces(query)])
+  const unique = new Map<string, SearchPlace>()
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue
+    for (const place of result.value) {
+      if (place.lat < 37.41 || place.lat > 37.72 || place.lng < 126.76 || place.lng > 127.19) continue
+      const key = `${place.lat.toFixed(5)},${place.lng.toFixed(5)}`
+      if (!unique.has(key)) unique.set(key, place)
+    }
+  }
+  if (!unique.size && results.every(result => result.status === 'rejected')) throw new Error('place search unavailable')
+  return [...unique.values()].slice(0, 45)
 }
