@@ -1057,14 +1057,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const seasonalRoute = routes.find(candidate => candidate.category === 'seasonal' && candidate.season === season)
     if (seasonalRoute) { setFlatOnly(false); onRouteSelect(seasonalRoute.id) }
   }
-  const locationHeading = userLocation?.heading ?? 0
   const locationIcon = useMemo(() => divIcon({
     className: 'tour-leaflet-location-icon',
-    html: `<span class="tour-user-location-marker" style="--tour-user-heading:${locationHeading}deg"></span>`,
-    iconSize: [48, 56],
-    iconAnchor: [24, 28],
-  }), [locationHeading])
-  const destinationIcon = useMemo(() => divIcon({ className: 'tour-custom-destination-icon', html: '<span aria-hidden="true">◆</span>', iconSize: [34, 38], iconAnchor: [17, 34] }), [])
+    html: `<span class="tour-journey-pin tour-journey-pin--start"><span>${locale === 'ko' ? '출발' : 'Start'}</span></span>`,
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+  }), [locale])
+  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
@@ -1088,7 +1087,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
       <Tooltip direction="top">{text('You are here', '내 위치')}{userLocation.accuracy !== undefined ? ` · ±${Math.round(userLocation.accuracy)} m` : ''}</Tooltip>
     </Marker>}
-    {customDestination && <Marker position={[customDestination.lat, customDestination.lng]} icon={destinationIcon} zIndexOffset={1100}>
+    {(customDestination || selectedStop !== null) && <Marker position={customDestination ? [customDestination.lat, customDestination.lng] : points[selectedStop!]} icon={destinationIcon} zIndexOffset={1100}>
       <Tooltip direction="top" permanent>{text('Destination', '도착지')}</Tooltip>
     </Marker>}
     {pickupStation && <CircleMarker center={[pickupStation.lat, pickupStation.lng]} radius={11}

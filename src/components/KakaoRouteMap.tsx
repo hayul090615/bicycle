@@ -316,13 +316,16 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
     if (!map || !api || status !== 'ready') return
     destinationOverlayRef.current?.setMap(null)
     destinationOverlayRef.current = null
-    if (customDestination) {
+    const destinationPoint = customDestination ?? (selectedStop !== null ? points[selectedStop] : null)
+    if (destinationPoint) {
       const marker = document.createElement('div')
-      marker.className = 'tour-kakao-custom-destination'
-      marker.textContent = '◆'
+      marker.className = 'tour-journey-pin tour-journey-pin--destination'
+      const pinLabel = document.createElement('span')
+      pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
+      marker.append(pinLabel)
       destinationOverlayRef.current = new api.CustomOverlay({
         map,
-        position: new api.LatLng(customDestination.lat, customDestination.lng),
+        position: new api.LatLng(destinationPoint.lat, destinationPoint.lng),
         content: marker,
         xAnchor: .5,
         yAnchor: 1,
@@ -330,7 +333,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       })
     }
     return () => { destinationOverlayRef.current?.setMap(null); destinationOverlayRef.current = null }
-  }, [customDestination, status])
+  }, [customDestination, locale, points, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -638,8 +641,10 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       })
     }
     const marker = document.createElement('div')
-    marker.className = 'tour-user-location-marker kakao-user-marker'
-    marker.style.setProperty('--tour-user-heading', `${userLocation.heading ?? 0}deg`)
+    marker.className = 'tour-journey-pin tour-journey-pin--start'
+    const pinLabel = document.createElement('span')
+    pinLabel.textContent = locale === 'ko' ? '출발' : 'Start'
+    marker.append(pinLabel)
     marker.setAttribute('role', 'img')
     const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
     marker.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
@@ -649,7 +654,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       position: new api.LatLng(userLocation.lat, userLocation.lng),
       content: marker,
       xAnchor: .5,
-      yAnchor: .5,
+      yAnchor: 1,
       zIndex: 12,
     })
   }, [locale, status, userLocation])

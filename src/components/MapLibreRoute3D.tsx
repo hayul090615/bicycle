@@ -738,13 +738,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     userMarkerRef.current = null
     if (!userLocation) return
     const element = document.createElement('div')
-    element.className = 'tour-user-location-marker'
-    element.style.setProperty('--tour-user-heading', `${userLocation.heading ?? 0}deg`)
+    element.className = 'tour-journey-pin tour-journey-pin--start'
+    const pinLabel = document.createElement('span')
+    pinLabel.textContent = locale === 'ko' ? '출발' : 'Start'
+    element.append(pinLabel)
     element.setAttribute('role', 'img')
     const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
     element.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
     element.title = userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`
-    userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
+    userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
       .setLngLat([userLocation.lng, userLocation.lat]).addTo(map)
   }, [locale, status, userLocation])
 
@@ -825,16 +827,19 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     if (!map || status !== 'ready') return
     destinationMarkerRef.current?.remove()
     destinationMarkerRef.current = null
-    if (customDestination) {
+    const destinationPoint = customDestination ?? (selectedStop !== null ? points[selectedStop] : null)
+    if (destinationPoint) {
       const element = document.createElement('div')
-      element.className = 'tour-map-custom-destination-marker'
-      element.textContent = '◆'
+      element.className = 'tour-journey-pin tour-journey-pin--destination'
+      const pinLabel = document.createElement('span')
+      pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
+      element.append(pinLabel)
       destinationMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
-        .setLngLat([customDestination.lng, customDestination.lat])
+        .setLngLat([destinationPoint.lng, destinationPoint.lat])
         .addTo(map)
     }
     return () => { destinationMarkerRef.current?.remove(); destinationMarkerRef.current = null }
-  }, [customDestination, status])
+  }, [customDestination, locale, points, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current

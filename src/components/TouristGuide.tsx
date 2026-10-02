@@ -92,9 +92,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
     <header className="tour-topbar">
       <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'TTAREUNGI SEOUL JOURNEY', '따릉이 서울 여행')}<small>{textFor(locale, 'Find your bike route through Seoul', '서울에서 자전거 길을 찾아보세요')}</small></span></div>
       <div className="tour-journey-planner" aria-label={textFor(locale, 'Plan your bike journey', '자전거 경로 설정')}>
-        <label><span>{textFor(locale, 'Start', '출발')}</span><select value={originStopIndex === null ? 'location' : String(originStopIndex)} onChange={event => { const next = event.currentTarget.value === 'location' ? null : Number(event.currentTarget.value); setOriginStopIndex(next); if (next === viaStopIndex) setViaStopIndex(null) }}>
-          <option value="location">{textFor(locale, 'My location', '내 위치')}</option>{route.stops.map((stop, index) => <option key={`origin-${stop.stationId}`} value={index} disabled={index === destinationStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
-        </select></label>
+        <div className="tour-journey-start"><span>{textFor(locale, 'Start', '출발')}</span><strong>{textFor(locale, 'My location', '내 위치')}</strong></div>
         <span className="tour-journey-arrow" aria-hidden="true">→</span>
         <button type="button" className="tour-journey-map-pick" onClick={() => { setDestinationStopIndex(null); setViaStopIndex(null); setOriginStopIndex(null); setDestinationPickRequest(request => request + 1) }}>
           <span>{textFor(locale, 'Destination', '도착지')}</span>
