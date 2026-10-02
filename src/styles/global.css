@@ -3469,14 +3469,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-rental-header-widget .tour-rental-duration button { border-color: #43574a; color: #dce7da; background: #293a30; }
 .tour-screen--dark .tour-rental-header-widget .tour-rental-duration button[aria-pressed='true'] { border-color: #286344; color: #f3f7ef; background: #286344; }
 
-/* Reserve room for the timer and map picker so neither covers the map or controls. */
+/* Keep the timer in its own small outlined card without a full-width blank strip. */
 .tour-screen .tour-topbar:has(.tour-rental-header-widget) {
   height: auto;
   min-height: 72px;
   flex: 0 0 auto;
   align-items: flex-start;
-  padding-bottom: 220px;
+  padding-bottom: 0;
 }
+.tour-screen:has(.tour-rental-header-widget) .tour-road-sign { top: 11.5rem; }
 .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-map-pick {
   min-width: 0;
   min-height: 34px;
@@ -3523,10 +3524,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @keyframes site-bike-wheel-roll { to { stroke-dashoffset: -20; } }
 @keyframes site-bike-splash-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 
-@media (max-width: 900px) {
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { padding-bottom: 0; }
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-planner { margin-top: 240px; }
-}
 @media (max-width: 700px) {
   .tour-rental-header-widget { top: calc(100% + .35rem); width: min(270px, calc(100vw - .7rem)); gap: .4rem; padding: .6rem; }
   .tour-rental-header-widget .tour-rental-duration button { min-height: 34px; padding: .3rem .35rem; font-size: .65rem; }
@@ -3543,9 +3540,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-rental-header-widget .tour-rental-start-button { width: 100%; min-width: 0; height: auto; min-height: 36px; padding: .36rem .5rem; }
   .tour-rental-header-widget .tour-rental-button-label { display: inline; }
   .tour-rental-header-widget .tour-rental-button-icon { display: none; }
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { grid-template-rows: 38px auto; align-content: start; }
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-header-actions { align-self: start; }
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-planner { margin-top: 240px; }
   .tour-screen:has(.tour-rental-header-widget) .tour-map-stage { height: 100% !important; min-height: 0; flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
