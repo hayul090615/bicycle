@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
@@ -304,7 +305,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -318,6 +319,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onOriginStopChange: (index: number | null) => void
   onDestinationStopChange: (index: number | null) => void
   onViaStopChange: (index: number | null) => void
+  rentalWidgetTarget: HTMLDivElement | null
 }) {
   const [showBikeSplash, setShowBikeSplash] = useState(true)
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
@@ -385,7 +387,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const preview = useRef<HTMLElement>(null)
   useEffect(() => {
     if (!showBikeSplash) return
-    const timer = window.setTimeout(() => setShowBikeSplash(false), 1450)
+    const timer = window.setTimeout(() => setShowBikeSplash(false), 1750)
     return () => window.clearTimeout(timer)
   }, [showBikeSplash])
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
@@ -1139,7 +1141,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
       <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}`} onMouseLeave={() => hoverStop(null)}>
-        {bikeUseMode === 'ttareungi' && <section className="tour-rental-map-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
+        {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<section className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
           <div className="tour-rental-map-copy"><h3>{text('Rental return reminder', '반납 시간 알림')}</h3><p>{text('Choose your pass length. Keep this page open for alerts before your rental expires.', '이용권 시간을 선택하세요. 화면을 열어두면 만료 전에 알림을 보내드립니다.')}</p></div>
           <div className="tour-rental-duration" role="group" aria-label={text('Rental time limit', '따릉이 이용 시간')}>{([60, 120] as const).map(minutes => <button type="button" key={minutes} aria-pressed={rentalLimitMinutes === minutes} disabled={rentalDeadline !== null} onClick={() => { setRentalLimitMinutes(minutes); if (rentalDeadline === null) void startRentalTimer(minutes) }}>{minutes === 60 ? text('1 hour', '1시간') : text('2 hours', '2시간')}</button>)}</div>
           <div className={`tour-rental-clock-row${rentalDeadline !== null ? ' is-running' : ''}${rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`}>
@@ -1153,7 +1155,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
           </button>
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
-        </section>}
+        </section>, rentalWidgetTarget)}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
         <div className="tour-map-destination-tools"><button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setDestinationPicking(active => !active) }}>{destinationPicking ? text('Tap a point on the map', '지도에서 도착지를 눌러 주세요') : text('Choose destination on map', '지도에서 도착지 선택')}</button>{customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}{destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}</div>
         {hasDestination && <aside className="tour-road-sign" role="status" aria-live="polite"><span className="tour-road-sign-arrow" aria-hidden="true">{instructionArrow(nextInstruction?.instruction)}</span><span><small>{text('NEXT DIRECTION', '다음 이동 방향')}</small><strong>{routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 길 안내를 불러오는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{distanceLabel(Math.max(0, (nextInstruction?.offsetMeters ?? routeDistance) - routeProgressMeters))} {text('to next turn', '후 다음 안내')}</em></span></aside>}
@@ -1200,7 +1202,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
           onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
         {showBikeSplash && <div className="tour-bike-splash" role="status" aria-label={text("Loading bike map", "\uC790\uC804\uAC70 \uC9C0\uB3C4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911")}>
-          <div className="tour-bike-splash-mark"><span aria-hidden="true">&#x1F6B2;</span><i /><i /></div><strong>{text("Seoul by bike", "\uC790\uC804\uAC70\uB85C \uC990\uAE30\uB294 \uC11C\uC6B8")}</strong>
+          <div className="tour-bike-splash-mark" aria-hidden="true"><svg viewBox="0 0 128 76" focusable="false">
+            <g className="tour-bike-splash-wheel" transform="translate(25 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
+            <g className="tour-bike-splash-wheel" transform="translate(103 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
+            <path className="tour-bike-splash-frame" d="M25 51 50 20 70 51H25m25-31h25l28 31M70 51 75 20M45 15h13m17 5 5-9h10" />
+            <circle className="tour-bike-splash-hub" cx="50" cy="20" r="3" /><circle className="tour-bike-splash-hub" cx="70" cy="51" r="3" />
+          </svg></div><strong>{text("Seoul by bike", "\uC790\uC804\uAC70\uB85C \uC990\uAE30\uB294 \uC11C\uC6B8")}</strong>
         </div>}
         <aside className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
           <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={sidebarOpen || activeMapTool === "routes"}

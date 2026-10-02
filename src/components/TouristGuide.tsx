@@ -19,6 +19,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const [originStopIndex, setOriginStopIndex] = useState<number | null>(null)
   const [destinationStopIndex, setDestinationStopIndex] = useState<number | null>(null)
   const [viaStopIndex, setViaStopIndex] = useState<number | null>(null)
+  const [rentalWidgetTarget, setRentalWidgetTarget] = useState<HTMLDivElement | null>(null)
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
   useEffect(() => {
@@ -104,7 +105,10 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
       <div className="tour-header-actions">
         <button type="button" className="tour-theme-button" aria-pressed={darkMode} onClick={onToggleTheme}>{darkMode ? textFor(locale, '☀ Light', '☀ 라이트') : textFor(locale, '☾ Dark', '☾ 다크')}</button>
         <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
-        <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}>{textFor(locale, 'Typing game', '타자 게임')} ↗</button>
+        <div className="tour-typing-action">
+          <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}>{textFor(locale, 'Typing game', '타자 게임')} ↗</button>
+          <div className="tour-rental-widget-slot" ref={setRentalWidgetTarget} />
+        </div>
       </div>
     </header>
     <div className="tour-content">
@@ -112,7 +116,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
           originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
           onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
-          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} />
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} />
       </section>
       <details className="tour-more-details" id="tour-routes">
         <summary><span><small>{textFor(locale, 'MORE TO EXPLORE', '서울을 더 둘러보기')}</small><strong>{textFor(locale, 'Browse ride themes and seasonal routes', '계절별 풍경과 테마 코스 보기')}</strong></span><i aria-hidden="true">＋</i></summary>
