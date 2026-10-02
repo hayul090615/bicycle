@@ -149,8 +149,8 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
         strokeWeight: 0,
         strokeColor: '#000000',
         strokeOpacity: 0,
-        fillColor: '#000000',
-        fillOpacity: 1,
+        fillColor: '#f1f2ec',
+        fillOpacity: .76,
       })
       let correctingCenter = false
       api.addListener(map, 'center_changed', () => {

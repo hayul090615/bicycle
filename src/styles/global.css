@@ -3294,3 +3294,73 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-destination-picking-frame { inset: .35rem; border-width: 2px; border-radius: 10px; }
   .tour-destination-picking-frame span { right: .45rem; bottom: .45rem; font-size: .64rem; }
 }
+
+/* Keep the rental controls in a compact white strip at the map's upper-right edge. */
+.tour-rental-map-widget {
+  top: max(.55rem, env(safe-area-inset-top));
+  right: .65rem;
+  left: max(calc(clamp(174px, 38vw, 220px) + .85rem), calc(100% - 760px - .65rem));
+  width: auto;
+  max-width: 760px;
+  grid-template-columns: minmax(105px, .78fr) minmax(145px, 1fr) auto minmax(120px, .86fr);
+  gap: .4rem .55rem;
+  padding: .45rem .6rem;
+  border-color: #dce5d9;
+  border-radius: 10px;
+  background: #fffefdf7;
+  box-shadow: 0 3px 13px #192a2030;
+}
+.tour-rental-map-copy h3 { margin: 0; font-size: .73rem; white-space: nowrap; }
+.tour-rental-map-copy p { display: none; }
+.tour-rental-map-widget .tour-rental-duration button { min-height: 36px; }
+.tour-rental-clock-row { gap: .28rem; font-size: .62rem; }
+.tour-rental-clock { width: 28px; height: 28px; }
+.tour-rental-clock-row .tour-rental-countdown { font-size: .9rem; }
+.tour-rental-start-button { min-height: 36px; padding: .38rem .58rem; }
+
+@media (max-width: 1050px) and (min-width: 701px) {
+  .tour-rental-map-widget {
+    left: max(calc(clamp(174px, 38vw, 220px) + .85rem), calc(100% - 560px - .65rem));
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .tour-rental-map-copy { display: none; }
+  .tour-rental-map-widget .tour-rental-duration { grid-column: 1; grid-row: 1; }
+  .tour-rental-map-widget .tour-rental-clock-row { grid-column: 2; grid-row: 1; }
+  .tour-rental-map-widget .tour-rental-start-button { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@media (max-width: 700px) {
+  .tour-rental-map-widget {
+    top: 7.1rem;
+    right: .55rem;
+    left: .55rem;
+    width: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .35rem .45rem;
+    padding: .42rem .5rem;
+    border-radius: 9px;
+  }
+  .tour-rental-map-copy { display: none; }
+  .tour-rental-map-widget .tour-rental-duration { grid-column: 1; grid-row: 1; }
+  .tour-rental-map-widget .tour-rental-duration button { min-height: 34px; padding: .35rem .4rem; font-size: .62rem; }
+  .tour-rental-map-widget .tour-rental-clock-row {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 34px;
+    justify-content: flex-end;
+    gap: .2rem;
+    font-size: .57rem;
+  }
+  .tour-rental-map-widget .tour-rental-clock { width: 25px; height: 25px; }
+  .tour-rental-map-widget .tour-rental-clock-row > span { max-width: 7.4rem; overflow: hidden; text-overflow: ellipsis; }
+  .tour-rental-map-widget .tour-rental-clock-row .tour-rental-countdown { font-size: .8rem; }
+  .tour-rental-map-widget .tour-rental-start-button { grid-column: 1 / -1; grid-row: 2; min-height: 34px; }
+  .tour-rental-map-widget .tour-rental-permission-note { grid-column: 1 / -1; grid-row: 3; }
+  .tour-map-destination-tools { top: 19.8rem; }
+  .tour-road-sign { top: 14rem; }
+}
+
+@media (max-width: 380px) {
+  .tour-rental-map-widget { grid-template-columns: minmax(0, 1fr) auto; }
+  .tour-rental-map-widget .tour-rental-clock-row > span { max-width: 5.8rem; }
+}

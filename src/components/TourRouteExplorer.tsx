@@ -1089,7 +1089,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       eventHandlers={{ click: () => chooseDestination(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : viaStopIndex === index ? '#7657bd' : originStopIndex === index || (originStopIndex === null && !userLocation && index === 0) ? '#1677e8' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
     </CircleMarker>)}
-    <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ color: '#000', weight: 0, fillColor: '#000', fillOpacity: 1, fillRule: 'evenodd' }} interactive={false} />
+    <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ color: '#f1f2ec', weight: 0, fillColor: '#f1f2ec', fillOpacity: .76, fillRule: 'evenodd' }} interactive={false} />
   </MapContainer>
 
   return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}`}>

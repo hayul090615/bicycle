@@ -342,7 +342,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
           id: 'tour-seoul-outside-mask',
           type: 'fill',
           source: 'tour-seoul-outside-mask',
-          paint: { 'fill-color': '#000000', 'fill-opacity': 1, 'fill-antialias': false },
+          paint: { 'fill-color': '#f1f2ec', 'fill-opacity': .76, 'fill-antialias': false },
         })
         if (showSatellite) {
           for (const layer of layers) {

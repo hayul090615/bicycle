@@ -136,7 +136,7 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
       map.style.display = 'block'
       map.addEventListener('gmp-error', fail)
       const cityMask = new library.Polygon3DElement({
-        fillColor: '#000000FF',
+        fillColor: '#F1F2ECBF',
         strokeColor: '#00000000',
         strokeWidth: 0,
         altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
