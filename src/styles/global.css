@@ -1358,6 +1358,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-journey-pin--destination { --pin-color: #ef3e38; }
 .tour-journey-pin::before { position: absolute; top: 10px; left: 5px; width: 36px; height: 36px; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; background: var(--pin-color); transform: rotate(-45deg); content: ''; }
 .tour-journey-pin > span { position: relative; z-index: 1; width: 28px; height: 28px; margin-top: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--pin-color); background: #fff; font: 900 10px/1 'Noto Sans KR', sans-serif; white-space: nowrap; }
+.tour-journey-pin--destination > span { width: 36px; color: #fff; background: transparent; font-size: 11px; text-shadow: 0 1px 2px #a51717aa; }
 .tour-leaflet-location-icon { border: 0 !important; background: transparent !important; }
 @media (max-width: 990px) {
   .tour-route-finder { margin-bottom: 1rem; }

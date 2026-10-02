@@ -1058,9 +1058,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
       <Tooltip direction="top">{text('You are here', '내 위치')}{userLocation.accuracy !== undefined ? ` · ±${Math.round(userLocation.accuracy)} m` : ''}</Tooltip>
     </Marker>}
-    {(customDestination || selectedStop !== null) && <Marker position={customDestination ? [customDestination.lat, customDestination.lng] : points[selectedStop!]} icon={destinationIcon} zIndexOffset={1100}>
-      <Tooltip direction="top" permanent>{text('Destination', '도착지')}</Tooltip>
-    </Marker>}
+    {(customDestination || selectedStop !== null) && <Marker position={customDestination ? [customDestination.lat, customDestination.lng] : points[selectedStop!]} icon={destinationIcon} zIndexOffset={1100} />}
     {pickupStation && <CircleMarker center={[pickupStation.lat, pickupStation.lng]} radius={11}
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#137e72', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{text('Pick up a bike', '자전거 대여')} · {pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</Tooltip>
