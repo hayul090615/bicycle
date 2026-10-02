@@ -140,7 +140,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -176,6 +176,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
   userLocation: { lat: number; lng: number; heading?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
+  destinationPicking: boolean
+  customDestination: { lat: number; lng: number } | null
+  onPickDestination: (point: { lat: number; lng: number }) => void
   onHoverStop: (index: number | null) => void
   shadowAzimuth: number
   sunElevation: number
@@ -193,6 +196,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
   const cctvPopupRef = useRef<maplibregl.Popup | null>(null)
   const userMarkerRef = useRef<MapLibreMarker | null>(null)
   const pickupMarkerRef = useRef<MapLibreMarker | null>(null)
+  const destinationMarkerRef = useRef<MapLibreMarker | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
@@ -252,7 +256,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     updateBuildingShadowsRef.current = updateBuildingShadows
     map.on('idle', updateBuildingShadows)
     map.on('moveend', updateBuildingShadows)
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: is3DView }), 'top-right')
+    map.addControl(new maplibregl.NavigationControl({ showZoom: false, showCompass: false, visualizePitch: is3DView }), 'top-right')
     const fail = () => {
       if (disposed || failed) return
       failed = true
@@ -725,6 +729,38 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
 
   useEffect(() => {
     const map = mapRef.current
+    if (!map || status !== 'ready' || !destinationPicking) return
+    const pickDestination = (event: maplibregl.MapMouseEvent) => {
+      const target = event.originalEvent.target
+      if (target instanceof HTMLElement && target.closest('.maplibregl-ctrl, .tour-3d-stop-marker')) return
+      onPickDestination({ lat: event.lngLat.lat, lng: event.lngLat.lng })
+    }
+    map.getCanvas().style.cursor = 'crosshair'
+    map.on('click', pickDestination)
+    return () => {
+      map.off('click', pickDestination)
+      map.getCanvas().style.cursor = ''
+    }
+  }, [destinationPicking, onPickDestination, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    destinationMarkerRef.current?.remove()
+    destinationMarkerRef.current = null
+    if (customDestination) {
+      const element = document.createElement('div')
+      element.className = 'tour-map-custom-destination-marker'
+      element.textContent = '◆'
+      destinationMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
+        .setLngLat([customDestination.lng, customDestination.lat])
+        .addTo(map)
+    }
+    return () => { destinationMarkerRef.current?.remove(); destinationMarkerRef.current = null }
+  }, [customDestination, status])
+
+  useEffect(() => {
+    const map = mapRef.current
     if (!map || status !== 'ready') return
     const visibility = showCourse ? 'visible' : 'none'
     map.setLayoutProperty('tour-route-casing', 'visibility', visibility)
@@ -759,6 +795,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     const map = mapRef.current
     if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
+    if (selectedStop === null) {
+      map.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 16, pitch: is3DView ? 66 : 0, bearing: is3DView ? userLocation.heading ?? 0 : 0, duration: 700, essential: false })
+      return
+    }
     const destination = points[selectedStop ?? points.length - 1]
     const bounds = new maplibregl.LngLatBounds([userLocation.lng, userLocation.lat], [destination.lng, destination.lat])
     ;[...(walkPath ?? []), ...(accessPath ?? [])].forEach(point => bounds.extend(point))

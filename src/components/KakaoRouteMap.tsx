@@ -42,7 +42,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   activeStopIndexes: number[]
@@ -69,6 +69,9 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
   userLocation: { lat: number; lng: number; heading?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
+  destinationPicking: boolean
+  customDestination: { lat: number; lng: number } | null
+  onPickDestination: (point: { lat: number; lng: number }) => void
   onHoverStop: (index: number | null) => void
   onFoodGuideOpen: (point: LonLat) => void
   showRoadview: boolean
@@ -87,6 +90,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
   const bikeLaneOverlaysRef = useRef<KakaoOverlay[]>([])
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
+  const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
@@ -152,7 +156,6 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
         }
       })
       map.addControl(new api.MapTypeControl(), api.ControlPosition.TOPRIGHT)
-      map.addControl(new api.ZoomControl(), api.ControlPosition.RIGHT)
       apiRef.current = api
       mapRef.current = map
       window.requestAnimationFrame(() => map.relayout())
@@ -262,6 +265,44 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
   }, [accessPath, activeStopIndexes, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, selectedStop, status, viaStopIndex])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready' || !destinationPicking) return
+    const onMapClick = (event?: { latLng?: { getLat(): number; getLng(): number } }) => {
+      const position = event?.latLng
+      if (position) onPickDestination({ lat: position.getLat(), lng: position.getLng() })
+    }
+    api.addListener(map, 'click', onMapClick)
+    host.current?.classList.add('is-picking-destination')
+    return () => {
+      api.removeListener(map, 'click', onMapClick)
+      host.current?.classList.remove('is-picking-destination')
+    }
+  }, [destinationPicking, onPickDestination, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    destinationOverlayRef.current?.setMap(null)
+    destinationOverlayRef.current = null
+    if (customDestination) {
+      const marker = document.createElement('div')
+      marker.className = 'tour-kakao-custom-destination'
+      marker.textContent = '◆'
+      destinationOverlayRef.current = new api.CustomOverlay({
+        map,
+        position: new api.LatLng(customDestination.lat, customDestination.lng),
+        content: marker,
+        xAnchor: .5,
+        yAnchor: 1,
+        zIndex: 20,
+      })
+    }
+    return () => { destinationOverlayRef.current?.setMap(null); destinationOverlayRef.current = null }
+  }, [customDestination, status])
 
   useEffect(() => {
     const map = mapRef.current

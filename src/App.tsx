@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
 import { CourseMap } from './components/CourseMap'
 import { Countdown } from './components/Countdown'
 import { DistrictSelector } from './components/DistrictSelector'
@@ -33,6 +33,24 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
   const stationData = useBikeStations(course.district as SeoulDistrict)
   const overallProgress = ((game.stationIndex + game.segmentProgress) / (course.stations.length - 1)) * 100
   const upcomingStation = course.stations[game.stationIndex + 2]
+  useLayoutEffect(() => {
+    const updateVisualViewport = () => {
+      const viewport = window.visualViewport
+      document.documentElement.style.setProperty('--game-visual-height', `${viewport?.height ?? window.innerHeight}px`)
+      document.documentElement.style.setProperty('--game-visual-top', `${viewport?.offsetTop ?? 0}px`)
+    }
+    updateVisualViewport()
+    window.visualViewport?.addEventListener('resize', updateVisualViewport)
+    window.visualViewport?.addEventListener('scroll', updateVisualViewport)
+    window.addEventListener('resize', updateVisualViewport)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateVisualViewport)
+      window.visualViewport?.removeEventListener('scroll', updateVisualViewport)
+      window.removeEventListener('resize', updateVisualViewport)
+      document.documentElement.style.removeProperty('--game-visual-height')
+      document.documentElement.style.removeProperty('--game-visual-top')
+    }
+  }, [])
   useEffect(() => { if (game.status === 'playing') inputRef.current?.focus() }, [game.status, game.stationIndex])
   const focusGame = (event: MouseEvent<HTMLElement>) => {
     if (game.status === 'playing' && !(event.target as HTMLElement).closest('button, input')) inputRef.current?.focus()

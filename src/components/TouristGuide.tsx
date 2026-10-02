@@ -94,7 +94,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
           <option value="location">{textFor(locale, 'My location', '내 위치')}</option>{route.stops.map((stop, index) => <option key={`origin-${stop.stationId}`} value={index} disabled={index === destinationStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
         </select></label>
         <span className="tour-journey-arrow" aria-hidden="true">→</span>
-        <label><span>{textFor(locale, 'Destination', '도착')}</span><select value={destinationStopIndex ?? ''} onChange={event => { const next = event.currentTarget.value === '' ? null : Number(event.currentTarget.value); setDestinationStopIndex(next); if (next === viaStopIndex) setViaStopIndex(null) }}>
+        <label><span>{textFor(locale, 'Destination', '도착')}</span><select value={destinationStopIndex ?? ''} onChange={event => { const next = event.currentTarget.value === '' ? null : Number(event.currentTarget.value); setDestinationStopIndex(next); if (next !== null) setOriginStopIndex(null); if (next === viaStopIndex) setViaStopIndex(null) }}>
           <option value="">{textFor(locale, 'Choose destination', '도착지 선택')}</option>{route.stops.map((stop, index) => <option key={`destination-${stop.stationId}`} value={index} disabled={index === originStopIndex}>{textFor(locale, stop.place, stop.placeKo)}</option>)}
         </select></label>
         <label className="tour-journey-via"><span>{textFor(locale, 'Via point', '중간지점 설정')}</span><select value={viaStopIndex ?? ''} onChange={event => setViaStopIndex(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))}>

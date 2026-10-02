@@ -37,8 +37,8 @@ export interface KakaoRoadviewClient {
 }
 
 export interface KakaoMapsApi {
-  addListener(target: object, eventName: string, handler: () => void): void
-  removeListener(target: object, eventName: string, handler: () => void): void
+  addListener(target: object, eventName: string, handler: (event?: { latLng?: KakaoLatLng }) => void): void
+  removeListener(target: object, eventName: string, handler: (event?: { latLng?: KakaoLatLng }) => void): void
   load(callback: () => void): void
   Map: new (container: HTMLElement, options: {
     center: KakaoLatLng
