@@ -3024,9 +3024,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-food-blog-card strong { color: #edf4e8; }
 .tour-screen--dark .tour-food-blog-card p, .tour-screen--dark .tour-food-blog-card small { color: #b4c1af; }
 
-.tour-mobile-map-top, .tour-mobile-route-sheet, .tour-bike-splash { display: none; }
+.tour-mobile-map-top, .tour-mobile-route-sheet { display: none; }
 .tour-mobile-sheet-expand { display: none; }
-.tour-screen .tour-bike-splash { position: fixed; z-index: 5000; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #f6fbf4; background: #102c22; animation: tour-bike-splash-out .35s ease 1.08s forwards; }
 .tour-screen .tour-mobile-destination { display: grid; gap: .3rem; color: #536159; font-size: .65rem; font-weight: 800; }
 .tour-screen .tour-mobile-destination select { width: 100%; min-height: 39px; padding: .4rem .65rem; border: 1px solid #dce6de; border-radius: 9px; color: #26332c; background: #fff; font: 750 .72rem "Noto Sans KR", sans-serif; }
 @media (max-width: 700px) {
@@ -3116,11 +3115,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   }
   .tour-screen .tour-mobile-route-sheet.is-expanded { max-height: min(78dvh, 680px); }
   .tour-screen .tour-mobile-sheet-expand { position: absolute; z-index: 1410; top: calc(50% + 38px); left: .45rem; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #d8e2da; border-radius: 13px; color: #176541; background: #fff; box-shadow: 0 3px 14px #15251d45; font: 900 1.45rem/1 'Noto Sans KR', sans-serif; cursor: pointer; }
-  .tour-screen .tour-mobile-destination-list { display: grid; gap: .35rem; padding-top: .15rem; }
-  .tour-screen .tour-mobile-destination-list button { min-height: 42px; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: .5rem; padding: .4rem .55rem; border: 1px solid #e1e8e2; border-radius: 9px; color: #304137; background: #fff; text-align: left; font: 700 .68rem "Noto Sans KR", sans-serif; }
-  .tour-screen .tour-mobile-destination-list button[aria-pressed="true"] { border-color: #1b815a; background: #edf7ed; }
-  .tour-screen .tour-mobile-destination-list button b { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #197451; }
-  .tour-screen .tour-mobile-destination-list button small { color: #748077; font-size: .58rem; }
   .tour-screen .tour-mobile-sheet-handle { display: flex; justify-content: center; padding: .1rem 0 .2rem; }
   .tour-screen .tour-mobile-sheet-handle i { width: 38px; height: 4px; border-radius: 99px; background: #aeb6b0; }
   .tour-screen .tour-mobile-sheet-title { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
@@ -3140,24 +3134,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-mobile-route-sheet.is-expanded ~ .tour-map-locate { visibility: hidden; pointer-events: none; }
   .tour-screen .tour-map-side-panel { position: absolute; z-index: 1450; inset: auto .5rem 11.8rem; width: auto; max-height: min(54vh, 440px); border-radius: 14px; }
   .tour-screen .tour-map-stage > .tour-food-guide-panel { z-index: 1450; right: .5rem; bottom: 11.8rem; left: .5rem; width: auto; max-height: min(52vh, 430px); transform: none; }
-  .tour-screen .tour-bike-splash {
-    position: fixed;
-    z-index: 2000;
-    inset: 0;
-  }
-  .tour-screen .tour-bike-splash > strong { opacity: 0; font-size: .82rem; letter-spacing: .04em; animation: tour-bike-title-in .35s ease .5s forwards; }
-  .tour-bike-splash-mark { position: relative; width: 76px; height: 76px; display: grid; place-items: center; border: 2px solid #bde8b2; border-radius: 50%; background: linear-gradient(145deg, #178b68, #146044); box-shadow: 0 0 0 9px #bde8b222, 0 10px 30px #061b13aa; animation: tour-bike-mark-pop .55s cubic-bezier(.2,.85,.25,1.2) both; }
-  .tour-bike-splash-mark > span { z-index: 1; font-size: 2.05rem; animation: tour-bike-ride 1s ease-in-out .3s both; }
-  .tour-bike-splash-mark > i { position: absolute; top: 50%; left: 100%; width: 0; height: 2px; background: #bde8b2; animation: tour-bike-trail .48s ease .4s both; }
-  .tour-bike-splash-mark > i:last-child { top: calc(50% + 7px); animation-delay: .52s; }
   .tour-screen--dark .tour-mobile-route-sheet { color: #e7eee6; border-color: #405249; background: #1d2b28f5; }
   .tour-screen--dark .tour-mobile-sheet-metrics { border-color: #394c42; }
   .tour-screen--dark .tour-mobile-sheet-metrics span { border-color: #394c42; }
   .tour-screen--dark .tour-mobile-sheet-metrics small { color: #afbeb1; }
   .tour-screen--dark .tour-mobile-sheet-actions button { color: #e4eee4; border-color: #42574c; background: #26382e; }
   .tour-screen--dark .tour-mobile-destination { color: #bdcabe; }
-  .tour-screen--dark .tour-mobile-destination select { color: #e7eee6; border-color: #42574c; background: #26382e; }
-  .tour-screen--dark .tour-mobile-destination-list button { color: #e7eee6; border-color: #42574c; background: #26382e; }
   .tour-screen--dark .tour-mobile-map-search, .tour-screen--dark .tour-mobile-map-chips button { color: #e9f0e8; border-color: #43564a; background: #1d2b28f5; }
 }
 
@@ -3189,12 +3171,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-mobile-sheet-actions button { min-width: 0; min-height: 44px; padding: .3rem .25rem; font-size: .61rem; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; text-align: center; }
   .tour-screen .tour-mobile-sheet-actions button > span { flex: 0 0 auto; }
 }
-@keyframes tour-bike-mark-pop { from { opacity: 0; transform: scale(.35) rotate(-18deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
-@keyframes tour-bike-ride { 0% { transform: translateX(-28px) rotate(-10deg); } 55% { transform: translateX(0) rotate(5deg); } 100% { transform: translateX(0) rotate(0); } }
-@keyframes tour-bike-trail { from { width: 0; opacity: .1; } to { width: 34px; opacity: .8; } }
-@keyframes tour-bike-title-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes tour-bike-splash-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
-
 /* Map destination, road sign, and rental controls */
 .tour-rental-map-widget {
   position: absolute;
@@ -3493,27 +3469,64 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-rental-header-widget .tour-rental-duration button { border-color: #43574a; color: #dce7da; background: #293a30; }
 .tour-screen--dark .tour-rental-header-widget .tour-rental-duration button[aria-pressed='true'] { border-color: #286344; color: #f3f7ef; background: #286344; }
 
-/* First-entry bike splash with a clear bicycle mark, shown on desktop and mobile. */
-.tour-screen .tour-bike-splash {
-  position: fixed;
-  z-index: 5000;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.05rem;
-  color: #f6fbf4;
-  background: #1e1e1e;
-  animation: tour-bike-splash-out .5s ease 1.25s forwards;
+/* Reserve room for the timer and map picker so neither covers the map or controls. */
+.tour-screen .tour-topbar:has(.tour-rental-header-widget) {
+  height: auto;
+  min-height: 72px;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  padding-bottom: 220px;
 }
-.tour-screen .tour-bike-splash-mark { width: 152px; height: 98px; display: grid; place-items: center; border: 0; border-radius: 0; background: transparent; box-shadow: none; animation: tour-bike-mark-pop .62s cubic-bezier(.2,.85,.25,1.2) both; }
-.tour-bike-splash-mark svg { width: min(148px, 44vw); overflow: visible; filter: drop-shadow(0 0 14px #12bc7755); animation: tour-bike-ride 1s ease-in-out .12s both; }
-.tour-bike-splash-wheel circle { fill: none; stroke: #f2f7ed; stroke-width: 3.4; }
-.tour-bike-splash-wheel path { fill: none; stroke: #a8b9ad; stroke-width: 1.1; }
-.tour-bike-splash-frame { fill: none; stroke: #39d68e; stroke-width: 4.3; stroke-linecap: round; stroke-linejoin: round; }
-.tour-bike-splash-hub { fill: #f2f7ed; stroke: #39d68e; stroke-width: 2; }
-.tour-screen .tour-bike-splash > strong { opacity: 0; color: #f6fbf4; font-size: .85rem; letter-spacing: .08em; animation: tour-bike-title-in .4s ease .38s forwards; }
+.tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-map-pick {
+  min-width: 0;
+  min-height: 34px;
+  flex: 1.25 1 0;
+  display: grid;
+  align-content: center;
+  gap: .12rem;
+  padding: .28rem .48rem;
+  border: 1px solid #d5e0d7;
+  border-radius: 8px;
+  color: #244536;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.tour-journey-map-pick > span { color: #64756a; font: 800 .58rem/1.1 "Noto Sans KR", sans-serif; }
+.tour-journey-map-pick > strong { overflow: hidden; font: 700 .64rem/1.2 "Noto Sans KR", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.tour-screen--dark .tour-journey-map-pick { border-color: #43574a; color: #e5ede4; background: #293a30; }
+.tour-screen--dark .tour-journey-map-pick > span { color: #bdcabe; }
+.tour-destination-list > .tour-destination-map-button { width: 100%; min-height: 38px; justify-content: center; padding: .45rem .6rem; border: 0; border-radius: 8px; color: #fff; background: #18533a; font: 800 .68rem 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-destination-list > .tour-destination-map-button[aria-pressed='true'] { background: #286344; }
+.tour-screen--dark .tour-destination-list > .tour-destination-map-button { color: #f3f7ef; background: #286344; }
+.tour-screen button.tour-mobile-destination { width: 100%; min-height: 39px; display: flex; align-items: center; justify-content: center; padding: .4rem .65rem; border: 1px solid #dce6de; border-radius: 9px; color: #24523a; background: #fff; text-align: center; font: 750 .72rem 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-screen button.tour-mobile-destination[aria-pressed='true'] { border-color: #18533a; color: #fff; background: #18533a; }
+.tour-screen--dark button.tour-mobile-destination { border-color: #42574c; color: #e7eee6; background: #26382e; }
+.tour-screen--dark button.tour-mobile-destination[aria-pressed='true'] { color: #fff; background: #286344; }
+
+/* White first-entry screen with an animated bicycle, then the main page appears. */
+.site-bike-splash {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  animation: site-bike-splash-out .45s ease 1.2s forwards;
+}
+.site-bike-splash-mark { width: min(152px, 44vw); overflow: visible; animation: site-bike-splash-in .72s cubic-bezier(.2,.85,.25,1.15) both; }
+.site-bike-splash-wheel circle { fill: none; stroke: #213d31; stroke-width: 3.4; }
+.site-bike-splash-wheel path { fill: none; stroke: #60786a; stroke-width: 1.15; stroke-dasharray: 7 3; animation: site-bike-wheel-roll .55s linear infinite; }
+.site-bike-splash-frame { fill: none; stroke: #168554; stroke-width: 4.4; stroke-linecap: round; stroke-linejoin: round; }
+.site-bike-splash-hub { fill: #168554; stroke: #fff; stroke-width: 1.5; }
+@keyframes site-bike-splash-in { from { opacity: 0; transform: translateX(-32px) scale(.72); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes site-bike-wheel-roll { to { stroke-dashoffset: -20; } }
+@keyframes site-bike-splash-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+@media (max-width: 900px) {
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { padding-bottom: 0; }
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-planner { margin-top: 240px; }
+}
 @media (max-width: 700px) {
   .tour-rental-header-widget { top: calc(100% + .35rem); width: min(270px, calc(100vw - .7rem)); gap: .4rem; padding: .6rem; }
   .tour-rental-header-widget .tour-rental-duration button { min-height: 34px; padding: .3rem .35rem; font-size: .65rem; }
@@ -3530,8 +3543,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-rental-header-widget .tour-rental-start-button { width: 100%; min-width: 0; height: auto; min-height: 36px; padding: .36rem .5rem; }
   .tour-rental-header-widget .tour-rental-button-label { display: inline; }
   .tour-rental-header-widget .tour-rental-button-icon { display: none; }
-  .tour-screen .tour-bike-splash > strong { font-size: .82rem; }
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { grid-template-rows: 38px auto; align-content: start; }
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-header-actions { align-self: start; }
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-planner { margin-top: 240px; }
+  .tour-screen:has(.tour-rental-header-widget) .tour-map-stage { height: 100% !important; min-height: 0; flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tour-screen .tour-bike-splash, .tour-bike-splash-mark, .tour-bike-splash-mark svg, .tour-screen .tour-bike-splash > strong { animation-duration: .01ms; animation-delay: 0ms; }
+  .site-bike-splash { animation-duration: .01ms; animation-delay: 0ms; }
+  .site-bike-splash-wheel path { animation: none; }
 }

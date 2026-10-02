@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { CourseMap } from './components/CourseMap'
 import { Countdown } from './components/Countdown'
 import { DistrictSelector } from './components/DistrictSelector'
@@ -84,6 +84,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>(screenFromUrl)
+  const [showSiteSplash, setShowSiteSplash] = useState(true)
   const [lightMode, setLightMode] = useState(() => localStorage.getItem(GAME_THEME_KEY) !== 'false')
   const toggleTheme = useCallback(() => setLightMode(current => {
     localStorage.setItem(GAME_THEME_KEY, String(!current))
@@ -93,6 +94,11 @@ export default function App() {
     const handleBack = () => setScreen(screenFromUrl())
     window.addEventListener('popstate', handleBack)
     return () => window.removeEventListener('popstate', handleBack)
+  }, [])
+  useEffect(() => {
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 250 : 1650
+    const timer = window.setTimeout(() => setShowSiteSplash(false), duration)
+    return () => window.clearTimeout(timer)
   }, [])
   const [selected, setSelected] = useState<SeoulDistrict | null>(null)
   const [runKey, setRunKey] = useState(0)
@@ -170,14 +176,27 @@ export default function App() {
     setActiveCourse(createDistrictCourse(selected, playedStations[selected] ?? []))
     setRunKey((value) => value + 1); setResult(null); setCurrentRankingId(null); setScreen('game')
   }
-  if (screen === 'game' && activeCourse) return <GameScreen key={runKey} course={activeCourse} playedStationIds={selected ? (playedStations[selected] ?? []) : []} onHome={goHome} onResult={handleResult} lightMode={lightMode} onToggleTheme={toggleTheme} />
-  if (screen === 'result' && activeCourse && result) return <GameResult district={activeCourse.district} result={result} highScore={highScore}
+  let screenContent: ReactNode
+  if (screen === 'game' && activeCourse) screenContent = <GameScreen key={runKey} course={activeCourse} playedStationIds={selected ? (playedStations[selected] ?? []) : []} onHome={goHome} onResult={handleResult} lightMode={lightMode} onToggleTheme={toggleTheme} />
+  else if (screen === 'result' && activeCourse && result) screenContent = <GameResult district={activeCourse.district} result={result} highScore={highScore}
     totalStations={activeCourse.stations.length} leaderboard={leaderboard} currentRankingId={currentRankingId} onRetry={startGame} onHome={goHome} />
-  if (screen === 'tour') return <TouristGuide onBack={goHome} darkMode={!lightMode} onToggleTheme={toggleTheme} />
-  if (screen === 'login' || screen === 'signup') return <AuthPage key={screen} kind={screen} onHome={goHome} onNavigate={openAuth} />
-  if (screen === 'text') return <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
-  return <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
+  else if (screen === 'tour') screenContent = <TouristGuide onBack={goHome} darkMode={!lightMode} onToggleTheme={toggleTheme} />
+  else if (screen === 'login' || screen === 'signup') screenContent = <AuthPage key={screen} kind={screen} onHome={goHome} onNavigate={openAuth} />
+  else if (screen === 'text') screenContent = <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
+  else screenContent = <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
     onOpenTextPractice={openTextPractice}
     onOpenAuth={openAuth}
     highScore={highScore} playedStations={playedStations} />
+
+  return <>
+    {screenContent}
+    {showSiteSplash && <div className="site-bike-splash" role="status" aria-label="자전거로 즐기는 서울">
+      <svg className="site-bike-splash-mark" viewBox="0 0 128 76" aria-hidden="true" focusable="false">
+        <g className="site-bike-splash-wheel" transform="translate(25 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
+        <g className="site-bike-splash-wheel" transform="translate(103 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
+        <path className="site-bike-splash-frame" d="M25 51 50 20 70 51H25m25-31h25l28 31M70 51 75 20M45 15h13m17 5 5-9h10" />
+        <circle className="site-bike-splash-hub" cx="50" cy="20" r="3" /><circle className="site-bike-splash-hub" cx="70" cy="51" r="3" />
+      </svg>
+    </div>}
+  </>
 }
