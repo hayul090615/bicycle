@@ -1361,8 +1361,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-finder-categories button[aria-pressed='true'], .tour-finder-routes button[aria-pressed='true'] { border-color: #527158; color: #304c39; background: #e3eadf; box-shadow: inset 3px 0 #527158; }
 .tour-journey-pin { --pin-color: #178653; position: relative; width: 46px; height: 54px; display: grid; place-items: start center; pointer-events: none; filter: drop-shadow(0 3px 3px #172b2055); }
 .tour-journey-pin--destination { --pin-color: #ef3e38; }
-.tour-journey-pin::before { position: absolute; top: 3px; left: 5px; width: 36px; height: 36px; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; background: var(--pin-color); transform: rotate(-45deg); content: ''; }
-.tour-journey-pin > span { position: relative; z-index: 1; width: 28px; height: 28px; margin-top: 9px; display: grid; place-items: center; border-radius: 50%; color: var(--pin-color); background: #fff; font: 900 10px/1 'Noto Sans KR', sans-serif; white-space: nowrap; }
+.tour-journey-pin::before { position: absolute; top: 10px; left: 5px; width: 36px; height: 36px; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; background: var(--pin-color); transform: rotate(-45deg); content: ''; }
+.tour-journey-pin > span { position: relative; z-index: 1; width: 28px; height: 28px; margin-top: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--pin-color); background: #fff; font: 900 10px/1 'Noto Sans KR', sans-serif; white-space: nowrap; }
 .tour-leaflet-location-icon { border: 0 !important; background: transparent !important; }
 @media (max-width: 990px) {
   .tour-route-finder { margin-bottom: 1rem; }
