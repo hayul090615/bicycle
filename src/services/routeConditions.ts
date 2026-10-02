@@ -213,14 +213,11 @@ export async function fetchRouteElevationProfile(path: LonLat[], signal: AbortSi
   return result
 }
 
-export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal): Promise<RouteRestaurant[]> {
-  const key = cacheKey(path)
+export async function fetchNearbyRestaurants(center: LonLat, signal: AbortSignal): Promise<RouteRestaurant[]> {
+  const key = `nearby:${center[1].toFixed(3)}:${center[0].toFixed(3)}`
   const cached = restaurantCache.get(key)
   if (cached) return cached
-  const samples = routeSamples(path, 700, 24)
-  if (samples.length < 2) return []
-  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
-  const query = `[out:json][timeout:8];nwr(around:450,${pairs})["amenity"~"^(restaurant|cafe|fast_food|food_court)$"]["name"];out center tags 60;`
+  const query = `[out:json][timeout:8];nwr(around:1000,${center[1].toFixed(5)},${center[0].toFixed(5)})["amenity"~"^(restaurant|cafe|fast_food|food_court)$"]["name"];out center tags 80;`
   const data = await queryOverpass(query, signal)
   const candidates = (data.elements ?? []).flatMap(item => {
     const tags = item.tags ?? {}
@@ -230,15 +227,15 @@ export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal)
     const amenity = tags.amenity
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name || !amenity) return []
     const point: LonLat = [lng!, lat!]
-    const routePosition = distanceAlongRoute(point, path)
-    if (routePosition.gap > 480) return []
+    const distance = segmentLength(point, center)
+    if (distance > 1000) return []
     const kind: RouteRestaurant['kind'] = amenity === 'cafe' ? 'cafe' : amenity === 'fast_food' ? 'quick' : 'restaurant'
     return [{
       restaurant: { id: `${item.type ?? 'place'}-${item.id}`, name, lat: lat!, lng: lng!, kind, cuisine: tags.cuisine },
       point,
-      along: routePosition.along,
+      distance,
     }]
-  }).sort((a, b) => a.along - b.along)
+  }).sort((a, b) => a.distance - b.distance)
   const results: RouteRestaurant[] = []
   for (const candidate of candidates) {
     if (results.some(item => segmentLength([item.lng, item.lat], candidate.point) < 35)) continue
