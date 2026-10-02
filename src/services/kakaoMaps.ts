@@ -142,6 +142,10 @@ export function loadKakaoMaps(): Promise<KakaoMapsApi> {
 }
 
 export async function searchSeoulPlaces(query: string): Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>> {
+  const normalizedQuery = query.replace(/\s+/g, '').toLocaleLowerCase()
+  if (normalizedQuery === '여의도' || normalizedQuery === 'yeouido' || normalizedQuery === '여의도동') {
+    return [{ id: 'seoul-yeouido', name: '여의도', address: '서울특별시 영등포구 여의도동', lat: 37.5219, lng: 126.9245 }]
+  }
   const api = await loadKakaoMaps()
   const places = new api.services.Places()
   const geocoder = new api.services.Geocoder()
@@ -154,14 +158,13 @@ export async function searchSeoulPlaces(query: string): Promise<Array<{ id: stri
     }, { size: 15 })
   })
   const inSeoul = (place: { lat: number; lng: number }) => place.lat >= 37.41 && place.lat <= 37.72 && place.lng >= 126.76 && place.lng <= 127.19
-  const exactArea = query.replace(/\s+/g, '') === '여의도'
-  const addressQuery = exactArea ? '서울특별시 영등포구 여의도동' : query
+  const addressQuery = query
   const addressResults = await new Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>(resolve => {
-    geocoder.addressSearch(addressQuery, (results, status) => {
+    try { geocoder.addressSearch(addressQuery, (results, status) => {
       if (status !== api.services.Status.OK) { resolve([]); return }
-      resolve(results.map((address, index) => ({ id: `address-${addressQuery}-${index}`, name: exactArea ? '여의도' : address.address_name, address: address.address_name, lat: Number(address.y), lng: Number(address.x) }))
+      resolve(results.map((address, index) => ({ id: `address-${addressQuery}-${index}`, name: address.address_name, address: address.address_name, lat: Number(address.y), lng: Number(address.x) }))
         .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng) && inSeoul(place)))
-    })
+    }) } catch { resolve([]) }
   })
   const keywordResults = await searchKeyword(query)
   const seoulResults = keywordResults.filter(inSeoul)

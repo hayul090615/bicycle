@@ -104,6 +104,12 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
       const results = (await searchSeoulPlaces(query)).filter(place => isInsideSeoul(place.lat, place.lng))
       setPlaceResults(results)
       setPlaceSearchStatus(results.length ? 'idle' : 'empty')
+      if (results.length === 1) {
+        const place = results[0]
+        setSearchedDestination(current => ({ lat: place.lat, lng: place.lng, serial: (current?.serial ?? 0) + 1 }))
+        setPlaceQuery(place.name)
+        setPlaceResults([])
+      }
     } catch { setPlaceSearchStatus('error') }
   }
 
