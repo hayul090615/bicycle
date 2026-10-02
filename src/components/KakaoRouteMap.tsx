@@ -4,7 +4,8 @@ import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type 
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
-import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
@@ -43,9 +44,10 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
+  elevationProfile: RouteElevationPoint[]
   activeStopIndexes: number[]
   originStopIndex: number | null
   viaStopIndex: number | null
@@ -236,9 +238,11 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
     activePopupIdRef.current = null
 
     const path = linePoints.map(point => new api.LatLng(point.lat, point.lng))
-    const casing = new api.Polyline({ map, path, strokeWeight: 15, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' })
-    const line = new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ff3b30', strokeOpacity: 1, strokeStyle: 'solid' })
-    routeOverlaysRef.current.push(casing, line)
+    const casing = new api.Polyline({ map: showCourse ? map : null, path, strokeWeight: 15, strokeColor: '#294c3a', strokeOpacity: .98, strokeStyle: 'solid' })
+    routeOverlaysRef.current.push(casing)
+    for (const segment of coloredRouteSegments(routePath ?? [], elevationProfile)) {
+      routeOverlaysRef.current.push(new api.Polyline({ map: showCourse ? map : null, path: segment.path.map(([lng, lat]) => new api.LatLng(lat, lng)), strokeWeight: 8, strokeColor: segment.color, strokeOpacity: 1, strokeStyle: 'solid' }))
+    }
     activeStopIndexes.forEach(index => {
       const stop = route.stops[index]
       const label = locale === 'ko' ? stop.placeKo : stop.place
@@ -292,7 +296,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [accessPath, activeStopIndexes, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, selectedStop, status, viaStopIndex])
+  }, [accessPath, activeStopIndexes, elevationProfile, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -358,7 +362,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
     if (!showCourse || !accessPath || accessPath.length < 2) return
     const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 15, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
-    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ff3b30', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
+    accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
   }, [accessEstimated, accessPath, showCourse, status])
 
   useEffect(() => {
@@ -634,9 +638,9 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
         center: new api.LatLng(userLocation.lat, userLocation.lng),
         radius: userLocation.accuracy,
         strokeWeight: 1,
-        strokeColor: '#1677e8',
+        strokeColor: '#168653',
         strokeOpacity: .7,
-        fillColor: '#1677e8',
+        fillColor: '#168653',
         fillOpacity: .15,
       })
     }

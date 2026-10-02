@@ -1813,7 +1813,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-map-locate:disabled { opacity: .75; cursor: wait; }
 .tour-journey-legend { position: absolute; z-index: 1201; right: .85rem; bottom: 4.25rem; max-width: min(290px, calc(100% - 1.7rem)); display: grid; gap: .2rem; padding: .55rem .7rem; border: 1px solid #cbdce9; border-radius: 5px; color: #24425c; background: #fffffff4; box-shadow: 0 2px 10px #17324b25; font-size: .64rem; }
 .tour-journey-legend-route { display: flex; align-items: center; gap: .35rem; font-weight: 800; }
-.tour-journey-legend-route i { width: 20px; border-top: 4px solid #ff3b30; }
+.tour-journey-legend-route i { width: 20px; border-top: 4px solid #fff; filter: drop-shadow(0 1px 1px #193e29); }
 .tour-journey-legend strong { font-size: .72rem; }
 .tour-journey-legend b { color: #135eaf; font-size: .75rem; }
 .tour-journey-legend small { color: #5a7184; line-height: 1.4; }
@@ -3482,6 +3482,18 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-rental-header-widget .tour-rental-button-label { display: inline; }
 .tour-rental-header-widget .tour-rental-button-icon { display: none; }
 .tour-rental-header-widget .tour-rental-permission-note { padding: .05rem .1rem 0; font-size: .58rem; line-height: 1.35; }
+.tour-rental-custom-time { display: flex; align-items: center; justify-content: space-between; gap: .5rem; color: #3f5b48; font: 800 .67rem 'Noto Sans KR', sans-serif; }
+.tour-rental-custom-time input { width: 94px; height: 36px; padding: .3rem .55rem; border: 1px solid #cddfce; border-radius: 8px; color: #1e4731; background: #fff; text-align: center; font: 800 .8rem 'Noto Sans KR', sans-serif; }
+.tour-rental-custom-time input:disabled { opacity: .68; }
+.tour-route-preferences { display: grid; gap: .45rem; padding: .68rem; border: 1px solid #dce5d9; border-radius: 12px; color: #294235; background: #fff; box-shadow: 0 8px 24px #192a2035; }
+.tour-route-preferences > strong { font-size: .69rem; }
+.tour-route-preferences > div { display: flex; gap: .3rem; }
+.tour-route-preferences button { min-height: 34px; flex: 1; padding: .28rem .3rem; border: 1px solid #d3dfd2; border-radius: 7px; color: #27503a; background: #fff; font: 800 .63rem 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-route-preferences button[aria-pressed='true'] { color: #fff; border-color: #18533a; background: #18533a; }
+.tour-route-preferences button:disabled { opacity: .48; cursor: not-allowed; }
+.tour-route-preferences small { color: #65766a; font-size: .56rem; line-height: 1.35; }
+.tour-screen--dark .tour-rental-custom-time, .tour-screen--dark .tour-route-preferences { color: #e5ede4; }
+.tour-screen--dark .tour-rental-custom-time input, .tour-screen--dark .tour-route-preferences { border-color: #405348; color: #e5ede4; background: #26372c; }
 .tour-screen--dark .tour-rental-header-widget { border-color: #405348; color: #e5ede4; background: #1d2b28; }
 .tour-screen--dark .tour-rental-header-widget .tour-rental-map-copy h3 { color: #f3f7f3; }
 .tour-screen--dark .tour-rental-header-widget .tour-rental-duration button { border-color: #43574a; color: #dce7da; background: #293a30; }
@@ -3524,6 +3536,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-journey-map-pick > strong { overflow: hidden; font: 700 .64rem/1.2 "Noto Sans KR", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 .tour-screen--dark .tour-journey-map-pick { border-color: #43574a; color: #e5ede4; background: #293a30; }
 .tour-screen--dark .tour-journey-map-pick > span { color: #bdcabe; }
+.tour-place-search { position: relative; min-width: 155px; flex: 1 1 185px; display: grid; gap: .2rem; }
+.tour-place-search > label, .tour-height-legend > span { color: #64756a; font: 800 .58rem 'Noto Sans KR', sans-serif; }
+.tour-place-search > div:first-of-type { display: flex; height: 34px; border: 1px solid #d5e0d7; border-radius: 8px; background: #fff; }
+.tour-place-search input { width: 100%; min-width: 0; padding: 0 .45rem; border: 0; outline: 0; border-radius: 8px; color: #244536; background: transparent; font: 700 .65rem 'Noto Sans KR', sans-serif; }
+.tour-place-search button[type='submit'] { padding: 0 .55rem; border: 0; border-radius: 0 7px 7px 0; color: #fff; background: #18533a; font: 800 .62rem 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-place-results { position: absolute; z-index: 2000; top: calc(100% + .2rem); right: 0; left: 0; max-height: 250px; overflow-y: auto; border: 1px solid #ccdacc; border-radius: 9px; background: #fff; box-shadow: 0 10px 25px #183b2a33; }
+.tour-place-results > button { width: 100%; display: grid; gap: .12rem; padding: .5rem .6rem; border: 0; border-bottom: 1px solid #e5ebe5; color: #234731; background: #fff; text-align: left; cursor: pointer; }
+.tour-place-results > button:hover { background: #eaf5ed; }
+.tour-place-results small { overflow: hidden; color: #718075; font-size: .55rem; text-overflow: ellipsis; white-space: nowrap; }
+.tour-place-results p { margin: 0; padding: .65rem; color: #53685a; font-size: .63rem; }
+.tour-height-legend { width: 102px; flex: 0 0 102px; display: grid; gap: .2rem; }
+.tour-height-legend i { display: block; height: 7px; background: linear-gradient(90deg,#fff 0%,#ffd5d3 48%,#f03431 100%); filter: drop-shadow(0 0 1px #294c3a); mask-image: repeating-linear-gradient(90deg,#000 0 11px,transparent 11px 15px); }
+.tour-height-legend small { color: #66766a; font-size: .52rem; }
+.tour-screen--dark .tour-place-search > div:first-of-type, .tour-screen--dark .tour-place-results { border-color: #405348; background: #26372c; }
+.tour-screen--dark .tour-place-search input, .tour-screen--dark .tour-place-results > button { color: #e5ede4; background: #26372c; }
+@media (max-width: 700px) { .tour-journey-planner { flex-wrap: wrap; } .tour-place-search { flex-basis: 100%; } .tour-height-legend { width: 90px; flex-basis: 90px; } }
 .tour-destination-list > .tour-destination-map-button { width: 100%; min-height: 38px; justify-content: center; padding: .45rem .6rem; border: 0; border-radius: 8px; color: #fff; background: #18533a; font: 800 .68rem 'Noto Sans KR', sans-serif; cursor: pointer; }
 .tour-destination-list > .tour-destination-map-button[aria-pressed='true'] { background: #286344; }
 .tour-screen--dark .tour-destination-list > .tour-destination-map-button { color: #f3f7ef; background: #286344; }

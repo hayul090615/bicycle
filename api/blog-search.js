@@ -14,7 +14,7 @@ export default async function handler(request, response) {
   try {
     const url = new URL(NAVER_BLOG_SEARCH_URL)
     url.searchParams.set('query', query)
-    url.searchParams.set('display', '8')
+    url.searchParams.set('display', request.query.countOnly === '1' ? '1' : '8')
     url.searchParams.set('sort', 'sim')
     const result = await fetch(url, {
       headers: {
@@ -27,6 +27,7 @@ export default async function handler(request, response) {
     if (!result.ok) return response.status(502).json({ error: 'blog_search_unavailable' })
 
     const data = await result.json()
+    if (request.query.countOnly === '1') return response.status(200).json({ total: Number(data.total) || 0 })
     const items = (data.items ?? []).flatMap(item => {
       try {
         const link = new URL(item.link)

@@ -11,7 +11,8 @@ import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
-import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import { routeGradientStops } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -142,10 +143,11 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
+  elevationProfile: RouteElevationPoint[]
   activeStopIndexes: number[]
   originStopIndex: number | null
   viaStopIndex: number | null
@@ -311,7 +313,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
         }, 'park')
         const layers = map.getStyle().layers
         const labelTextField: ExpressionSpecification = locale === 'en'
-          ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['get', 'name']]
+          ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['case', ['==', ['get', 'class'], 'bus'], 'Bus Stop', ['get', 'name']]]
           : ['coalesce', ['get', 'name:ko'], ['get', 'name_ko'], ['get', 'name'], ['get', 'name:en']]
         for (const layer of map.getStyle().layers as Array<{ id: string; type: string; layout?: Record<string, unknown> }>) {
           if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
@@ -330,9 +332,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
               14, ['*', ['get', 'accuracy'], .264],
               16, ['*', ['get', 'accuracy'], 1.055],
               18, ['*', ['get', 'accuracy'], 4.22]] as ExpressionSpecification,
-            'circle-color': '#1677e8',
+            'circle-color': '#168653',
             'circle-opacity': .15,
-            'circle-stroke-color': '#1677e8',
+            'circle-stroke-color': '#168653',
             'circle-stroke-opacity': .7,
             'circle-stroke-width': 1.25,
           },
@@ -363,7 +365,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
             }
           }
         }
-        map.addSource('tour-route-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+        map.addSource('tour-route-line', { type: 'geojson', lineMetrics: true, data: { type: 'FeatureCollection', features: [] } })
         map.addSource('tour-access-line', { type: 'geojson', data: EMPTY_LINE })
         map.addSource('tour-walk-line', { type: 'geojson', data: EMPTY_LINE })
         map.addSource('tour-bike-lanes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -372,9 +374,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
           id: 'tour-route-line',
           type: 'line' as const,
           source: 'tour-route-line',
-          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: {
-            'line-color': '#ff3b30',
+            'line-color': '#ffffff',
             'line-width': ['interpolate', ['linear'], ['zoom'], 11, 5, 17, 10] as ExpressionSpecification,
             'line-opacity': 1,
           },
@@ -383,25 +385,25 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
           id: 'tour-route-casing',
           type: 'line' as const,
           source: 'tour-route-line',
-          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: {
-            'line-color': '#f5f5ed',
+            'line-color': '#294c3a',
             'line-width': ['interpolate', ['linear'], ['zoom'], 11, 10, 17, 15] as ExpressionSpecification,
             'line-opacity': 0.96,
           },
         }
         if (map.getLayer('building-3d')) map.setLayoutProperty('building-3d', 'visibility', is3DView ? 'visible' : 'none')
         const accessCasing = { id: 'tour-access-casing', type: 'line' as const, source: 'tour-access-line',
-          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: { 'line-color': '#fffdf5', 'line-width': 14, 'line-opacity': .98 } }
         const accessLine = { id: 'tour-access-solid', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#ff3b30', 'line-width': 8, 'line-opacity': 1 } }
+          paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 1 } }
         const accessDashed = { id: 'tour-access-dashed', type: 'line' as const, source: 'tour-access-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
-          paint: { 'line-color': '#ff3b30', 'line-width': 8, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
+          paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 1, 'line-dasharray': [1.5, 1.2] } }
         const walkLine = { id: 'tour-walk-line', type: 'line' as const, source: 'tour-walk-line',
-          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
+          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: { 'line-color': '#506b7b', 'line-width': 4, 'line-opacity': 1, 'line-dasharray': [1.2, 1.2] } }
         const bikeLaneCasing = { id: 'tour-bike-lanes-casing', type: 'line' as const, source: 'tour-bike-lanes',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
@@ -710,7 +712,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     const map = mapRef.current
     if (!map || status !== 'ready') return
     const textField: ExpressionSpecification = locale === 'en'
-      ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['get', 'name']]
+      ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['case', ['==', ['get', 'class'], 'bus'], 'Bus Stop', ['get', 'name']]]
       : ['coalesce', ['get', 'name:ko'], ['get', 'name_ko'], ['get', 'name'], ['get', 'name:en']]
     for (const layer of map.getStyle().layers as Array<{ id: string; type: string; layout?: Record<string, unknown> }>) {
       if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
@@ -848,6 +850,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     map.setLayoutProperty('tour-route-casing', 'visibility', visibility)
     map.setLayoutProperty('tour-route-line', 'visibility', visibility)
   }, [showCourse, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const stops = routeGradientStops(elevationProfile)
+    map.setPaintProperty('tour-route-line', 'line-gradient', ['interpolate', ['linear'], ['line-progress'], ...stops.flat()] as ExpressionSpecification)
+  }, [elevationProfile, status])
 
   useEffect(() => {
     const map = mapRef.current

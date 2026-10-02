@@ -11,6 +11,8 @@ export type RouteRestaurant = {
   lng: number
   kind: 'restaurant' | 'cafe' | 'quick'
   cuisine?: string
+  distanceFromRouteMeters?: number
+  blogMentions?: number
 }
 
 export type RouteBikeLane = { id: string; points: LonLat[]; kind: 'cycleway' | 'lane' }
@@ -213,11 +215,14 @@ export async function fetchRouteElevationProfile(path: LonLat[], signal: AbortSi
   return result
 }
 
-export async function fetchNearbyRestaurants(center: LonLat, signal: AbortSignal): Promise<RouteRestaurant[]> {
-  const key = `nearby:${center[1].toFixed(3)}:${center[0].toFixed(3)}`
+export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal): Promise<RouteRestaurant[]> {
+  const key = `route-food:${cacheKey(path)}`
   const cached = restaurantCache.get(key)
   if (cached) return cached
-  const query = `[out:json][timeout:8];nwr(around:1000,${center[1].toFixed(5)},${center[0].toFixed(5)})["amenity"~"^(restaurant|cafe|fast_food|food_court)$"]["name"];out center tags 80;`
+  const samples = routeSamples(path, 450, 40)
+  if (samples.length < 2) return []
+  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
+  const query = `[out:json][timeout:8];nwr(around:180,${pairs})["amenity"~"^(restaurant|cafe|fast_food|food_court)$"]["name"];out center tags 160;`
   const data = await queryOverpass(query, signal)
   const candidates = (data.elements ?? []).flatMap(item => {
     const tags = item.tags ?? {}
@@ -227,20 +232,20 @@ export async function fetchNearbyRestaurants(center: LonLat, signal: AbortSignal
     const amenity = tags.amenity
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name || !amenity) return []
     const point: LonLat = [lng!, lat!]
-    const distance = segmentLength(point, center)
-    if (distance > 1000) return []
+    const position = distanceAlongRoute(point, path)
+    if (position.gap > 180) return []
     const kind: RouteRestaurant['kind'] = amenity === 'cafe' ? 'cafe' : amenity === 'fast_food' ? 'quick' : 'restaurant'
     return [{
-      restaurant: { id: `${item.type ?? 'place'}-${item.id}`, name, lat: lat!, lng: lng!, kind, cuisine: tags.cuisine },
+      restaurant: { id: `${item.type ?? 'place'}-${item.id}`, name, lat: lat!, lng: lng!, kind, cuisine: tags.cuisine, distanceFromRouteMeters: Math.round(position.gap) },
       point,
-      distance,
+      distance: position.gap,
     }]
   }).sort((a, b) => a.distance - b.distance)
   const results: RouteRestaurant[] = []
   for (const candidate of candidates) {
-    if (results.some(item => segmentLength([item.lng, item.lat], candidate.point) < 35)) continue
+    if (results.some(item => segmentLength([item.lng, item.lat], candidate.point) < 80)) continue
     results.push(candidate.restaurant)
-    if (results.length >= 40) break
+    if (results.length >= 18) break
   }
   restaurantCache.set(key, results)
   return results

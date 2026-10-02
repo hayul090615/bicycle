@@ -3,7 +3,8 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePolygon3D, type GooglePosition3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
-import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
+import type { RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
@@ -53,9 +54,10 @@ function accuracyRing({ lat, lng, accuracy }: { lat: number; lng: number; accura
   })
 }
 
-export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
+export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
+  elevationProfile: RouteElevationPoint[]
   activeStopIndexes: number[]
   originStopIndex: number | null
   viaStopIndex: number | null
@@ -78,7 +80,7 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<GoogleMap3D | null>(null)
   const libraryRef = useRef<Maps3DLibrary | null>(null)
-  const routeLineRef = useRef<HTMLElement | null>(null)
+  const routeLineRef = useRef<HTMLElement[]>([])
   const accessLineRef = useRef<HTMLElement | null>(null)
   const markersRef = useRef<HTMLElement[]>([])
   const peopleMarkersRef = useRef<HTMLElement[]>([])
@@ -188,9 +190,9 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
       userAccuracyRef.current = null
       cityMaskRef.current?.remove()
       cityMaskRef.current = null
-      routeLineRef.current?.remove()
+      routeLineRef.current.forEach(line => line.remove())
       accessLineRef.current?.remove()
-      routeLineRef.current = null
+      routeLineRef.current = []
       map?.remove()
       mapRef.current = null
       libraryRef.current = null
@@ -203,11 +205,15 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
     if (!map || !library || status !== 'ready') return
     let riderFrame = 0
     map.description = locale === 'ko' ? route.titleKo : route.title
-    routeLineRef.current?.remove()
+    routeLineRef.current.forEach(line => line.remove())
+    routeLineRef.current = []
     markersRef.current.forEach(marker => marker.remove())
     if (showCourse) {
-      routeLineRef.current = new library.Polyline3DElement({ path: linePoints, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ff3b30', strokeWidth: 8, drawsOccludedSegments: false })
-      map.append(routeLineRef.current)
+      routeLineRef.current = coloredRouteSegments(routePath ?? [], elevationProfile).map(segment => {
+        const line = new library.Polyline3DElement({ path: segment.path.map(([lng, lat]) => ({ lat, lng })), altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: segment.color, strokeWidth: 8, drawsOccludedSegments: false })
+        map.append(line)
+        return line
+      })
     }
     markersRef.current = showCourse ? activeStopIndexes.map(index => {
       const position = points[index]
@@ -299,7 +305,7 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
     }
-  }, [activeStopIndexes, linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, showRiders, status, viaStopIndex])
+  }, [activeStopIndexes, elevationProfile, linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, showRiders, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -363,7 +369,7 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
     accessLineRef.current = null
     if (!showCourse || !accessPath || accessPath.length < 2) return
     accessLineRef.current = new library.Polyline3DElement({ path: accessPath.map(([lng, lat]) => ({ lat, lng })),
-      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ff3b30', strokeWidth: 8, drawsOccludedSegments: false })
+      altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ffffff', strokeWidth: 8, drawsOccludedSegments: false })
     map.append(accessLineRef.current)
   }, [accessPath, showCourse, status])
 

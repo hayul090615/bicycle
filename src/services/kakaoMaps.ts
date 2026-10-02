@@ -51,7 +51,7 @@ export interface KakaoMapsApi {
   Roadview: new (container: HTMLElement) => KakaoRoadview
   RoadviewClient: new () => KakaoRoadviewClient
   Polyline: new (options: {
-    map: KakaoMap
+    map: KakaoMap | null
     path: KakaoLatLng[]
     strokeWeight: number
     strokeColor: string
@@ -89,6 +89,10 @@ export interface KakaoMapsApi {
   ZoomControl: new () => unknown
   ControlPosition: { TOPRIGHT: string; RIGHT: string }
   MapTypeId: { ROADMAP: string }
+  services: {
+    Status: { OK: string; ZERO_RESULT: string }
+    Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number }) : void }
+  }
 }
 
 type KakaoWindow = Window & {
@@ -122,7 +126,7 @@ export function loadKakaoMaps(): Promise<KakaoMapsApi> {
     }
     const timeout = window.setTimeout(() => finish(new Error('KAKAO_MAPS_TIMEOUT')), 20000)
     script.async = true
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(import.meta.env.VITE_KAKAO_MAP_KEY.trim())}&autoload=false`
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(import.meta.env.VITE_KAKAO_MAP_KEY.trim())}&autoload=false&libraries=services`
     script.onload = () => {
       if (!scope.kakao?.maps) {
         finish(new Error('KAKAO_MAPS_UNAVAILABLE'))
@@ -134,4 +138,16 @@ export function loadKakaoMaps(): Promise<KakaoMapsApi> {
     document.head.append(script)
   })
   return loading
+}
+
+export async function searchSeoulPlaces(query: string): Promise<Array<{ id: string; name: string; address: string; lat: number; lng: number }>> {
+  const api = await loadKakaoMaps()
+  return new Promise((resolve, reject) => {
+    new api.services.Places().keywordSearch(query.includes('서울') || /\bseoul\b/i.test(query) ? query : `서울 ${query}`, (places, status) => {
+      if (status === api.services.Status.ZERO_RESULT) { resolve([]); return }
+      if (status !== api.services.Status.OK) { reject(new Error('place search unavailable')); return }
+      resolve(places.map(place => ({ id: place.id, name: place.place_name, address: place.road_address_name || place.address_name, lat: Number(place.y), lng: Number(place.x) }))
+        .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng)))
+    }, { size: 15 })
+  })
 }
