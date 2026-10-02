@@ -15,11 +15,16 @@ export interface GoogleMap3D extends HTMLElement {
   flyCameraTo(options: { endCamera: Camera3D; durationMillis: number }): void
   stopCameraAnimation(): void
 }
+export type GooglePosition3D = { lat: number; lng: number; altitude?: number }
+export interface GooglePolygon3D extends HTMLElement {
+  path: GooglePosition3D[] | GooglePosition3D[][]
+}
 export interface Maps3DLibrary {
   Map3DElement: new (options: Camera3D & { mode: string; gestureHandling: string; description: string }) => GoogleMap3D
   Marker3DElement: new (options: Record<string, unknown>) => HTMLElement
   Marker3DInteractiveElement: new (options: Record<string, unknown>) => HTMLElement
   Polyline3DElement: new (options: Record<string, unknown>) => HTMLElement
+  Polygon3DElement: new (options: Record<string, unknown>) => GooglePolygon3D
   MapMode: { HYBRID: string }
   AltitudeMode: { CLAMP_TO_GROUND: string }
 }

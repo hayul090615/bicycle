@@ -58,6 +58,25 @@ export interface KakaoMapsApi {
     strokeOpacity: number
     strokeStyle: string
   }) => KakaoOverlay
+  Polygon: new (options: {
+    map: KakaoMap | null
+    path: KakaoLatLng[][]
+    strokeWeight: number
+    strokeColor: string
+    strokeOpacity: number
+    fillColor: string
+    fillOpacity: number
+  }) => KakaoOverlay
+  Circle: new (options: {
+    map: KakaoMap | null
+    center: KakaoLatLng
+    radius: number
+    strokeWeight: number
+    strokeColor: string
+    strokeOpacity: number
+    fillColor: string
+    fillOpacity: number
+  }) => KakaoOverlay
   CustomOverlay: new (options: {
     map: KakaoMap | null
     position: KakaoLatLng

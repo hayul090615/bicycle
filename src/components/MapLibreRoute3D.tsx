@@ -7,6 +7,7 @@ import { castBuildingShadow } from '../utils/buildingShadow'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
+import { SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
@@ -21,6 +22,7 @@ const IMAGERY_ATTRIBUTION = 'Imagery © Esri. Sources: Esri, Vantor, Earthstar G
 const SATELLITE_SURFACES = new Set(['park', 'landuse', 'landcover', 'water', 'aeroway', 'building'])
 const EMPTY_SHADOWS: GeoJSON.FeatureCollection<GeoJSON.Polygon> = { type: 'FeatureCollection', features: [] }
 const EMPTY_LINE: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: 'FeatureCollection', features: [] }
+const EMPTY_POINT: GeoJSON.FeatureCollection<GeoJSON.Point> = { type: 'FeatureCollection', features: [] }
 const SEASON_BUILDING_COLORS: Record<TourSeason, string> = {
   spring: '#c5bbb8', summer: '#b6bab1', autumn: '#c6b6a5', winter: '#bcc7ca',
 }
@@ -173,7 +175,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   onFoodGuideOpen: (point: LonLat) => void
   locale: 'en' | 'ko'
-  userLocation: { lat: number; lng: number; heading?: number } | null
+  userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
   destinationPicking: boolean
@@ -308,6 +310,40 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
           paint: { 'raster-opacity': 1, 'raster-fade-duration': 100 },
         }, 'park')
         const layers = map.getStyle().layers
+        const labelTextField: ExpressionSpecification = locale === 'en'
+          ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['get', 'name']]
+          : ['coalesce', ['get', 'name:ko'], ['get', 'name_ko'], ['get', 'name'], ['get', 'name:en']]
+        for (const layer of map.getStyle().layers as Array<{ id: string; type: string; layout?: Record<string, unknown> }>) {
+          if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
+            map.setLayoutProperty(layer.id, 'text-field', labelTextField)
+          }
+        }
+        map.addSource('tour-location-accuracy', { type: 'geojson', data: EMPTY_POINT })
+        map.addLayer({
+          id: 'tour-location-accuracy',
+          type: 'circle',
+          source: 'tour-location-accuracy',
+          paint: {
+            'circle-radius': ['interpolate', ['linear'], ['zoom'],
+              10, ['*', ['get', 'accuracy'], .0165],
+              12, ['*', ['get', 'accuracy'], .066],
+              14, ['*', ['get', 'accuracy'], .264],
+              16, ['*', ['get', 'accuracy'], 1.055],
+              18, ['*', ['get', 'accuracy'], 4.22]] as ExpressionSpecification,
+            'circle-color': '#1677e8',
+            'circle-opacity': .15,
+            'circle-stroke-color': '#1677e8',
+            'circle-stroke-opacity': .7,
+            'circle-stroke-width': 1.25,
+          },
+        })
+        map.addSource('tour-seoul-outside-mask', { type: 'geojson', data: SEOUL_OUTSIDE_MASK })
+        map.addLayer({
+          id: 'tour-seoul-outside-mask',
+          type: 'fill',
+          source: 'tour-seoul-outside-mask',
+          paint: { 'fill-color': '#000000', 'fill-opacity': 1, 'fill-antialias': false },
+        })
         if (showSatellite) {
           for (const layer of layers) {
             const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined
@@ -658,6 +694,31 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
+    const textField: ExpressionSpecification = locale === 'en'
+      ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['get', 'name']]
+      : ['coalesce', ['get', 'name:ko'], ['get', 'name_ko'], ['get', 'name'], ['get', 'name:en']]
+    for (const layer of map.getStyle().layers as Array<{ id: string; type: string; layout?: Record<string, unknown> }>) {
+      if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
+        map.setLayoutProperty(layer.id, 'text-field', textField)
+      }
+    }
+  }, [locale, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
+    const source = map.getSource('tour-location-accuracy') as GeoJSONSource | undefined
+    if (!source) return
+    source.setData(userLocation ? {
+      type: 'Feature',
+      properties: { accuracy: Math.max(0, userLocation.accuracy ?? 0) },
+      geometry: { type: 'Point', coordinates: [userLocation.lng, userLocation.lat] },
+    } : EMPTY_POINT)
+  }, [status, userLocation])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || status !== 'ready') return
     userMarkerRef.current?.remove()
     userMarkerRef.current = null
     if (!userLocation) return
@@ -665,8 +726,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, activeStopIndexes,
     element.className = 'tour-user-location-marker'
     element.style.setProperty('--tour-user-heading', `${userLocation.heading ?? 0}deg`)
     element.setAttribute('role', 'img')
-    element.setAttribute('aria-label', locale === 'ko' ? '내 위치' : 'You are here')
-    element.title = locale === 'ko' ? '내 위치' : 'You are here'
+    const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
+    element.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
+    element.title = userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`
     userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
       .setLngLat([userLocation.lng, userLocation.lat]).addTo(map)
   }, [locale, status, userLocation])

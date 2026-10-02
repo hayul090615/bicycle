@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
-import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type Maps3DLibrary } from '../services/googleMaps3d'
+import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePolygon3D, type GooglePosition3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
 import type { RouteCondition, RouteRestaurant } from '../services/routeConditions'
@@ -8,6 +8,7 @@ import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
+import { SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
@@ -38,6 +39,20 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
+function accuracyRing({ lat, lng, accuracy }: { lat: number; lng: number; accuracy: number }): GooglePosition3D[] {
+  const angularDistance = accuracy / 6_371_000
+  const latitude = lat * Math.PI / 180
+  const longitude = lng * Math.PI / 180
+  return Array.from({ length: 49 }, (_, index) => {
+    const bearing = index / 48 * Math.PI * 2
+    const destinationLatitude = Math.asin(Math.sin(latitude) * Math.cos(angularDistance)
+      + Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing))
+    const destinationLongitude = longitude + Math.atan2(Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
+      Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude))
+    return { lat: destinationLatitude * 180 / Math.PI, lng: destinationLongitude * 180 / Math.PI, altitude: 0 }
+  })
+}
+
 export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
@@ -55,7 +70,7 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
   cctvCameras: PublicCamera[]
   locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
-  userLocation: { lat: number; lng: number } | null
+  userLocation: { lat: number; lng: number; accuracy?: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
   onFoodGuideOpen: (point: LonLat) => void
   fallback: ReactNode
@@ -73,6 +88,8 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
+  const userAccuracyRef = useRef<GooglePolygon3D | null>(null)
+  const cityMaskRef = useRef<GooglePolygon3D | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [selectedCamera, setSelectedCamera] = useState<PublicCamera | null>(null)
@@ -118,6 +135,16 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
       map.style.height = '100%'
       map.style.display = 'block'
       map.addEventListener('gmp-error', fail)
+      const cityMask = new library.Polygon3DElement({
+        fillColor: '#000000FF',
+        strokeColor: '#00000000',
+        strokeWidth: 0,
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+        drawsOccludedSegments: true,
+      })
+      cityMask.path = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => ({ lat, lng, altitude: 0 })))
+      map.append(cityMask)
+      cityMaskRef.current = cityMask
       map.addEventListener('gmp-steadychange', event => {
         if (!disposed && !failed && (event as Event & { isSteady: boolean }).isSteady) {
           window.clearTimeout(timeout)
@@ -148,6 +175,10 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
+      userAccuracyRef.current?.remove()
+      userAccuracyRef.current = null
+      cityMaskRef.current?.remove()
+      cityMaskRef.current = null
       routeLineRef.current?.remove()
       accessLineRef.current?.remove()
       routeLineRef.current = null
@@ -333,9 +364,21 @@ export function GoogleRoute3D({ route, routePath, activeStopIndexes, originStopI
     if (!map || !library || status !== 'ready') return
     userMarkerRef.current?.remove()
     userMarkerRef.current = null
+    userAccuracyRef.current?.remove()
+    userAccuracyRef.current = null
     if (!userLocation) return
     const label = locale === 'ko' ? '내 위치' : 'You are here'
-    const marker = new library.Marker3DInteractiveElement({ position: userLocation, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
+    if (userLocation.accuracy !== undefined) {
+      const accuracy = new library.Polygon3DElement({
+        fillColor: '#1677E833', strokeColor: '#1677E8AA', strokeWidth: 1,
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: false,
+      })
+      accuracy.path = accuracyRing({ lat: userLocation.lat, lng: userLocation.lng, accuracy: userLocation.accuracy })
+      map.append(accuracy)
+      userAccuracyRef.current = accuracy
+    }
+    const title = userLocation.accuracy === undefined ? label : `${label} · ±${Math.round(userLocation.accuracy)} m`
+    const marker = new library.Marker3DInteractiveElement({ position: { lat: userLocation.lat, lng: userLocation.lng, altitude: 0 }, label, title, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
     map.append(marker)
     userMarkerRef.current = marker
   }, [locale, status, userLocation])

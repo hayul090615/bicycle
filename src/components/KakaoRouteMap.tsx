@@ -9,6 +9,7 @@ import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { createFoodGuideMarker } from './foodGuideMarker'
 import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
+import { SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 type MapPoint = { lat: number; lng: number }
 
@@ -66,7 +67,7 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
   cctvCameras: PublicCamera[]
   locationFocusRequest: number
   locale: 'en' | 'ko'
-  userLocation: { lat: number; lng: number; heading?: number } | null
+  userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
   destinationPicking: boolean
@@ -90,6 +91,8 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
   const bikeLaneOverlaysRef = useRef<KakaoOverlay[]>([])
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
+  const userAccuracyOverlayRef = useRef<KakaoOverlay | null>(null)
+  const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
@@ -139,6 +142,16 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
         draggable: true,
         scrollwheel: true,
       })
+      const maskPaths = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => new api.LatLng(lat, lng)))
+      cityMaskOverlayRef.current = new api.Polygon({
+        map,
+        path: maskPaths,
+        strokeWeight: 0,
+        strokeColor: '#000000',
+        strokeOpacity: 0,
+        fillColor: '#000000',
+        fillOpacity: 1,
+      })
       let correctingCenter = false
       api.addListener(map, 'center_changed', () => {
         if (correctingCenter) return
@@ -181,6 +194,8 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
+      userAccuracyOverlayRef.current?.setMap(null)
+      cityMaskOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       routeOverlaysRef.current = []
       accessOverlaysRef.current = []
@@ -190,6 +205,8 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
       bikeLaneOverlaysRef.current = []
       sceneryOverlaysRef.current = []
       userOverlayRef.current = null
+      userAccuracyOverlayRef.current = null
+      cityMaskOverlayRef.current = null
       activePopupRef.current = null
       activePopupIdRef.current = null
       mapRef.current = null
@@ -594,13 +611,28 @@ export function KakaoRouteMap({ route, routePath, activeStopIndexes, originStopI
     if (!map || !api || status !== 'ready') return
     userOverlayRef.current?.setMap(null)
     userOverlayRef.current = null
+    userAccuracyOverlayRef.current?.setMap(null)
+    userAccuracyOverlayRef.current = null
     if (!userLocation) return
+    if (userLocation.accuracy !== undefined) {
+      userAccuracyOverlayRef.current = new api.Circle({
+        map,
+        center: new api.LatLng(userLocation.lat, userLocation.lng),
+        radius: userLocation.accuracy,
+        strokeWeight: 1,
+        strokeColor: '#1677e8',
+        strokeOpacity: .7,
+        fillColor: '#1677e8',
+        fillOpacity: .15,
+      })
+    }
     const marker = document.createElement('div')
     marker.className = 'tour-user-location-marker kakao-user-marker'
     marker.style.setProperty('--tour-user-heading', `${userLocation.heading ?? 0}deg`)
     marker.setAttribute('role', 'img')
-    marker.setAttribute('aria-label', locale === 'ko' ? '내 위치' : 'You are here')
-    marker.title = locale === 'ko' ? '내 위치' : 'You are here'
+    const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
+    marker.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
+    marker.title = userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`
     userOverlayRef.current = new api.CustomOverlay({
       map,
       position: new api.LatLng(userLocation.lat, userLocation.lng),
