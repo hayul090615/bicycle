@@ -290,6 +290,58 @@ function MapCenterReporter({ onChange }: { onChange: (center: Coordinates) => vo
   return null
 }
 
+function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[]; locale: string }) {
+  const map = useMap()
+  const [viewRevision, setViewRevision] = useState(0)
+  useEffect(() => {
+    const refresh = () => setViewRevision(value => value + 1)
+    map.on('moveend zoomend', refresh)
+    return () => { map.off('moveend zoomend', refresh) }
+  }, [map])
+  const clusters = useMemo(() => {
+    const points = stations.map(station => ({ station, point: map.latLngToContainerPoint([station.lat, station.lng]) }))
+    const groups: Array<{ stations: NearbyBikeStation[]; x: number; y: number; lat: number; lng: number }> = []
+    for (const item of points) {
+      let nearest: typeof groups[number] | undefined
+      let nearestDistance = 56
+      for (const group of groups) {
+        const distance = Math.hypot(item.point.x - group.x, item.point.y - group.y)
+        if (distance < nearestDistance) { nearest = group; nearestDistance = distance }
+      }
+      if (nearest) {
+        const length = nearest.stations.length
+        nearest.stations.push(item.station)
+        nearest.x = (nearest.x * length + item.point.x) / (length + 1)
+        nearest.y = (nearest.y * length + item.point.y) / (length + 1)
+        nearest.lat = (nearest.lat * length + item.station.lat) / (length + 1)
+        nearest.lng = (nearest.lng * length + item.station.lng) / (length + 1)
+      } else groups.push({ stations: [item.station], x: item.point.x, y: item.point.y, lat: item.station.lat, lng: item.station.lng })
+    }
+    return groups
+  }, [stations, map, viewRevision])
+
+  return <>{clusters.map(cluster => {
+    if (cluster.stations.length === 1) {
+      const station = cluster.stations[0]
+      return <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}
+        icon={divIcon({ className: 'tour-live-bike-icon', html: `<span>${station.available ?? '–'}</span>`, iconSize: [42, 42], iconAnchor: [21, 37] })}>
+        <Tooltip className="tour-live-bike-tooltip"><span><strong>{station.name}</strong><b>{station.available === null ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable') : (locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`)}</b></span></Tooltip>
+        <Tooltip permanent direction="bottom" offset={[0, -34]} className="tour-live-bike-name-tooltip">{station.name}</Tooltip>
+      </Marker>
+    }
+    const knownStations = cluster.stations.filter(station => station.available !== null)
+    const bikeTotal = knownStations.reduce((total, station) => total + (station.available ?? 0), 0)
+    const countLabel = knownStations.length === 0 ? '—' : `${bikeTotal}${knownStations.length < cluster.stations.length ? '+' : ''}`
+    const stationNames = cluster.stations.map(station => station.name).join(', ')
+    const summary = locale === 'ko' ? `${countLabel}대 · 대여소 ${cluster.stations.length}곳` : `${countLabel} bikes · ${cluster.stations.length} stations`
+    return <Marker key={`live-bike-cluster-${cluster.stations.map(station => station.id).join('-')}`} position={[cluster.lat, cluster.lng]}
+      icon={divIcon({ className: 'tour-live-bike-cluster-icon', html: `<span>${countLabel}</span><small>${cluster.stations.length}${locale === 'ko' ? '곳' : ' st.'}</small>`, iconSize: [52, 52], iconAnchor: [26, 26] })}
+      eventHandlers={{ click: () => map.flyTo([cluster.lat, cluster.lng], Math.min(map.getZoom() + 2, map.getMaxZoom())) }}>
+      <Tooltip className="tour-live-bike-cluster-tooltip"><strong>{summary}</strong><span>{stationNames}</span></Tooltip>
+    </Marker>
+  })}</>
+}
+
 function DestinationPickerMapEvents({ enabled, onPick }: { enabled: boolean; onPick: (point: Coordinates) => void }) {
   useMapEvents({ click: event => { if (enabled) onPick({ lat: event.latlng.lat, lng: event.latlng.lng }) } })
   return null
@@ -1119,16 +1171,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
-    {showBikeStations && mapBikeStations.map(station => <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}
-      icon={divIcon({ className: 'tour-live-bike-icon', html: `<span>${station.available ?? '–'}</span>`, iconSize: [42, 42], iconAnchor: [21, 37] })}>
-      <Tooltip className="tour-live-bike-tooltip">
-        <span>
-          <strong>{station.name}</strong>
-          <b>{station.available === null ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text(`${station.available} bikes available`, `${station.available}대 대여 가능`)}</b>
-        </span>
-      </Tooltip>
-      <Tooltip permanent direction="bottom" offset={[0, -34]} className="tour-live-bike-name-tooltip">{station.name}</Tooltip>
-    </Marker>)}
+    {showBikeStations && <BikeStationMarkers stations={mapBikeStations} locale={locale} />}
     {showAmenities && routeAmenities.map(amenity => <Marker key={amenity.id} position={[amenity.lat, amenity.lng]}
       icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
       <Tooltip>{amenityTitle(amenity, locale)} · {distanceLabel(amenity.distanceMeters)}</Tooltip>
