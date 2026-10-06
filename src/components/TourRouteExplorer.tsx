@@ -1412,6 +1412,16 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <button type="button" aria-current={activeMapTool === "cctv" ? "true" : undefined} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool("cctv") }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
               <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
             </nav>
+            <div className="tour-map-menu-actions">
+              <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === "settings"}
+                onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
+                <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
+              </button>
+              <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={sidebarOpen} aria-controls="tour-route-sidebar" onClick={() => setSidebarOpen(open => !open)}>
+                <span aria-hidden="true">&#x1F6B4;</span>{text("Ride plan", "\uB77C\uC774\uB529 \uACC4\uD68D")}
+              </button>
+            </div>
+            <div className="tour-menu-plan-slot" ref={setMenuPlanTarget} />
           </section>
           <section className="tour-map-rail-group tour-map-rail-group--map">
             <h2>{text("Map", "\uC9C0\uB3C4")}</h2>
@@ -1429,17 +1439,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               </select>
             </label>
           </section>
-          <section className="tour-map-rail-group tour-map-rail-group--other">
-            <h2>{text("Other", "\uAE30\uD0C0")}</h2>
-            <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === "settings"}
-              onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
-              <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
-            </button>
-          </section>
-          <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={sidebarOpen} aria-controls="tour-route-sidebar" onClick={() => setSidebarOpen(open => !open)}>
-            <span aria-hidden="true">&#x1F6B4;</span>{text("Ride plan", "\uB77C\uC774\uB529 \uACC4\uD68D")}
-          </button>
-          <div className="tour-menu-plan-slot" ref={setMenuPlanTarget} />
         </aside>
         <button type="button" className="tour-map-locate" onClick={() => { setActiveMapTool(null); locateNearestRoute(false) }} disabled={locating} aria-label={text("Show my current location", "\uB0B4 \uD604\uC7AC \uC704\uCE58 \uD45C\uC2DC")}>
           <span aria-hidden="true">&#x25CE;</span>{locating ? text("Locating...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("My location", "\uB0B4 \uC704\uCE58")}
