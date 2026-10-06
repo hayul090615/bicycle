@@ -29,7 +29,7 @@ type Coordinates = { lat: number; lng: number; heading?: number; accuracy?: numb
 type BikeUseMode = 'ttareungi' | 'personal'
 type RotationRequest = { direction: 'left' | 'right' | 'up' | 'down'; serial: number }
 type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | 'amenities' | 'bikeStations'
-type MapTool = 'routes' | 'course' | 'food' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | 'facilities'
+type MapTool = 'routes' | 'ridePlan' | 'course' | 'food' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | 'facilities'
 type MapLayers = Record<MapLayerKey, boolean>
 const DEFAULT_MAP_LAYERS: MapLayers = { course: false, restaurants: false, cctv: false, roadInfo: true, riders: false, amenities: true, bikeStations: false }
 function readMapLayers(): MapLayers {
@@ -441,7 +441,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const locationKey = locationLat === null || locationLng === null ? null : `${locationLat.toFixed(6)}:${locationLng.toFixed(6)}`
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
-    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 300), [locationLat, locationLng])
+    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 500), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
   const nearbyStations = useMemo(() => {
     const stationsById = new Map(snapshotNearby.map(station => [station.id, station]))
@@ -910,9 +910,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const controller = new AbortController()
     let active = true
     const location = { lat: locationLat, lng: locationLng }
-    setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1000, 300), updatedAt: null, status: 'loading' })
+    setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1000, 500), updatedAt: null, status: 'loading' })
     const refresh = () => {
-      void fetchNearbyBikeStations(location, controller.signal, 300).then(result => {
+      void fetchNearbyBikeStations(location, controller.signal, 500).then(result => {
         if (active) setNearbyBikes({ key: locationKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
       }).catch(() => {
         if (active) setNearbyBikes(current => current?.key === locationKey ? { ...current, status: 'unavailable' } : current)
@@ -1148,8 +1148,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </aside>
       <section className="tour-nearby-stations" aria-live="polite">
         <div className="tour-itinerary-heading"><h3>{text('Nearby Ttareungi', '내 근처 따릉이')}</h3><span>{activeNearbyBikes?.status === 'live' ? text('LIVE', '실시간') : activeNearbyBikes?.status === 'unavailable' ? text('OFFLINE', '연결 대기') : text('LOCATION', '위치')}</span></div>
-        {!userLocation ? <p>{text('Tap My location to find rental stations within 300 m.', '내 위치를 누르면 300m 이내 대여소를 모두 보여드려요.')}</p>
-          : nearbyStations.length === 0 ? <p>{text('No rental station was found within 300 m.', '300m 이내에서 대여소를 찾지 못했습니다.')}</p>
+        {!userLocation ? <p>{text('Tap My location to find rental stations within 500 m.', '내 위치를 누르면 500m 이내 대여소를 모두 보여드려요.')}</p>
+          : nearbyStations.length === 0 ? <p>{text('No rental station was found within 500 m.', '500m 이내에서 대여소를 찾지 못했습니다.')}</p>
             : <div className="tour-nearby-list">{nearbyStations.map(station => <button key={station.id} type="button" disabled={station.available === 0} aria-pressed={pickupStation?.id === station.id} onClick={() => {
               setSelectedBikeStationId(station.id)
               try { localStorage.setItem('seoul-bike-selected-pickup-station', station.id) } catch { /* Selection still works in memory. */ }
@@ -1417,7 +1417,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                 onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
                 <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
               </button>
-              <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={sidebarOpen} aria-controls="tour-route-sidebar" onClick={() => setSidebarOpen(open => !open)}>
+              <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={activeMapTool === "ridePlan"} aria-controls="tour-map-side-panel" onClick={() => { setSidebarOpen(false); setActiveMapTool(current => current === "ridePlan" ? null : "ridePlan") }}>
                 <span aria-hidden="true">&#x1F6B4;</span>{text("Ride plan", "\uB77C\uC774\uB529 \uACC4\uD68D")}
               </button>
             </div>
@@ -1443,9 +1443,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button type="button" className="tour-map-locate" onClick={() => { setActiveMapTool(null); locateNearestRoute(false) }} disabled={locating} aria-label={text("Show my current location", "\uB0B4 \uD604\uC7AC \uC704\uCE58 \uD45C\uC2DC")}>
           <span aria-hidden="true">&#x25CE;</span>{locating ? text("Locating...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("My location", "\uB0B4 \uC704\uCE58")}
         </button>
-        {activeMapTool && <aside className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
+        {activeMapTool && <aside id="tour-map-side-panel" className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
           <header className="tour-map-side-panel-header">
-            <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
+            <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'ridePlan' ? text('Ride plan', '라이딩 계획') : activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
               : activeMapTool === 'course' ? text('Route display', '코스 표시')
                 : activeMapTool === 'food' ? text('Food along the way', '경로 주변 맛집')
                     : activeMapTool === 'cctv' ? text('Public CCTV', '공공 CCTV')
@@ -1456,7 +1456,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <button type="button" onClick={() => setActiveMapTool(null)} aria-label={text('Close map panel', '지도 패널 닫기')}>×</button>
           </header>
           <div className="tour-map-side-panel-body">
-            {activeMapTool === 'routes' && <>
+            {(activeMapTool === 'routes' || activeMapTool === 'ridePlan') && <>
               <div className="tour-map-panel-feature"><small>{text('SELECTED ROUTE', '선택한 코스')}</small><strong>{text(route.title, route.titleKo)}</strong>
                 <span>{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by bike`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</span></div>
               {bikeUseMode === 'ttareungi' && <section className="tour-course-bike-stations"><h3>{text('Live bikes along this course', '코스 주변 실시간 대여소')}</h3>

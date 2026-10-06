@@ -12,6 +12,7 @@ import { createDistrictCourse, districtCourses, type SeoulDistrict } from './dat
 import { useTypingGame } from './hooks/useTypingGame'
 import { useBikeStations } from './hooks/useBikeStations'
 import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/game'
+import { SEOUL_BOUNDARY } from './data/seoulBoundary'
 
 type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour' | AuthPageKind
 function screenFromUrl(): AppScreen {
@@ -26,6 +27,26 @@ const PLAYED_STATIONS_KEY = 'seoul-typing-bike-played-stations-v1'
 const GAME_THEME_KEY = 'seoul-typing-bike-light-mode'
 const LEADERBOARD_KEY = 'seoul-typing-bike-leaderboard-v1'
 type PlayedStations = Partial<Record<SeoulDistrict, string[]>>
+
+const splashMapBounds = SEOUL_BOUNDARY.reduce((bounds, [lng, lat]) => ({
+  minLng: Math.min(bounds.minLng, lng), maxLng: Math.max(bounds.maxLng, lng),
+  minLat: Math.min(bounds.minLat, lat), maxLat: Math.max(bounds.maxLat, lat),
+}), { minLng: Infinity, maxLng: -Infinity, minLat: Infinity, maxLat: -Infinity })
+const splashMapWidth = 600
+const splashMapHeight = 460
+const splashMapPadding = 20
+const splashLongitudeScale = Math.cos(((splashMapBounds.minLat + splashMapBounds.maxLat) / 2) * Math.PI / 180)
+const splashMapScale = Math.min(
+  (splashMapWidth - splashMapPadding * 2) / ((splashMapBounds.maxLng - splashMapBounds.minLng) * splashLongitudeScale),
+  (splashMapHeight - splashMapPadding * 2) / (splashMapBounds.maxLat - splashMapBounds.minLat),
+)
+const splashMapOffsetX = (splashMapWidth - (splashMapBounds.maxLng - splashMapBounds.minLng) * splashLongitudeScale * splashMapScale) / 2
+const splashMapOffsetY = (splashMapHeight - (splashMapBounds.maxLat - splashMapBounds.minLat) * splashMapScale) / 2
+const SEOUL_SPLASH_PATH = SEOUL_BOUNDARY.map(([lng, lat], index) => {
+  const x = splashMapOffsetX + (lng - splashMapBounds.minLng) * splashLongitudeScale * splashMapScale
+  const y = splashMapHeight - splashMapOffsetY - (lat - splashMapBounds.minLat) * splashMapScale
+  return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
+}).join(' ') + ' Z'
 
 function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onToggleTheme }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void; lightMode: boolean; onToggleTheme: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -203,12 +224,18 @@ export default function App() {
     {screenContent}
     {showSiteSplash && <div className="site-bike-splash" role="status" aria-label="자전거로 즐기는 서울">
       <div className="site-bike-splash-scene" aria-hidden="true">
-        <svg className="site-bike-splash-road" viewBox="0 0 360 180" focusable="false">
-          <path className="site-bike-map-boundary" d="M36 18 61 10 89 16 112 8 139 15 163 9 190 15 217 8 244 16 271 11 299 19 326 17 347 32 342 55 353 76 344 98 352 120 339 141 343 157 319 169 292 164 269 173 242 165 216 174 190 166 163 174 138 165 111 172 87 164 62 169 41 157 22 159 13 140 19 119 9 98 17 77 11 56 20 37Z" />
-          <path className="site-bike-road-bed site-bike-road-avenue" d="M5 42C43 47 63 31 96 35S146 54 179 43 231 27 261 39 315 58 356 43M4 133C39 119 66 139 99 128S151 105 181 120 231 149 265 132 316 111 356 128M38 178C63 151 77 122 105 101S149 76 174 58 218 28 239 2M112 181C128 155 143 133 169 115S211 84 233 65 271 34 300 4" />
-          <path className="site-bike-road-bed site-bike-road-street" d="M26 23C39 41 49 57 45 77S30 112 39 145M70 13C83 34 83 51 76 69S62 105 70 128 89 153 95 168M119 12C108 32 106 50 117 67S137 93 128 111 108 142 119 166M157 12C171 30 177 48 166 67S145 98 157 116 182 142 177 166M205 13C193 31 192 48 203 65S226 94 215 112 192 141 203 165M250 14C261 31 260 47 250 65S233 95 246 113 269 143 260 166M296 18C282 37 281 53 292 71S315 101 304 119 286 143 292 163M18 65C48 74 66 88 91 82S133 58 158 70 196 96 220 84 266 60 293 73 326 91 348 82M13 104C42 91 67 99 91 111S133 135 159 123 194 97 219 107 263 133 289 121 325 99 349 109M52 17C58 37 62 51 58 68M99 20C94 39 96 55 108 72M143 18C151 37 151 52 140 70M187 19C180 37 183 52 195 69M234 21C225 38 228 54 240 70M278 22C270 39 275 55 286 71M320 26C309 43 313 58 326 73M31 149C52 132 66 119 91 120M82 161C100 142 114 128 137 129M147 161C161 144 178 133 197 135M213 161C227 145 245 132 265 135M277 157C294 140 312 128 333 133" />
-          <path className="site-bike-road-center" d="M5 42C43 47 63 31 96 35S146 54 179 43 231 27 261 39 315 58 356 43M4 133C39 119 66 139 99 128S151 105 181 120 231 149 265 132 316 111 356 128M38 178C63 151 77 122 105 101S149 76 174 58 218 28 239 2M112 181C128 155 143 133 169 115S211 84 233 65 271 34 300 4" />
-          <circle className="site-bike-road-node" cx="96" cy="35" r="3" /><circle className="site-bike-road-node" cx="179" cy="43" r="3.4" /><circle className="site-bike-road-node" cx="99" cy="128" r="3" /><circle className="site-bike-road-node" cx="181" cy="120" r="3.4" /><circle className="site-bike-road-node" cx="265" cy="132" r="3" />
+        <svg className="site-bike-splash-road" viewBox="0 0 600 460" focusable="false">
+          <defs><clipPath id="site-seoul-map-clip"><path d={SEOUL_SPLASH_PATH} /></clipPath></defs>
+          <path className="site-bike-map-land" d={SEOUL_SPLASH_PATH} />
+          <g clipPath="url(#site-seoul-map-clip)">
+            <path className="site-bike-road-bed site-bike-road-avenue" d="M-20 104C52 100 91 143 155 128S257 80 318 108 425 160 492 132 566 96 634 121M-24 305C43 277 103 308 163 285S263 237 327 265 429 320 493 290 563 248 626 273M75 486C115 417 150 354 204 303S310 218 355 157 407 69 450-25M220 489C249 420 272 356 324 309S420 234 458 177 511 86 567-14" />
+            <path className="site-bike-road-bed site-bike-road-street" d="M45 5C77 64 86 116 66 166S32 252 52 315 98 403 105 468M112 0C142 56 146 110 128 158S101 250 126 304 169 379 166 456M187-8C168 46 171 96 202 145S245 218 219 272 183 357 207 413 242 451 239 474M257-8C293 46 296 94 266 146S230 224 261 276 305 348 291 399 270 442 281 472M337-12C305 45 310 94 344 143S384 220 351 274 321 351 351 405 388 451 378 476M410-10C447 44 444 98 412 149S383 226 416 276 453 345 435 397 417 440 435 468M493-12C458 48 462 101 495 151S536 221 506 274 476 346 505 400 541 445 527 472M566-4C532 48 535 98 568 145S605 222 578 274 552 344 574 390 602 440 594 468M-8 61C55 48 113 74 169 65S272 36 331 59 440 91 497 67 572 48 621 66M-14 185C42 165 98 195 154 183S263 150 324 175 432 210 489 185 566 163 624 181M-14 231C48 211 102 239 163 229S270 197 331 221 434 255 492 232 568 207 625 227M-10 354C48 330 108 361 168 349S271 317 331 340 433 377 493 352 568 329 622 346M18 414C75 391 129 418 186 406S280 380 337 400 434 434 493 413 560 390 607 404M17 27C42 48 59 71 67 94M91 17C110 43 119 68 108 94M156 7C174 32 179 56 167 82M227 9C245 35 246 59 232 85M300 4C317 30 317 54 301 80M374 2C389 26 389 53 375 79M449 3C467 30 463 56 448 84M525 9C544 34 539 61 523 88M590 18C606 42 600 65 584 91M24 272C58 248 91 228 127 231M73 342C104 320 136 298 175 301M151 387C184 361 215 339 252 341M245 425C275 399 307 378 345 380M355 421C388 394 418 374 457 376M458 340C490 318 523 300 561 302M432 235C464 215 498 197 536 201M328 191C362 171 397 153 435 157M196 178C229 158 261 140 298 143" />
+            <path className="site-bike-cycle-route" d="M20 155C70 177 104 196 151 190S236 158 282 175 365 214 412 205 493 172 567 192M26 332C82 307 124 286 177 291S260 321 311 304 401 270 451 282 522 311 581 284M95 455C126 386 159 330 211 283S310 211 352 153 396 63 421 4M190 455C216 398 237 347 284 302S380 221 423 174 481 83 537 9" />
+            <path className="site-bike-cycle-route-center" d="M20 155C70 177 104 196 151 190S236 158 282 175 365 214 412 205 493 172 567 192M26 332C82 307 124 286 177 291S260 321 311 304 401 270 451 282 522 311 581 284M95 455C126 386 159 330 211 283S310 211 352 153 396 63 421 4M190 455C216 398 237 347 284 302S380 221 423 174 481 83 537 9" />
+            <circle className="site-bike-road-node" cx="155" cy="128" r="4" /><circle className="site-bike-road-node" cx="318" cy="108" r="4.5" /><circle className="site-bike-road-node" cx="163" cy="285" r="4" /><circle className="site-bike-road-node" cx="327" cy="265" r="4.5" /><circle className="site-bike-road-node" cx="493" cy="290" r="4" />
+          </g>
+          <path className="site-bike-map-route-casing" d={SEOUL_SPLASH_PATH} />
+          <path className="site-bike-map-boundary" d={SEOUL_SPLASH_PATH} />
         </svg>
         <svg className="site-bike-splash-mark" viewBox="0 0 128 76" focusable="false">
           <g className="site-bike-splash-wheel" transform="translate(25 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
