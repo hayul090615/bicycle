@@ -442,7 +442,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 100), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
-  const nearbyStations = activeNearbyBikes?.status === 'live' ? activeNearbyBikes.stations : snapshotNearby
+  const nearbyStations = useMemo(() => {
+    const byId = new Map(snapshotNearby.map(station => [station.id, station]))
+    if (activeNearbyBikes?.status === 'live') {
+      for (const station of activeNearbyBikes.stations) byId.set(station.id, station)
+    }
+    return [...byId.values()].sort((first, second) => first.distanceMeters - second.distanceMeters)
+  }, [activeNearbyBikes, snapshotNearby])
   const pickupStation = bikeUseMode === 'personal' ? null : nearbyStations.find(station => station.id === selectedBikeStationId && (station.available === null || station.available > 0))
     ?? nearbyStations.find(station => station.available === null || station.available > 0)
     ?? (activeNearbyBikes?.status === 'live' ? null : nearbyStations[0] ?? null)
@@ -516,7 +522,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const showRoadInfo = mapLayers.roadInfo
   const showRiders = mapLayers.riders
   const showAmenities = mapLayers.amenities
-  const showBikeStations = mapLayers.bikeStations || (bikeUseMode === 'ttareungi' && userLocation !== null)
+  const showBikeStations = mapLayers.bikeStations || userLocation !== null
   const mapBikeStations = useMemo(() => {
     const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
     for (const station of nearbyStations) byId.set(station.id, station)
@@ -892,7 +898,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     }
   }, [activePathKey, routedPath, showRestaurants, foodGuideOpen])
   useEffect(() => {
-    if (bikeUseMode === 'personal' || !locationKey || locationLat === null || locationLng === null) {
+    if (!locationKey || locationLat === null || locationLng === null) {
       setNearbyBikes(null)
       return
     }
@@ -910,7 +916,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     refresh()
     const interval = window.setInterval(refresh, 30_000)
     return () => { active = false; window.clearInterval(interval); controller.abort() }
-  }, [bikeUseMode, locationKey, locationLat, locationLng])
+  }, [locationKey, locationLat, locationLng])
   useEffect(() => {
     if (rentalDeadline === null) return
     const interval = window.setInterval(() => setRentalNow(Date.now()), 1000)
@@ -1310,7 +1316,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                   <button type="button" aria-pressed={bikeUseMode === 'ttareungi'} onClick={() => changeBikeUseMode('ttareungi')}>{text('Ttareungi', '따릉이')}</button>
                   <button type="button" aria-pressed={bikeUseMode === 'personal'} onClick={() => changeBikeUseMode('personal')}>{text('My bicycle', '내 자전거')}</button>
                 </div>
-                <p className="tour-map-panel-note">{bikeUseMode === 'personal' ? text('Rental stations, bike counts and return reminders are hidden.', '내 자전거 모드에서는 대여소·잔여 수·반납 알림을 숨깁니다.') : text('Rental stations, live bike counts and return reminders are shown.', '따릉이 대여소와 실시간 잔여 수, 반납 알림을 표시합니다.')}</p>
+                <p className="tour-map-panel-note">{text('Nearby rental stations and live bike counts are shown on the map. Rental reminders are available in Ttareungi mode.', '주변 따릉이 대여소와 실시간 잔여 대수를 지도에 표시합니다. 대여 알림은 따릉이 모드에서 사용할 수 있습니다.')}</p>
               </section>
               <section className="tour-map-panel-section"><h3>{text('Map style', '지도 종류')}</h3>
                 <div className="tour-map-view-options">
@@ -1341,7 +1347,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               </section>
               <section className="tour-map-panel-section tour-map-panel-section--actions"><h3>{text('On the map', '지도에 표시')}</h3>
                 <label className="tour-map-panel-check"><input type="checkbox" checked={showAmenities} onChange={() => setMapLayers(current => ({ ...current, amenities: !current.amenities }))} /><span>{text('Rider facilities', '라이더 편의시설')}</span><small>{amenitiesState?.status === 'loading' ? '…' : routeAmenities.length}</small></label>
-                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => setMapLayers(current => ({ ...current, bikeStations: !current.bikeStations }))} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{courseBikeStations.length}</small></label>
+                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => setMapLayers(current => ({ ...current, bikeStations: !current.bikeStations }))} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{nearbyStations.length}</small></label>
                 <button type="button" className="tour-map-panel-action" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>{text('Building shadows', '건물 그림자')} · {showShadows ? text('On', '켜짐') : text('Off', '꺼짐')}</button>
               </section>
             </>}
