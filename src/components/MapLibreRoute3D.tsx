@@ -5,8 +5,6 @@ import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeo
 import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
 import { createCyclistMarker } from './cyclistMarker'
-import { createFoodGuideMarker } from './foodGuideMarker'
-import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
 import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
@@ -193,7 +191,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   const markersRef = useRef<MapLibreMarker[]>([])
   const peopleMarkersRef = useRef<MapLibreMarker[]>([])
   const treeMarkersRef = useRef<MapLibreMarker[]>([])
-  const foodGuideMarkersRef = useRef<MapLibreMarker[]>([])
   const conditionMarkersRef = useRef<MapLibreMarker[]>([])
   const restaurantMarkersRef = useRef<MapLibreMarker[]>([])
   const cctvMarkersRef = useRef<MapLibreMarker[]>([])
@@ -271,10 +268,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       peopleMarkersRef.current = []
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
-      foodGuideMarkersRef.current.forEach(marker => marker.remove())
-      foodGuideMarkersRef.current = []
-      foodGuideMarkersRef.current.forEach(marker => marker.remove())
-      foodGuideMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -496,8 +489,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       element.className = 'tour-live-bike-marker'
       const count = document.createElement('span')
       count.textContent = station.available === null ? '–' : String(station.available)
-      element.append(count)
-      element.title = `${station.name} · ${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      const popup = document.createElement('span')
+      popup.className = 'tour-live-bike-popup'
+      const name = document.createElement('strong')
+      name.textContent = station.name
+      const available = document.createElement('small')
+      available.textContent = `${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      popup.append(name, available)
+      element.append(count, popup)
+      element.title = `${station.name} · ${available.textContent}`
       element.setAttribute('role', 'img')
       element.setAttribute('aria-label', element.title)
       return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([station.lng, station.lat]).addTo(map)
@@ -593,11 +593,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     if (!map || status !== 'ready') return
     peopleMarkersRef.current.forEach(marker => marker.remove())
     treeMarkersRef.current.forEach(marker => marker.remove())
-    foodGuideMarkersRef.current.forEach(marker => marker.remove())
     conditionMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
     treeMarkersRef.current = []
-    foodGuideMarkersRef.current = []
     conditionMarkersRef.current = []
     let riderFrame = 0
     const sceneryPath = routePath && routePath.length >= 2 ? routePath : linePoints
@@ -627,12 +625,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
           }
           riderFrame = window.requestAnimationFrame(moveRiders)
         }
-      }
-      if (showCourse) {
-        foodGuideMarkersRef.current = sampleRouteAtIntervals(sceneryPath, 100).map(({ point }, index) => {
-          const element = createFoodGuideMarker(locale, index, () => onFoodGuideOpen(point))
-          return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat(point).addTo(map)
-        })
       }
     }
     conditionMarkersRef.current = showRoadInfo ? routeConditions.map(condition => {
@@ -699,14 +691,12 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       map.off('idle', updateVisibility)
       peopleMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current.forEach(marker => marker.remove())
-      foodGuideMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current.forEach(marker => marker.remove())
       peopleMarkersRef.current = []
       treeMarkersRef.current = []
-      foodGuideMarkersRef.current = []
       conditionMarkersRef.current = []
     }
-  }, [is3DView, linePoints, locale, onFoodGuideOpen, routeConditions, routePath, season, showCourse, showRiders, showRoadInfo, status])
+  }, [is3DView, linePoints, locale, routeConditions, routePath, season, showCourse, showRiders, showRoadInfo, status])
 
   useEffect(() => {
     const map = mapRef.current

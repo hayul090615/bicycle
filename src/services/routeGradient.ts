@@ -9,7 +9,7 @@ function lengthMeters(a: LonLat, b: LonLat): number {
 }
 
 export function routeElevationColor(elevation: number, minimum: number, maximum: number): string {
-  if (maximum - minimum < 5) return '#ffffff'
+  if (maximum - minimum < 1.2) return '#ffffff'
   const t = Math.max(0, Math.min(1, (elevation - minimum) / (maximum - minimum)))
   return `rgb(255,${Math.round(255 - 193 * t)},${Math.round(255 - 199 * t)})`
 }

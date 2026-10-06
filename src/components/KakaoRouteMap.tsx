@@ -8,8 +8,6 @@ import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteElevationPoint, 
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { createFoodGuideMarker } from './foodGuideMarker'
-import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
 import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 type MapPoint = { lat: number; lng: number }
@@ -406,14 +404,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     sceneryOverlaysRef.current = []
     if (!showCourse) return
     const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
-    const routeCoordinates = path.map(point => [point.lng, point.lat] as LonLat)
-    const sampledRoute = sampleRouteAtIntervals(routeCoordinates, 100)
     const riderOverlays: Array<{ overlay: KakaoOverlay; phase: number; person: HTMLElement }> = []
     let riderFrame = 0
-    sampledRoute.forEach(({ point }, index) => {
-      const guide = createFoodGuideMarker(locale, index, () => onFoodGuideOpen(point))
-      sceneryOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(point[1], point[0]), content: guide, xAnchor: .5, yAnchor: 1, zIndex: 7 }))
-    })
     if (showRiders) {
       const lonLatPath = path.map(point => [point.lng, point.lat] as LonLat)
       const motion = createRouteMotion(lonLatPath)
@@ -452,7 +444,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []
     }
-  }, [locale, onFoodGuideOpen, points, routePath, showCourse, showRiders, status])
+  }, [locale, points, routePath, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -495,8 +487,15 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       marker.className = 'tour-live-bike-marker'
       const count = document.createElement('span')
       count.textContent = station.available === null ? '–' : String(station.available)
-      marker.append(count)
-      marker.title = `${station.name} · ${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      const popup = document.createElement('span')
+      popup.className = 'tour-live-bike-popup'
+      const name = document.createElement('strong')
+      name.textContent = station.name
+      const available = document.createElement('small')
+      available.textContent = `${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      popup.append(name, available)
+      marker.append(count, popup)
+      marker.title = `${station.name} · ${available.textContent}`
       marker.setAttribute('role', 'img')
       marker.setAttribute('aria-label', marker.title)
       return new api.CustomOverlay({ map, position: new api.LatLng(station.lat, station.lng), content: marker, xAnchor: .5, yAnchor: 1, zIndex: 9 })

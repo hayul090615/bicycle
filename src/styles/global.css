@@ -1736,8 +1736,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-course-bike-stations li > b.is-empty { color: #a44b40; }
 .tour-course-bike-stations li > b small { margin-left: .15rem; }
 .tour-live-bike-marker, .tour-live-bike-icon { width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; color: #fff; background: #0c8261; box-shadow: 0 3px 10px #15271e66; font: 850 .66rem 'DM Sans', 'Noto Sans KR', sans-serif; transform: rotate(-45deg); }
-.tour-live-bike-marker { cursor: default; }
-.tour-live-bike-marker > span, .tour-live-bike-icon > span { display: block; transform: rotate(45deg); }
+.tour-live-bike-marker { position: relative; overflow: visible; cursor: pointer; }
+.tour-live-bike-marker > span:first-child, .tour-live-bike-icon > span { display: block; transform: rotate(45deg); }
+.tour-live-bike-popup { position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 8px); display: none; width: max-content; max-width: 190px; gap: 3px; padding: 7px 9px; border: 1px solid #dce7de; border-radius: 8px; color: #244233; background: #fff; box-shadow: 0 4px 14px #10251c40; transform: translate(-50%, -8px) rotate(45deg); text-align: left; white-space: normal; pointer-events: none; }
+.tour-live-bike-popup strong { display: block; overflow: hidden; max-width: 172px; font: 750 11px/1.3 'Noto Sans KR', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.tour-live-bike-popup small { display: block; color: #168359; font: 700 10px/1.3 'Noto Sans KR', sans-serif; white-space: nowrap; }
+.tour-live-bike-marker:hover .tour-live-bike-popup, .tour-live-bike-marker:focus-visible .tour-live-bike-popup { display: grid; }
 .tour-screen--dark .tour-course-bike-stations { border-color: #42564a; background: #26372c; }
 .tour-screen--dark .tour-course-bike-stations h3, .tour-screen--dark .tour-course-bike-stations li strong { color: #e5ede4; }
 .tour-screen--dark .tour-course-bike-stations > p, .tour-screen--dark .tour-course-bike-stations li small { color: #b6c4b7; }

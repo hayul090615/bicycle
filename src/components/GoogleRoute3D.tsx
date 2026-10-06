@@ -7,8 +7,6 @@ import type { RouteCondition, RouteElevationPoint, RouteRestaurant } from '../se
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { createFoodGuideMarker } from './foodGuideMarker'
-import { sampleRouteAtIntervals } from '../utils/routeMapSamples'
 import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
@@ -85,7 +83,6 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   const markersRef = useRef<HTMLElement[]>([])
   const peopleMarkersRef = useRef<HTMLElement[]>([])
   const treeMarkersRef = useRef<HTMLElement[]>([])
-  const foodGuideMarkersRef = useRef<HTMLElement[]>([])
   const conditionMarkersRef = useRef<HTMLElement[]>([])
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
@@ -176,8 +173,6 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       peopleMarkersRef.current = []
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
-      foodGuideMarkersRef.current.forEach(marker => marker.remove())
-      foodGuideMarkersRef.current = []
       conditionMarkersRef.current.forEach(marker => marker.remove())
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
@@ -229,26 +224,9 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     }) : []
     treeMarkersRef.current.forEach(marker => marker.remove())
     treeMarkersRef.current = []
-    foodGuideMarkersRef.current.forEach(marker => marker.remove())
-    foodGuideMarkersRef.current = []
     const sceneryPath = routePath && routePath.length >= 2
       ? routePath
       : linePoints.map(point => [point.lng, point.lat] as LonLat)
-    if (showCourse && sceneryPath.length >= 2) {
-      foodGuideMarkersRef.current = sampleRouteAtIntervals(sceneryPath, 100).map(({ point: [lng, lat] }, index) => {
-        const marker = new library.Marker3DElement({
-          position: { lat, lng }, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
-          title: locale === 'ko' ? '100m 지점 맛집 추천' : 'Food recommendations at this route point',
-          drawsWhenOccluded: false, sizePreserved: false,
-        })
-        const icon = createFoodGuideMarker(locale, index, () => onFoodGuideOpen([lng, lat]))
-        const template = document.createElement('template')
-        template.content.append(icon)
-        marker.append(template)
-        map.append(marker)
-        return marker
-      })
-    }
     peopleMarkersRef.current.forEach(marker => marker.remove())
     peopleMarkersRef.current = []
     const motion = createRouteMotion(sceneryPath)
@@ -305,7 +283,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       treeMarkersRef.current.forEach(marker => marker.remove())
       treeMarkersRef.current = []
     }
-  }, [activeStopIndexes, elevationProfile, linePoints, locale, onFoodGuideOpen, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, showRiders, status, viaStopIndex])
+  }, [activeStopIndexes, elevationProfile, linePoints, locale, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, showRiders, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current
