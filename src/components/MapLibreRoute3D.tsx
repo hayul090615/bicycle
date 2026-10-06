@@ -9,7 +9,7 @@ import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
-import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
 import { routeGradientStops } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -141,7 +141,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -153,8 +153,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   accessEstimated: boolean
   walkPath: LonLat[] | null
   pickupStation: NearbyBikeStation | null
-  bikeLanes: RouteBikeLane[]
-  showBikeLanes: boolean
   amenities: RouteAmenity[]
   showAmenities: boolean
   bikeStations: NearbyBikeStation[]
@@ -361,7 +359,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
         map.addSource('tour-route-line', { type: 'geojson', lineMetrics: true, data: { type: 'FeatureCollection', features: [] } })
         map.addSource('tour-access-line', { type: 'geojson', data: EMPTY_LINE })
         map.addSource('tour-walk-line', { type: 'geojson', data: EMPTY_LINE })
-        map.addSource('tour-bike-lanes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
         const buildingLayer = layers.find(layer => layer.id === 'building-3d')?.id
         const routeLayer = {
           id: 'tour-route-line',
@@ -398,12 +395,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
         const walkLine = { id: 'tour-walk-line', type: 'line' as const, source: 'tour-walk-line',
           layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const, visibility: 'none' as const },
           paint: { 'line-color': '#506b7b', 'line-width': 4, 'line-opacity': 1, 'line-dasharray': [1.2, 1.2] } }
-        const bikeLaneCasing = { id: 'tour-bike-lanes-casing', type: 'line' as const, source: 'tour-bike-lanes',
-          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
-          paint: { 'line-color': '#fffdf4', 'line-width': 7, 'line-opacity': .9 } }
-        const bikeLaneLine = { id: 'tour-bike-lanes-line', type: 'line' as const, source: 'tour-bike-lanes',
-          layout: { 'line-cap': 'round' as const, 'line-join': 'round' as const },
-          paint: { 'line-color': '#2585a6', 'line-width': 4, 'line-opacity': .98, 'line-dasharray': [2, 1.4] } }
         map.addSource('tour-building-shadows', { type: 'geojson', data: EMPTY_SHADOWS })
         const shadowFill = {
           id: 'tour-building-shadow-fill',
@@ -428,8 +419,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
           map.addLayer(accessLine, buildingLayer)
           map.addLayer(accessDashed, buildingLayer)
           map.addLayer(walkLine, buildingLayer)
-          map.addLayer(bikeLaneCasing, buildingLayer)
-          map.addLayer(bikeLaneLine, buildingLayer)
         } else {
           map.addLayer(shadowFill)
           map.addLayer(shadowOutline)
@@ -439,8 +428,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
           map.addLayer(accessLine)
           map.addLayer(accessDashed)
           map.addLayer(walkLine)
-          map.addLayer(bikeLaneCasing)
-          map.addLayer(bikeLaneLine)
         }
         setStatus('ready')
         shadowUpdateTimeout = window.setTimeout(updateBuildingShadows, 350)
@@ -570,23 +557,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       ? { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walkPath } }
       : EMPTY_LINE)
   }, [status, walkPath])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || status !== 'ready') return
-    const source = map.getSource('tour-bike-lanes') as GeoJSONSource | undefined
-    source?.setData({
-      type: 'FeatureCollection',
-      features: bikeLanes.map(lane => ({
-        type: 'Feature',
-        properties: { kind: lane.kind },
-        geometry: { type: 'LineString', coordinates: lane.points },
-      })),
-    })
-    const visibility = showBikeLanes ? 'visible' : 'none'
-    map.setLayoutProperty('tour-bike-lanes-casing', 'visibility', visibility)
-    map.setLayoutProperty('tour-bike-lanes-line', 'visibility', visibility)
-  }, [bikeLanes, showBikeLanes, status])
 
   useEffect(() => {
     const map = mapRef.current

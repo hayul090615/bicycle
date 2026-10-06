@@ -4,7 +4,7 @@ import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type 
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
-import type { RouteAmenity, RouteBikeLane, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
@@ -42,7 +42,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, bikeLanes, showBikeLanes, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, showRoadview, onCloseRoadview, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -52,8 +52,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   accessPath: LonLat[] | null
   accessEstimated: boolean
   walkPath: LonLat[] | null
-  bikeLanes: RouteBikeLane[]
-  showBikeLanes: boolean
   amenities: RouteAmenity[]
   showAmenities: boolean
   bikeStations: NearbyBikeStation[]
@@ -90,7 +88,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const conditionOverlaysRef = useRef<KakaoOverlay[]>([])
   const restaurantOverlaysRef = useRef<KakaoOverlay[]>([])
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
-  const bikeLaneOverlaysRef = useRef<KakaoOverlay[]>([])
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const userAccuracyOverlayRef = useRef<KakaoOverlay | null>(null)
@@ -202,7 +199,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       restaurantOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
-      bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
       userAccuracyOverlayRef.current?.setMap(null)
@@ -214,7 +210,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       conditionOverlaysRef.current = []
       restaurantOverlaysRef.current = []
       cctvOverlaysRef.current = []
-      bikeLaneOverlaysRef.current = []
       sceneryOverlaysRef.current = []
       userOverlayRef.current = null
       userAccuracyOverlayRef.current = null
@@ -376,25 +371,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     walkOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#e33d3d', strokeOpacity: 1, strokeStyle: 'shortdash' }))
     return () => { walkOverlaysRef.current.forEach(overlay => overlay.setMap(null)); walkOverlaysRef.current = [] }
   }, [showCourse, status, walkPath])
-
-  useEffect(() => {
-    const map = mapRef.current
-    const api = apiRef.current
-    if (!map || !api || status !== 'ready') return
-    bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
-    bikeLaneOverlaysRef.current = []
-    if (!showBikeLanes) return
-    bikeLanes.forEach(lane => {
-      if (lane.points.length < 2) return
-      const path = lane.points.map(([lng, lat]) => new api.LatLng(lat, lng))
-      bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: .95, strokeStyle: 'solid' }))
-      bikeLaneOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#2585a6', strokeOpacity: .98, strokeStyle: 'solid' }))
-    })
-    return () => {
-      bikeLaneOverlaysRef.current.forEach(overlay => overlay.setMap(null))
-      bikeLaneOverlaysRef.current = []
-    }
-  }, [bikeLanes, showBikeLanes, status])
 
   useEffect(() => {
     const map = mapRef.current

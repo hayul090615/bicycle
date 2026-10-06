@@ -15,7 +15,6 @@ export type RouteRestaurant = {
   blogMentions?: number
 }
 
-export type RouteBikeLane = { id: string; points: LonLat[]; kind: 'cycleway' | 'lane' }
 export type RouteAmenity = {
   id: string
   name: string
@@ -33,7 +32,6 @@ const METERS_PER_DEGREE_LAT = 111_000
 const signalCache = new Map<string, RouteCondition[]>()
 const gradeCache = new Map<string, RouteCondition[]>()
 const restaurantCache = new Map<string, RouteRestaurant[]>()
-const bikeLaneCache = new Map<string, RouteBikeLane[]>()
 const amenityCache = new Map<string, RouteAmenity[]>()
 const elevationCache = new Map<string, RouteElevationPoint[]>()
 const OVERPASS_ENDPOINTS = [
@@ -144,26 +142,6 @@ export async function fetchRouteSignals(path: LonLat[], signal: AbortSignal): Pr
   }
   signalCache.set(key, unique)
   return unique
-}
-
-export async function fetchRouteBikeLanes(path: LonLat[], signal: AbortSignal): Promise<RouteBikeLane[]> {
-  const key = cacheKey(path)
-  const cached = bikeLaneCache.get(key)
-  if (cached) return cached
-  const samples = routeSamples(path, 380, 44)
-  if (samples.length < 2) return []
-  const pairs = samples.map(({ point: [lng, lat] }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(',')
-  const query = `[out:json][timeout:12];(way["highway"="cycleway"](around:240,${pairs});way["cycleway"~"^(lane|track|shared_lane)$"](around:240,${pairs});way["cycleway:left"~"^(lane|track)$"](around:240,${pairs});way["cycleway:right"~"^(lane|track)$"](around:240,${pairs}););out geom 300;`
-  const data = await queryOverpass(query, signal)
-  const lanes = (data.elements ?? []).flatMap(item => {
-    const points = (item.geometry ?? []).map(point => [point.lon, point.lat] as LonLat)
-    if (points.length < 2) return []
-    const close = points.some((point, index) => index % 8 === 0 && distanceAlongRoute(point, path).gap <= 280)
-    if (!close) return []
-    return [{ id: `bike-lane-${item.id}`, points, kind: item.tags?.highway === 'cycleway' ? 'cycleway' as const : 'lane' as const }]
-  }).slice(0, 220)
-  bikeLaneCache.set(key, lanes)
-  return lanes
 }
 
 export async function fetchRouteAmenities(path: LonLat[], signal: AbortSignal): Promise<RouteAmenity[]> {
