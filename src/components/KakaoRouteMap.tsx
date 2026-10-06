@@ -42,7 +42,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -60,6 +60,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
+  hasDestination: boolean
   showRestaurants: boolean
   showRoadInfo: boolean
   showCctv: boolean
@@ -236,13 +237,13 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       }))
     })
 
-    if (locationFocusRequest === 0 && selectedStop === null) {
+    if (!hasDestination && locationFocusRequest === 0 && selectedStop === null) {
       map.setLevel(8, { animate: false })
       map.setCenter(new api.LatLng(37.5665, 126.978))
       return
     }
     if (accessPath && accessPath.length >= 2) {
-      const framed = selectedStop === null ? [...linePoints, ...accessPath.map(([lng, lat]) => ({ lng, lat }))] : accessPath.map(([lng, lat]) => ({ lng, lat }))
+      const framed = selectedStop === null ? [...linePoints, ...accessPath.map(([lng, lat]) => ({ lng, lat })), ...(walkPath ?? []).map(([lng, lat]) => ({ lng, lat }))] : accessPath.map(([lng, lat]) => ({ lng, lat }))
       const south = Math.min(...framed.map(point => point.lat)), north = Math.max(...framed.map(point => point.lat))
       const west = Math.min(...framed.map(point => point.lng)), east = Math.max(...framed.map(point => point.lng))
       const spanKm = Math.max((north - south) * 111, (east - west) * 88)
@@ -261,7 +262,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [accessPath, activeStopIndexes, elevationProfile, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, status, viaStopIndex])
+  }, [accessPath, activeStopIndexes, elevationProfile, hasDestination, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, status, viaStopIndex, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
@@ -313,11 +314,11 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
-    if (!map || !api || status !== 'ready' || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || !api || status !== 'ready' || hasDestination || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
     map.setLevel(4, { animate: true })
     map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
-  }, [locationFocusRequest, status, userLocation])
+  }, [hasDestination, locationFocusRequest, status, userLocation])
 
   useEffect(() => {
     const map = mapRef.current, api = apiRef.current
@@ -437,12 +438,14 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       popup.className = 'tour-live-bike-popup'
       const name = document.createElement('strong')
       name.textContent = station.name
+      const separator = document.createElement('i')
+      separator.textContent = '—'
       const available = document.createElement('small')
       available.className = 'tour-live-bike-count'
       available.textContent = station.available === null
         ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable')
         : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
-      popup.append(name, available)
+      popup.append(name, separator, available)
       marker.append(count, popup)
       marker.title = `${station.name} · ${available.textContent}`
       marker.setAttribute('role', 'button')
