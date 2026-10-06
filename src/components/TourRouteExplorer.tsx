@@ -1114,6 +1114,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     <DestinationPickerMapEvents enabled={destinationPicking} onPick={chooseCustomDestination} />
     {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 5, opacity: 1 }} />)}
+    {showRidingRoute && routedPath && <Polyline positions={routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: '#294c3a', weight: 2.5, opacity: .92, dashArray: '2 8', lineCap: 'round', interactive: false }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
@@ -1126,6 +1127,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <b>{station.available === null ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text(`${station.available} bikes available`, `${station.available}대 대여 가능`)}</b>
         </span>
       </Tooltip>
+      <Tooltip permanent direction="bottom" offset={[0, -34]} className="tour-live-bike-name-tooltip">{station.name}</Tooltip>
     </Marker>)}
     {showAmenities && routeAmenities.map(amenity => <Marker key={amenity.id} position={[amenity.lat, amenity.lng]}
       icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
@@ -1184,7 +1186,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <div className="tour-sidebar-heading">
         <span className="tour-card-kicker">{text('EXPLORE SEOUL BY BIKE', '따릉이로 서울 둘러보기')}</span>
         <h1>{text(route.title, route.titleKo)}</h1>
-        <p>{text(route.summary, route.summaryKo)}</p>
         <div><span>◷ {text(route.suggestedTime, route.suggestedTimeKo)}</span><span>{route.stops.length} {text('stops', '곳 경유')}</span></div>
         <div className="tour-bike-time" role="status"><strong>{routeDistanceEstimated ? '≈ ' : ''}{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by Ttareungi`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</strong><small>{text('At 12 km/h · riding only, without sightseeing stops', '시속 12km 기준 · 관광·신호 대기 제외')}{routeDistanceEstimated ? text(' · distance estimate', ' · 거리 추정치') : ''}</small></div>
       </div>
@@ -1405,10 +1406,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             if (!open) setSidebarOpen(false)
             setActiveMapTool(null)
           }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
-          <button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
           <div className="tour-height-legend" aria-label={text('Route elevation: white low, red high', '길 높낮이: 낮으면 흰색, 높으면 빨간색')}>
-            <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low → high', '낮음 → 높음')}</small>
+            <span>{text('Elevation /', '길 높낮이 /')}</span><i aria-hidden="true" /><small>{text('low > high', '낮음 > 높음')}</small>
           </div>
+          <button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
           {customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}
           {destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}
         </div>
@@ -1518,7 +1519,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                   : !routeInstructions.length ? <p>{routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 경로 안내를 불러오는 중입니다…') : routeGuidanceStatus === 'unavailable' ? text('Could not load turn-by-turn directions. Check your connection and try again.', '상세 경로 안내를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.') : text('Detailed bicycle directions are unavailable for this route.', '이 코스는 상세 자전거 길 안내를 제공하지 않습니다.')}</p>
                     : <ol>{routeInstructions.slice(0, 18).map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>}
               </section>
-              <p>{text(route.summary, route.summaryKo)}</p>
             </>}
             {activeMapTool === 'course' && <>
               <p>{text('Show the selected route and the path from your location.', '선택한 코스와 내 위치에서 출발하는 경로를 지도에 표시합니다.')}</p>
