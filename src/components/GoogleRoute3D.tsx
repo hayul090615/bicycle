@@ -38,20 +38,6 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
-function accuracyRing({ lat, lng, accuracy }: { lat: number; lng: number; accuracy: number }): GooglePosition3D[] {
-  const angularDistance = accuracy / 6_371_000
-  const latitude = lat * Math.PI / 180
-  const longitude = lng * Math.PI / 180
-  return Array.from({ length: 49 }, (_, index) => {
-    const bearing = index / 48 * Math.PI * 2
-    const destinationLatitude = Math.asin(Math.sin(latitude) * Math.cos(angularDistance)
-      + Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing))
-    const destinationLongitude = longitude + Math.atan2(Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
-      Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude))
-    return { lat: destinationLatitude * 180 / Math.PI, lng: destinationLongitude * 180 / Math.PI, altitude: 0 }
-  })
-}
-
 export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
@@ -87,7 +73,6 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
-  const userAccuracyRef = useRef<GooglePolygon3D | null>(null)
   const cityMaskRef = useRef<GooglePolygon3D | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -181,8 +166,6 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
-      userAccuracyRef.current?.remove()
-      userAccuracyRef.current = null
       cityMaskRef.current?.remove()
       cityMaskRef.current = null
       routeLineRef.current.forEach(line => line.remove())
@@ -357,19 +340,8 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     if (!map || !library || status !== 'ready') return
     userMarkerRef.current?.remove()
     userMarkerRef.current = null
-    userAccuracyRef.current?.remove()
-    userAccuracyRef.current = null
     if (!userLocation) return
     const label = locale === 'ko' ? '내 위치' : 'You are here'
-    if (userLocation.accuracy !== undefined) {
-      const accuracy = new library.Polygon3DElement({
-        fillColor: '#1677E833', strokeColor: '#1677E8AA', strokeWidth: 1,
-        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: false,
-      })
-      accuracy.path = accuracyRing({ lat: userLocation.lat, lng: userLocation.lng, accuracy: userLocation.accuracy })
-      map.append(accuracy)
-      userAccuracyRef.current = accuracy
-    }
     const title = userLocation.accuracy === undefined ? label : `${label} · ±${Math.round(userLocation.accuracy)} m`
     const marker = new library.Marker3DInteractiveElement({ position: { lat: userLocation.lat, lng: userLocation.lng, altitude: 0 }, label, title, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
     map.append(marker)

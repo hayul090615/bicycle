@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
+import { CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, latLngBounds, type LatLngExpression } from 'leaflet'
 import { getTouristStation, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { GoogleRoute3D } from './GoogleRoute3D'
@@ -332,7 +332,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
   const [view, setView] = useState<'city' | 'satellite' | 'map' | 'google' | 'kakao'>(() => hasKakaoMapsKey && locale === 'ko' ? 'kakao' : 'city')
-  const [roadviewOpen, setRoadviewOpen] = useState(false)
   const [activeMapTool, setActiveMapTool] = useState<MapTool | null>(null)
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [trackingLocation, setTrackingLocation] = useState(false)
@@ -340,7 +339,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
   const [nearestResult, setNearestResult] = useState<{ routeId: string; distance: number } | null>(null)
   const [routeOptions, setRouteOptions] = useState<{ key: string; routes: Array<{ route: BikeRouteResult; signalCount: number | null }> } | null>(null)
-  const [routePreference, setRoutePreference] = useState<'shortest' | 'fewSignals'>('shortest')
   const [routeGuidanceStatus, setRouteGuidanceStatus] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle')
   const [amenitiesState, setAmenitiesState] = useState<{ routeId: string; places: RouteAmenity[]; status: 'loading' | 'ready' | 'unavailable' } | null>(null)
   const [elevationState, setElevationState] = useState<{ key: string; points: RouteElevationPoint[]; status: 'loading' | 'ready' | 'unavailable' } | null>(null)
@@ -500,9 +498,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return [station.lat, station.lng]
   }), [route])
   const activeRouteOptions = routeOptions?.key === routeGuidanceKey ? routeOptions.routes : []
-  const selectedRouteOption = routePreference === 'fewSignals' && activeRouteOptions.every(option => option.signalCount !== null)
-    ? [...activeRouteOptions].sort((a, b) => (a.signalCount ?? Infinity) - (b.signalCount ?? Infinity) || (a.route.distanceMeters ?? Infinity) - (b.route.distanceMeters ?? Infinity))[0]
-    : [...activeRouteOptions].sort((a, b) => (a.route.distanceMeters ?? Infinity) - (b.route.distanceMeters ?? Infinity))[0]
+  const selectedRouteOption = [...activeRouteOptions].sort((a, b) => (a.route.distanceMeters ?? Infinity) - (b.route.distanceMeters ?? Infinity))[0]
   const routeGeometry = selectedRouteOption ? { key: routeGuidanceKey, points: selectedRouteOption.route.geometry, distanceMeters: selectedRouteOption.route.distanceMeters ?? pathDistance(selectedRouteOption.route.geometry), instructions: selectedRouteOption.route.instructions } : null
   const routedPath = routeGeometry?.points ?? null
   const activePathKey = routedPath && selectedRouteOption ? `${routeGuidanceKey}:${activeRouteOptions.indexOf(selectedRouteOption)}` : null
@@ -702,7 +698,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const rotateMap = (direction: RotationRequest['direction']) => setRotationRequest(current => ({ direction, serial: (current?.serial ?? 0) + 1 }))
   const chooseMapView = (nextView: 'city' | 'satellite' | 'map' | 'google' | 'kakao') => {
-    setRoadviewOpen(false)
     setRotationRequest(null)
     setView(locale === 'en' && (nextView === 'google' || nextView === 'kakao') ? 'city' : nextView)
   }
@@ -1075,8 +1070,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
       <Tooltip>{amenityTitle(amenity, locale)} · {distanceLabel(amenity.distanceMeters)}</Tooltip>
     </Marker>)}
-    {userLocation?.accuracy !== undefined && <Circle center={[userLocation.lat, userLocation.lng]} radius={userLocation.accuracy}
-      pathOptions={{ color: '#168653', weight: 1.5, fillColor: '#168653', fillOpacity: .16 }} interactive={false} />}
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
       <Tooltip direction="top">{text('You are here', '내 위치')}{userLocation.accuracy !== undefined ? ` · ±${Math.round(userLocation.accuracy)} m` : ''}</Tooltip>
     </Marker>}
@@ -1159,10 +1152,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
           </button>
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
-        </section><section className="tour-route-preferences" aria-label={text('Choose bicycle route', '자전거 길 선택')}>
-          <strong>{text('Bicycle route', '자전거 길 선택')}</strong>
-          <div><button type="button" aria-pressed={routePreference === 'shortest'} onClick={() => setRoutePreference('shortest')}>{text('Shortest', '가까운 길')}</button><button type="button" aria-pressed={routePreference === 'fewSignals'} onClick={() => setRoutePreference('fewSignals')} disabled={activeRouteOptions.length < 2 || activeRouteOptions.some(option => option.signalCount === null)}>{text('Fewer signals', '신호등 적은 길')}</button></div>
-          {hasDestination && <small>{activeRouteOptions.length < 2 ? text('No alternative route available.', '대체 경로가 없습니다.') : activeRouteOptions.some(option => option.signalCount === null) ? text('Checking mapped signals…', '지도 신호등을 확인하는 중…') : text(`Selected route: ${selectedRouteOption?.signalCount ?? 0} mapped signals`, `선택한 길: 지도 신호등 ${selectedRouteOption?.signalCount ?? 0}개`)}</small>}
         </section>{roadSign}</div>, rentalWidgetTarget)}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
         <div className="tour-map-destination-tools"><button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>{customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}{destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}</div>
@@ -1171,7 +1160,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} showRoadview={roadviewOpen} onCloseRoadview={() => setRoadviewOpen(false)} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
@@ -1223,10 +1212,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <button type="button" aria-pressed={view === "satellite" || view === "map" || view === "kakao"} onClick={() => { setActiveMapTool(null); chooseMapView("satellite") }}>2D</button>
               <button type="button" aria-pressed={view === "city" || view === "google"} onClick={() => { setActiveMapTool(null); chooseMapView("city") }}>3D</button>
             </div>
-            {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-expanded={roadviewOpen}
-              onClick={() => { setActiveMapTool(null); setFoodGuideOpen(false); setView("kakao"); setRoadviewOpen(open => !open) }}>
-              <span aria-hidden="true">&#x25C9;</span>{text("Road view", "\uB85C\uB4DC\uBDF0")}
-            </button>}
             <label className="tour-map-mode-select"><span>{text("Map type", "\uC9C0\uB3C4 \uC885\uB958")}</span>
               <select value={view} aria-label={text("Choose a map view", "\uC9C0\uB3C4 \uC885\uB958 \uC120\uD0DD")} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
                 {hasKakaoMapsKey && locale === 'ko' && <option value="kakao">{text("Kakao map - road", "\uCE74\uCE74\uC624 \uC9C0\uB3C4 ? \uB3C4\uB85C")}</option>}

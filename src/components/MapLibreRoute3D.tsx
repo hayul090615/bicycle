@@ -311,25 +311,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
             map.setLayoutProperty(layer.id, 'text-field', labelTextField)
           }
         }
-        map.addSource('tour-location-accuracy', { type: 'geojson', data: EMPTY_POINT })
-        map.addLayer({
-          id: 'tour-location-accuracy',
-          type: 'circle',
-          source: 'tour-location-accuracy',
-          paint: {
-            'circle-radius': ['interpolate', ['linear'], ['zoom'],
-              10, ['*', ['get', 'accuracy'], .0165],
-              12, ['*', ['get', 'accuracy'], .066],
-              14, ['*', ['get', 'accuracy'], .264],
-              16, ['*', ['get', 'accuracy'], 1.055],
-              18, ['*', ['get', 'accuracy'], 4.22]] as ExpressionSpecification,
-            'circle-color': '#168653',
-            'circle-opacity': .15,
-            'circle-stroke-color': '#168653',
-            'circle-stroke-opacity': .7,
-            'circle-stroke-width': 1.25,
-          },
-        })
         map.addSource('tour-seoul-outside-mask', { type: 'geojson', data: SEOUL_OUTSIDE_MASK })
         map.addLayer({
           id: 'tour-seoul-outside-mask',
@@ -680,18 +661,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       }
     }
   }, [locale, status])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || status !== 'ready') return
-    const source = map.getSource('tour-location-accuracy') as GeoJSONSource | undefined
-    if (!source) return
-    source.setData(userLocation ? {
-      type: 'Feature',
-      properties: { accuracy: Math.max(0, userLocation.accuracy ?? 0) },
-      geometry: { type: 'Point', coordinates: [userLocation.lng, userLocation.lat] },
-    } : EMPTY_POINT)
-  }, [status, userLocation])
 
   useEffect(() => {
     const map = mapRef.current

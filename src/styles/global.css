@@ -3625,3 +3625,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .site-bike-splash { animation-duration: .01ms; animation-delay: 0ms; }
   .site-bike-splash-wheel path { animation: none; }
 }
+
+/* Keep camera arrows below the rental timer at every screen size. */
+.tour-screen .tour-map-rotate-controls,
+.tour-screen .tour-map-rotate-controls--tilt { top: 14rem; }
