@@ -440,7 +440,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const locationKey = locationLat === null || locationLng === null ? null : `${locationLat}:${locationLng}`
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
-    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 100), [locationLat, locationLng])
+    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 200), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
   const nearbyStations = useMemo(() => {
     const byId = new Map(snapshotNearby.map(station => [station.id, station]))
@@ -905,9 +905,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const controller = new AbortController()
     let active = true
     const location = { lat: locationLat, lng: locationLng }
-    setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1000, 100), updatedAt: null, status: 'loading' })
+    setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1000, 200), updatedAt: null, status: 'loading' })
     const refresh = () => {
-      void fetchNearbyBikeStations(location, controller.signal, 100).then(result => {
+      void fetchNearbyBikeStations(location, controller.signal, 200).then(result => {
         if (active) setNearbyBikes({ key: locationKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
       }).catch(() => {
         if (active) setNearbyBikes(current => current?.key === locationKey ? { ...current, status: 'unavailable' } : current)
@@ -1432,8 +1432,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </aside>
       <section className="tour-nearby-stations" aria-live="polite">
         <div className="tour-itinerary-heading"><h3>{text('Nearby Ttareungi', '내 근처 따릉이')}</h3><span>{activeNearbyBikes?.status === 'live' ? text('LIVE', '실시간') : activeNearbyBikes?.status === 'unavailable' ? text('OFFLINE', '연결 대기') : text('LOCATION', '위치')}</span></div>
-        {!userLocation ? <p>{text('Tap My location to find rental stations within 100 m.', '내 위치를 누르면 100m 이내 대여소를 모두 보여드려요.')}</p>
-          : nearbyStations.length === 0 ? <p>{text('No rental station was found within 100 m.', '100m 이내에서 대여소를 찾지 못했습니다.')}</p>
+        {!userLocation ? <p>{text('Tap My location to find rental stations within 200 m.', '내 위치를 누르면 200m 이내 대여소를 모두 보여드려요.')}</p>
+          : nearbyStations.length === 0 ? <p>{text('No rental station was found within 200 m.', '200m 이내에서 대여소를 찾지 못했습니다.')}</p>
             : <div className="tour-nearby-list">{nearbyStations.map(station => <button key={station.id} type="button" disabled={station.available === 0} aria-pressed={pickupStation?.id === station.id} onClick={() => {
               setSelectedBikeStationId(station.id)
               try { localStorage.setItem('seoul-bike-selected-pickup-station', station.id) } catch { /* Selection still works in memory. */ }
