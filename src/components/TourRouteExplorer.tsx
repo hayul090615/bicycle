@@ -518,10 +518,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const showAmenities = mapLayers.amenities
   const showBikeStations = mapLayers.bikeStations || (bikeUseMode === 'ttareungi' && userLocation !== null)
   const mapBikeStations = useMemo(() => {
-    const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
+    const byId = new Map(courseBikeStations.map(station => [station.id, station]))
     for (const station of nearbyStations) byId.set(station.id, station)
     return [...byId.values()]
-  }, [courseBikeStations, mapLayers.bikeStations, nearbyStations])
+  }, [courseBikeStations, nearbyStations])
   const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
   const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
     : activeRoadConditions?.signalsStatus === 'ready' ? String(routeSignals.length) : '—'
@@ -1057,8 +1057,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     <DestinationPickerMapEvents enabled={destinationPicking} onPick={chooseCustomDestination} />
     {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 5, opacity: 1 }} />)}
-    {showRidingRoute && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
-    {showRidingRoute && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
+    {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
+    {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
     {showBikeStations && mapBikeStations.map(station => <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}

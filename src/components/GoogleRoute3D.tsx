@@ -345,11 +345,11 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     if (!map || !library || status !== 'ready') return
     accessLineRef.current?.remove()
     accessLineRef.current = null
-    if (!showCourse || !accessPath || accessPath.length < 2) return
+    if (!showCourse || routePath || !accessPath || accessPath.length < 2) return
     accessLineRef.current = new library.Polyline3DElement({ path: accessPath.map(([lng, lat]) => ({ lat, lng })),
       altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, strokeColor: '#ffffff', strokeWidth: 5, drawsOccludedSegments: false })
     map.append(accessLineRef.current)
-  }, [accessPath, showCourse, status])
+  }, [accessPath, routePath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current

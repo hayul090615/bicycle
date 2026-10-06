@@ -354,11 +354,11 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     if (!map || !api || status !== 'ready') return
     accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
     accessOverlaysRef.current = []
-    if (!showCourse || !accessPath || accessPath.length < 2) return
+    if (!showCourse || routePath || !accessPath || accessPath.length < 2) return
     const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 9, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 5, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
-  }, [accessEstimated, accessPath, showCourse, status])
+  }, [accessEstimated, accessPath, routePath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current

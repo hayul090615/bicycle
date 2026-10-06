@@ -545,9 +545,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     source?.setData(accessPath && accessPath.length >= 2
       ? { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: accessPath } }
       : EMPTY_LINE)
-    map.setLayoutProperty('tour-access-solid', 'visibility', showCourse && accessPath && !accessEstimated ? 'visible' : 'none')
-    map.setLayoutProperty('tour-access-dashed', 'visibility', showCourse && accessPath && accessEstimated ? 'visible' : 'none')
-  }, [accessPath, accessEstimated, showCourse, status])
+    map.setLayoutProperty('tour-access-solid', 'visibility', showCourse && !routePath && accessPath && !accessEstimated ? 'visible' : 'none')
+    map.setLayoutProperty('tour-access-dashed', 'visibility', showCourse && !routePath && accessPath && accessEstimated ? 'visible' : 'none')
+  }, [accessPath, accessEstimated, routePath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
