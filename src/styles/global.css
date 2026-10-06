@@ -3525,8 +3525,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-content { background: #fbfaf5; }
 .tour-screen--dark .tour-content { background: #111d19; }
 @media (min-width: 901px) {
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { min-height: 60px; padding-top: 0; padding-bottom: 0; }
-  .tour-screen .tour-content { padding-top: 0; }
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { min-height: 68px; padding-top: .15rem; padding-bottom: .15rem; }
+  .tour-screen .tour-content { padding-top: .12rem; }
   .tour-screen .tour-earth-preview > .tour-map-stage { height: 100%; min-height: 0; flex: 1 1 auto; }
   .tour-screen .tour-map-stage > .tour-maplibre-3d,
   .tour-screen .tour-map-stage > .google-route-3d,
