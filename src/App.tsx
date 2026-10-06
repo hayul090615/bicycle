@@ -199,12 +199,19 @@ export default function App() {
   return <>
     {screenContent}
     {showSiteSplash && <div className="site-bike-splash" role="status" aria-label="자전거로 즐기는 서울">
-      <svg className="site-bike-splash-mark" viewBox="0 0 128 76" aria-hidden="true" focusable="false">
-        <g className="site-bike-splash-wheel" transform="translate(25 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
-        <g className="site-bike-splash-wheel" transform="translate(103 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
-        <path className="site-bike-splash-frame" d="M25 51 50 20 70 51H25m25-31h25l28 31M70 51 75 20M45 15h13m17 5 5-9h10" />
-        <circle className="site-bike-splash-hub" cx="50" cy="20" r="3" /><circle className="site-bike-splash-hub" cx="70" cy="51" r="3" />
-      </svg>
+      <div className="site-bike-splash-scene" aria-hidden="true">
+        <svg className="site-bike-splash-road" viewBox="0 0 360 180" focusable="false">
+          <path className="site-bike-road-bed" d="M-12 124C35 119 36 54 94 55s66 67 123 69 70-69 157-88M-10 48c53 5 68 91 126 91s63-69 123-69 73 67 133 61" />
+          <path className="site-bike-road-center" d="M-12 124C35 119 36 54 94 55s66 67 123 69 70-69 157-88M-10 48c53 5 68 91 126 91s63-69 123-69 73 67 133 61" />
+          <circle className="site-bike-road-node" cx="94" cy="55" r="5" /><circle className="site-bike-road-node" cx="217" cy="124" r="5" /><circle className="site-bike-road-node" cx="209" cy="70" r="5" />
+        </svg>
+        <svg className="site-bike-splash-mark" viewBox="0 0 128 76" focusable="false">
+          <g className="site-bike-splash-wheel" transform="translate(25 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
+          <g className="site-bike-splash-wheel" transform="translate(103 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
+          <path className="site-bike-splash-frame" d="M25 51 50 20 70 51H25m25-31h25l28 31M70 51 75 20M45 15h13m17 5 5-9h10" />
+          <circle className="site-bike-splash-hub" cx="50" cy="20" r="3" /><circle className="site-bike-splash-hub" cx="70" cy="51" r="3" />
+        </svg>
+      </div>
     </div>}
   </>
 }
