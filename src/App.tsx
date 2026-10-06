@@ -201,9 +201,10 @@ export default function App() {
     {showSiteSplash && <div className="site-bike-splash" role="status" aria-label="자전거로 즐기는 서울">
       <div className="site-bike-splash-scene" aria-hidden="true">
         <svg className="site-bike-splash-road" viewBox="0 0 360 180" focusable="false">
-          <path className="site-bike-road-bed" d="M-12 124C35 119 36 54 94 55s66 67 123 69 70-69 157-88M-10 48c53 5 68 91 126 91s63-69 123-69 73 67 133 61" />
-          <path className="site-bike-road-center" d="M-12 124C35 119 36 54 94 55s66 67 123 69 70-69 157-88M-10 48c53 5 68 91 126 91s63-69 123-69 73 67 133 61" />
-          <circle className="site-bike-road-node" cx="94" cy="55" r="5" /><circle className="site-bike-road-node" cx="217" cy="124" r="5" /><circle className="site-bike-road-node" cx="209" cy="70" r="5" />
+          <path className="site-bike-road-bed site-bike-road-avenue" d="M-14 28 35 35 72 24 112 39 153 25 196 38 235 23 279 36 320 22 374 34M-12 91 31 79 72 94 111 78 151 94 191 78 232 94 273 77 312 94 373 75M-12 153 35 139 74 158 113 142 153 159 194 141 236 158 276 139 319 157 373 136" />
+          <path className="site-bike-road-bed site-bike-road-street" d="M36-12 35 35 31 79 35 139 42 190M112-12 112 39 111 78 113 142 120 191M196-12 196 38 191 78 194 141 202 191M279-12 279 36 273 77 276 139 284 191M-12 54 72 24 72 94 74 158M72 24 153 25 151 94 153 159M153 25 235 23 232 94 236 158M235 23 320 22 312 94 319 157M31 79 72 94 113 78 151 94 191 78 232 94 273 77 312 94" />
+          <path className="site-bike-road-center" d="M-14 28 35 35 72 24 112 39 153 25 196 38 235 23 279 36 320 22 374 34M-12 91 31 79 72 94 111 78 151 94 191 78 232 94 273 77 312 94 373 75M-12 153 35 139 74 158 113 142 153 159 194 141 236 158 276 139 319 157 373 136" />
+          <circle className="site-bike-road-node" cx="72" cy="94" r="3.5" /><circle className="site-bike-road-node" cx="151" cy="94" r="3.5" /><circle className="site-bike-road-node" cx="232" cy="94" r="3.5" /><circle className="site-bike-road-node" cx="312" cy="94" r="3.5" />
         </svg>
         <svg className="site-bike-splash-mark" viewBox="0 0 128 76" focusable="false">
           <g className="site-bike-splash-wheel" transform="translate(25 51)"><circle r="19" /><path d="M-19 0h38M0-19v38M-13.4-13.4l26.8 26.8m0-26.8-26.8 26.8" /></g>
