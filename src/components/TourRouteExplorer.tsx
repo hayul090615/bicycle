@@ -1114,7 +1114,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     <DestinationPickerMapEvents enabled={destinationPicking} onPick={chooseCustomDestination} />
     {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 5, opacity: 1 }} />)}
-    {showRidingRoute && routedPath && <Polyline positions={routedPath.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: '#294c3a', weight: 2.5, opacity: .92, dashArray: '2 8', lineCap: 'round', interactive: false }} />}
+    {showRidingRoute && linePoints.length > 1 && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 2.5, opacity: .92, dashArray: '2 8', lineCap: 'round', interactive: false }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
