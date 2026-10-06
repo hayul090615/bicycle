@@ -63,7 +63,7 @@ export default async function handler(request, response) {
   const lat = Number(request.query.lat)
   const lng = Number(request.query.lng)
   const requestedRadius = Number(request.query.radius)
-  const radiusMeters = requestedRadius === 100 || requestedRadius === 200 || requestedRadius === 500 ? requestedRadius : 5_000
+  const radiusMeters = requestedRadius === 100 || requestedRadius === 200 || requestedRadius === 300 || requestedRadius === 500 ? requestedRadius : 5_000
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < 37.3 || lat > 37.75 || lng < 126.6 || lng > 127.4) {
     return response.status(400).json({ error: 'location_outside_seoul' })
   }
