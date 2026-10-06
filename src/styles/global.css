@@ -1742,7 +1742,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-live-bike-popup strong { display: block; overflow: hidden; max-width: 214px; font: 800 13px/1.35 'Noto Sans KR', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 .tour-live-bike-popup small { display: block; color: #168359; font: 850 16px/1.35 'Noto Sans KR', sans-serif; white-space: nowrap; }
 .tour-live-bike-marker:hover .tour-live-bike-popup, .tour-live-bike-marker:focus-visible .tour-live-bike-popup, .tour-live-bike-marker.is-open .tour-live-bike-popup { display: grid; }
-.leaflet-tooltip.tour-live-bike-tooltip { padding: 9px 12px; border: 1px solid #d4e2d7; border-radius: 9px; color: #244233; box-shadow: 0 5px 18px #10251c40; }
+.leaflet-tooltip.tour-live-bike-tooltip { width: max-content; max-width: min(360px, 88vw); padding: 9px 12px; border: 1px solid #d4e2d7; border-radius: 9px; color: #244233; box-shadow: 0 5px 18px #10251c40; white-space: nowrap; }
 .leaflet-tooltip.tour-live-bike-name-tooltip { min-width: 0; padding: 2px 5px; border: 1px solid #d4e2d7; border-radius: 5px; color: #285440; background: #fffffff2; box-shadow: 0 1px 4px #10251c28; font: 700 .56rem 'Noto Sans KR', sans-serif; text-align: center; white-space: nowrap; }
 .tour-live-bike-cluster-icon { width: 52px !important; height: 52px !important; display: grid; align-content: center; justify-items: center; border: 3px solid #fff; border-radius: 50%; color: #fff; background: #07855f; box-shadow: 0 2px 9px #173b2a66; font-family: 'DM Sans', 'Noto Sans KR', sans-serif; line-height: 1; }
 .tour-live-bike-cluster-icon > span { font-size: .95rem; font-weight: 950; }
@@ -1750,8 +1750,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .leaflet-tooltip.tour-live-bike-cluster-tooltip { display: grid; gap: 3px; max-width: 220px; white-space: normal; }
 .tour-live-bike-cluster-tooltip strong { color: #0c8261; font-size: .8rem; }
 .tour-live-bike-cluster-tooltip span { color: #53665a; font-size: .66rem; line-height: 1.4; }
-.tour-live-bike-tooltip > span { display: grid; gap: 3px; }
+.tour-live-bike-tooltip > span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .tour-live-bike-tooltip strong { font-size: .78rem; }
+.tour-live-bike-tooltip i { color: #78867b; font-style: normal; }
 .tour-live-bike-tooltip b { color: #0c8261; font-size: .95rem; font-weight: 900; }
 .tour-screen--dark .tour-course-bike-stations { border-color: #42564a; background: #26372c; }
 .tour-screen--dark .tour-course-bike-stations h3, .tour-screen--dark .tour-course-bike-stations li strong { color: #e5ede4; }

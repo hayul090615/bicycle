@@ -141,7 +141,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -163,6 +163,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
   showCourse: boolean
+  hasDestination: boolean
   showRestaurants: boolean
   showRoadInfo: boolean
   showRiders: boolean
@@ -809,8 +810,14 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     markersRef.current.forEach((marker, index) => {
       marker.getElement().classList.toggle('is-selected', selectedStop === index)
     })
-    if (locationFocusRequest > 0 && selectedStop === null && userLocation) return
-    if (locationFocusRequest === 0 && selectedStop === null) return
+    if (!hasDestination && locationFocusRequest > 0 && selectedStop === null && userLocation) return
+    if (!hasDestination && locationFocusRequest === 0 && selectedStop === null) return
+    if (hasDestination) {
+      const bounds = new maplibregl.LngLatBounds()
+      ;[...linePoints, ...(accessPath ?? []), ...(walkPath ?? [])].forEach(point => bounds.extend(point))
+      map.fitBounds(bounds, { padding: { top: 72, right: 72, bottom: 72, left: 72 }, maxZoom: 15, pitch: isFlatMap ? 0 : 66, duration: 480 })
+      return
+    }
     if (accessPath && accessPath.length >= 2) {
       const bounds = new maplibregl.LngLatBounds()
       ;(selectedStop === null ? [...linePoints, ...accessPath, ...(walkPath ?? [])] : [...accessPath, ...(walkPath ?? [])]).forEach(point => bounds.extend(point))
@@ -825,11 +832,11 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     const bounds = new maplibregl.LngLatBounds()
     linePoints.forEach(point => bounds.extend(point))
     map.fitBounds(bounds, { padding: { top: 48, right: 52, bottom: 48, left: 52 }, maxZoom: 15, pitch: isFlatMap ? 0 : 66, bearing: isFlatMap ? 0 : -6, duration: 480 })
-  }, [accessPath, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
+  }, [accessPath, hasDestination, isFlatMap, linePoints, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || status !== 'ready' || hasDestination || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
     if (selectedStop === null) {
       map.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 16, pitch: is3DView ? 66 : 0, bearing: is3DView ? userLocation.heading ?? 0 : 0, duration: 700, essential: false })
@@ -846,7 +853,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       duration: 720,
       essential: false,
     })
-  }, [accessPath, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
+  }, [accessPath, hasDestination, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
