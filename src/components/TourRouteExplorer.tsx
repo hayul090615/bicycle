@@ -1070,8 +1070,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
     {showBikeStations && mapBikeStations.map(station => <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}
-      icon={divIcon({ className: 'tour-live-bike-icon', html: `<span>${station.available ?? '–'}</span>`, iconSize: [34, 34], iconAnchor: [17, 30] })}>
-      <Tooltip>{station.name} · {station.available === null ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text(`${station.available} bikes available`, `${station.available}대 대여 가능`)}</Tooltip>
+      icon={divIcon({ className: 'tour-live-bike-icon', html: `<span>${station.available ?? '–'}</span>`, iconSize: [42, 42], iconAnchor: [21, 37] })}>
+      <Tooltip className="tour-live-bike-tooltip">
+        <span>
+          <strong>{station.name}</strong>
+          <b>{station.available === null ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text(`${station.available} bikes available`, `${station.available}대 대여 가능`)}</b>
+        </span>
+      </Tooltip>
     </Marker>)}
     {showAmenities && routeAmenities.map(amenity => <Marker key={amenity.id} position={[amenity.lat, amenity.lng]}
       icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>

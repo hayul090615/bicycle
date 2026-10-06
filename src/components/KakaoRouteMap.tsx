@@ -438,6 +438,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const name = document.createElement('strong')
       name.textContent = station.name
       const available = document.createElement('small')
+      available.className = 'tour-live-bike-count'
       available.textContent = station.available === null
         ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable')
         : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
