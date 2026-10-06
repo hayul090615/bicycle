@@ -306,7 +306,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, destinationPickRequest, menuToggleRequest, searchedDestination }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, destinationPickRequest, searchedDestination }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -322,7 +322,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onViaStopChange: (index: number | null) => void
   rentalWidgetTarget: HTMLDivElement | null
   destinationPickRequest: number
-  menuToggleRequest: number
   searchedDestination: { lat: number; lng: number; serial: number } | null
 }) {
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
@@ -357,6 +356,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   })
   const [bikeUseMode, setBikeUseMode] = useState<BikeUseMode>(readBikeUseMode)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mapMenuOpen, setMapMenuOpen] = useState(false)
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
   const [flatOnly, setFlatOnly] = useState(false)
   const [durationFilter, setDurationFilter] = useState<30 | 60 | null>(null)
@@ -383,7 +383,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const rentalNoticeRef = useRef({ fiveMinutes: false, expired: false })
   const initialLocationRequestedRef = useRef(false)
   const lastSyncedDestinationIndexRef = useRef<number | null>(null)
-  const lastMenuToggleRequestRef = useRef(menuToggleRequest)
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
@@ -395,13 +394,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setDestinationPicking(true)
     setActiveMapTool(null)
     setSidebarOpen(false)
+    setMapMenuOpen(false)
   }, [destinationPickRequest])
-  useEffect(() => {
-    if (lastMenuToggleRequestRef.current === menuToggleRequest) return
-    lastMenuToggleRequestRef.current = menuToggleRequest
-    setActiveMapTool(null)
-    setSidebarOpen(open => !open)
-  }, [menuToggleRequest])
   useEffect(() => {
     if (locale === 'en' && (view === 'kakao' || view === 'google')) setView('city')
   }, [locale, view])
@@ -1137,7 +1131,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {routeInstructions.length > 0 && <div className="tour-road-sign-directions"><h3>{text('Full directions', '전체 길 안내')}</h3><ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol></div>}
   </aside> : null
 
-  return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}`}>
+  return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}${mapMenuOpen ? ' tour-explorer-grid--menu-open' : ''}`}>
     <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
@@ -1174,7 +1168,20 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
         </section>{roadSign}</div>, rentalWidgetTarget)}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
-        <div className="tour-map-destination-tools"><button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>{customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}{destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}</div>
+        <div className="tour-map-destination-tools">
+          <button type="button" className="tour-map-menu-button" aria-expanded={mapMenuOpen} aria-controls="tour-map-control-rail tour-route-sidebar" aria-label={text('Menu', '메뉴')} onClick={() => {
+            const open = !mapMenuOpen
+            setMapMenuOpen(open)
+            setSidebarOpen(open)
+            setActiveMapTool(null)
+          }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
+          <button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
+          <div className="tour-height-legend" aria-label={text('Route elevation: white low, red high', '길 높낮이: 낮으면 흰색, 높으면 빨간색')}>
+            <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low → high', '낮음 → 높음')}</small>
+          </div>
+          {customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}
+          {destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}
+        </div>
         {(bikeUseMode !== 'ttareungi' || !rentalWidgetTarget) && roadSign}
         {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
           <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
@@ -1199,7 +1206,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
         <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
         {navigationCue}
-          <button type="button" className="tour-mobile-destination" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false) }}>
+          <button type="button" className="tour-mobile-destination" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>
             {destinationPicking ? text("Tap your destination on the map", "지도에서 도착지를 눌러 주세요") : customDestination ? text("Change destination on map", "지도에서 도착지 바꾸기") : text("Choose any destination on map", "지도에서 원하는 도착지 선택")}
           </button>
           {mobileSheetExpanded && <label className="tour-mobile-bike-mode">{text('Bike mode', '자전거 이용 모드')}
@@ -1212,7 +1219,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <button type="button" className="tour-mobile-sheet-expand" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded}
           aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
           onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
-        <aside className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
+        <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
           <section className="tour-map-rail-group">
             <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>
             <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>
@@ -1270,7 +1277,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                 {courseBikeStations.length > 0 && <ul>{courseBikeStations.map(station => <li key={station.id}><span><strong>{station.name}</strong><small>{distanceLabel(station.distanceMeters)} {text('from route', '경로 근처')}</small></span><b className={station.available === 0 ? 'is-empty' : ''}>{station.available ?? '—'}<small>{text('bikes', '대')}</small></b></li>)}</ul>}
               </section>}
               <section className="tour-destination-list"><h3>{text('Choose a destination on the map', '지도에서 도착지를 선택하세요')}</h3><p>{text('Tap anywhere in Seoul to get bicycle directions from your location.', '서울 지도에서 원하는 곳을 누르면 내 위치부터 자전거 길을 안내합니다.')}</p>
-                <button type="button" className="tour-destination-map-button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false) }}>{destinationPicking ? text('Tap a point on the map', '지도에서 원하는 곳을 눌러 주세요') : text('Pick a point on map', '지도에서 위치 찍기')}</button>
+                <button type="button" className="tour-destination-map-button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>{destinationPicking ? text('Tap a point on the map', '지도에서 원하는 곳을 눌러 주세요') : text('Pick a point on map', '지도에서 위치 찍기')}</button>
               </section>
               <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setActiveMapTool(null); setSidebarOpen(true) }}>{text('Browse all courses', '전체 코스 둘러보기')} ↗</button>
               <section className="tour-turn-guide"><h3>{text('Turn-by-turn guide', '구간별 길 안내')}</h3>
@@ -1419,7 +1426,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </details>
     </section>
     <aside id="tour-route-sidebar" className="tour-itinerary" aria-label={text('Routes and nearby bikes', '코스와 가까운 따릉이')} hidden={!sidebarOpen}>
-      <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => setSidebarOpen(false)} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
+      <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => { setSidebarOpen(false); setMapMenuOpen(false) }} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
       <div className="tour-sidebar-heading">
         <span className="tour-card-kicker">{text('EXPLORE SEOUL BY BIKE', '따릉이로 서울 둘러보기')}</span>
         <h1>{text(route.title, route.titleKo)}</h1>

@@ -3583,15 +3583,20 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark button.tour-mobile-destination { border-color: #42574c; color: #e7eee6; background: #26382e; }
 .tour-screen--dark button.tour-mobile-destination[aria-pressed='true'] { color: #fff; background: #286344; }
 
-/* Compact menu beside the destination picker. */
-.tour-journey-menu { width: 46px; min-width: 46px; height: 42px; flex: 0 0 46px; display: grid; justify-items: center; align-content: center; gap: 3px; padding: 2px; border: 0; border-radius: 8px; color: #183c2b; background: transparent; cursor: pointer; }
-.tour-journey-menu:hover, .tour-journey-menu:focus-visible { background: #e8f1e8; outline: 2px solid #39845b; outline-offset: 1px; }
+/* Map menu opens the controls and course drawer together. */
+.tour-screen .tour-explorer-grid:not(.tour-explorer-grid--menu-open) .tour-map-control-rail { display: none !important; }
+.tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 3.55rem; display: flex !important; }
+.tour-map-destination-tools { left: .65rem; align-items: flex-start; max-width: min(610px, calc(100% - 1.3rem)); }
+.tour-map-menu-button { width: 46px; min-width: 46px; height: 42px; flex: 0 0 46px; display: grid; justify-items: center; align-content: center; gap: 3px; padding: 2px; border: 1px solid #d5e2d8; border-radius: 9px; color: #183c2b; background: #fffffff2; box-shadow: 0 3px 12px #17251b32; cursor: pointer; }
+.tour-map-menu-button:hover, .tour-map-menu-button:focus-visible, .tour-map-menu-button[aria-expanded='true'] { border-color: #39845b; color: #fff; background: #18533a; outline: 2px solid #c5e9cc; outline-offset: 1px; }
+.tour-map-menu-button small { color: inherit; font: 800 .53rem/1 'Noto Sans KR', sans-serif; }
 .tour-journey-menu-bars { display: grid; gap: 4px; }
 .tour-journey-menu-bars i { width: 24px; height: 3px; display: block; border-radius: 99px; background: #18211b; }
-.tour-journey-menu small { font: 800 .53rem/1 'Noto Sans KR', sans-serif; }
-.tour-screen--dark .tour-journey-menu { color: #e4ede4; }
-.tour-screen--dark .tour-journey-menu-bars i { background: #e4ede4; }
-.tour-screen--dark .tour-journey-menu:hover, .tour-screen--dark .tour-journey-menu:focus-visible { background: #293d31; }
+.tour-map-menu-button:hover .tour-journey-menu-bars i, .tour-map-menu-button:focus-visible .tour-journey-menu-bars i, .tour-map-menu-button[aria-expanded='true'] .tour-journey-menu-bars i { background: #fff; }
+.tour-screen--dark .tour-map-menu-button { border-color: #43574a; color: #e4ede4; background: #1c2b23f2; }
+.tour-screen--dark .tour-map-menu-button .tour-journey-menu-bars i { background: #e4ede4; }
+.tour-screen--dark .tour-map-menu-button[aria-expanded='true'] { color: #fff; background: #286344; }
+.tour-screen--dark .tour-map-menu-button[aria-expanded='true'] .tour-journey-menu-bars i { background: #fff; }
 
 /* Text-led pause overlay with a red close mark. */
 .pause-overlay { position: fixed; overflow: hidden; background: radial-gradient(ellipse at center, #103f35b8 0%, #071d19dc 78%); }
@@ -3605,6 +3610,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @keyframes pause-title-pop { from { opacity: 0; transform: translateY(24px) scale(.78); filter: blur(10px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
 @keyframes pause-title-glow { from { text-shadow: 0 0 12px #70f0c580, 0 0 34px #2bce9166, 0 5px 0 #0d513b; } to { text-shadow: 0 0 23px #b0ffdc, 0 0 70px #2bce91c9, 0 5px 0 #0d513b; } }
 @media (prefers-reduced-motion: reduce) { .pause-overlay::before, .pause-overlay::after, .pause-overlay-content h2 { animation: none; } }
+
+.tour-screen .tour-map-destination-tools > .tour-map-menu-button { width: 46px; min-width: 46px; height: 42px; flex: 0 0 46px; gap: 3px; padding: 2px; }
+.tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 3.55rem; bottom: .5rem; }
+.tour-screen .tour-map-destination-tools > .tour-height-legend { align-self: center; width: 108px; flex: 0 0 108px; padding: .38rem .48rem; border: 1px solid #d5e0d7; border-radius: 8px; background: #fffffff2; box-shadow: 0 3px 12px #17251b22; }
+.tour-screen--dark .tour-map-destination-tools > .tour-height-legend { border-color: #43574a; background: #1c2b23f2; }
+@media (max-width: 900px) {
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { right: auto; left: .45rem; width: clamp(150px, 42vw, 190px); }
+  .tour-screen .tour-explorer-grid--menu-open .tour-itinerary { top: 3.55rem; right: .45rem; bottom: .5rem; left: calc(clamp(150px, 42vw, 190px) + .9rem); width: auto; max-height: none; }
+}
 
 /* Green first-entry screen with an animated bicycle, then the main page appears. */
 .site-bike-splash {
