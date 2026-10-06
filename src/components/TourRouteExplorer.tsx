@@ -306,7 +306,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, destinationPickRequest, searchedDestination }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, destinationPickRequest, menuToggleRequest, searchedDestination }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -322,6 +322,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onViaStopChange: (index: number | null) => void
   rentalWidgetTarget: HTMLDivElement | null
   destinationPickRequest: number
+  menuToggleRequest: number
   searchedDestination: { lat: number; lng: number; serial: number } | null
 }) {
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
@@ -382,6 +383,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const rentalNoticeRef = useRef({ fiveMinutes: false, expired: false })
   const initialLocationRequestedRef = useRef(false)
   const lastSyncedDestinationIndexRef = useRef<number | null>(null)
+  const lastMenuToggleRequestRef = useRef(menuToggleRequest)
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
@@ -394,6 +396,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setActiveMapTool(null)
     setSidebarOpen(false)
   }, [destinationPickRequest])
+  useEffect(() => {
+    if (lastMenuToggleRequestRef.current === menuToggleRequest) return
+    lastMenuToggleRequestRef.current = menuToggleRequest
+    setActiveMapTool(null)
+    setSidebarOpen(open => !open)
+  }, [menuToggleRequest])
   useEffect(() => {
     if (locale === 'en' && (view === 'kakao' || view === 'google')) setView('city')
   }, [locale, view])
@@ -1205,10 +1213,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
           onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
         <aside className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
-          <button type="button" className="tour-map-rail-sidebar-toggle" aria-expanded={sidebarOpen || activeMapTool === "routes"}
-            onClick={() => { if (window.matchMedia("(min-width: 901px)").matches) { setSidebarOpen(open => !open); setActiveMapTool(null) } else setActiveMapTool(current => current === "routes" ? null : "routes") }}>
-            <span aria-hidden="true">&#x2637;</span>{text("Routes", "\uCF54\uC2A4 \uBAA9\uB85D")}
-          </button>
           <section className="tour-map-rail-group">
             <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>
             <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>

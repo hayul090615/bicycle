@@ -78,7 +78,10 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
       </div>
     </div>
     {game.status === 'countdown' && <Countdown value={game.countdown} courseTitle={course.title} stationName={game.currentStation.name} />}
-    {game.status === 'paused' && <div className="pause-overlay" role="dialog" aria-modal="true"><div><span>Ⅱ</span><h2>잠시 쉬어가요</h2><p>시간도 함께 멈춰 있습니다.</p><button className="button button--primary" onClick={game.togglePause}>계속 달리기</button></div></div>}
+    {game.status === 'paused' && <div className="pause-overlay" role="dialog" aria-modal="true" aria-label="일시 정지">
+      <button type="button" className="pause-overlay-close" onClick={game.togglePause} aria-label="계속 달리기">×</button>
+      <div className="pause-overlay-content"><h2>잠시 쉬어가요</h2></div>
+    </div>}
   </main>
 }
 

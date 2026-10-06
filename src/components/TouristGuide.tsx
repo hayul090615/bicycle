@@ -22,6 +22,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const [destinationStopIndex, setDestinationStopIndex] = useState<number | null>(null)
   const [viaStopIndex, setViaStopIndex] = useState<number | null>(null)
   const [destinationPickRequest, setDestinationPickRequest] = useState(0)
+  const [menuToggleRequest, setMenuToggleRequest] = useState(0)
   const [placeQuery, setPlaceQuery] = useState('')
   const [placeResults, setPlaceResults] = useState<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>([])
   const [placeSearchStatus, setPlaceSearchStatus] = useState<'idle' | 'loading' | 'empty' | 'error'>('idle')
@@ -119,6 +120,10 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
       <div className="tour-journey-planner" aria-label={textFor(locale, 'Plan your bike journey', '자전거 경로 설정')}>
         <div className="tour-journey-start"><span>{textFor(locale, 'Start', '출발')}</span><strong>{textFor(locale, 'My location', '내 위치')}</strong></div>
         <span className="tour-journey-arrow" aria-hidden="true">→</span>
+        <button type="button" className="tour-journey-menu" aria-controls="tour-route-sidebar" aria-label={textFor(locale, 'Open route menu', '코스 메뉴 열기')} title={textFor(locale, 'Open route menu', '코스 메뉴 열기')} onClick={() => setMenuToggleRequest(request => request + 1)}>
+          <span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span>
+          <small>{textFor(locale, 'Menu', '메뉴')}</small>
+        </button>
         <button type="button" className="tour-journey-map-pick" onClick={() => { setDestinationStopIndex(null); setViaStopIndex(null); setOriginStopIndex(null); setDestinationPickRequest(request => request + 1) }}>
           <span>{textFor(locale, 'Destination', '도착지')}</span>
           <strong>{textFor(locale, 'Choose any point on map', '지도에서 원하는 곳 선택')}</strong>
@@ -151,7 +156,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
           originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
           onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
-          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} destinationPickRequest={destinationPickRequest} searchedDestination={searchedDestination} />
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} destinationPickRequest={destinationPickRequest} menuToggleRequest={menuToggleRequest} searchedDestination={searchedDestination} />
       </section>
       <details className="tour-more-details" id="tour-routes">
         <summary><span><small>{textFor(locale, 'MORE TO EXPLORE', '서울을 더 둘러보기')}</small><strong>{textFor(locale, 'Browse ride themes and seasonal routes', '계절별 풍경과 테마 코스 보기')}</strong></span><i aria-hidden="true">＋</i></summary>
