@@ -3669,10 +3669,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 .site-bike-splash-scene { position: relative; width: min(440px, 92vw); height: 220px; display: grid; place-items: center; }
 .site-bike-splash-road { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.site-bike-map-boundary { fill: #f4fff01a; stroke: #f4fff0; stroke-width: 1.6; stroke-linejoin: round; opacity: .52; }
 .site-bike-road-bed { fill: none; stroke: #f4fff0; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
-.site-bike-road-avenue { stroke-width: 8; opacity: .68; }
-.site-bike-road-street { opacity: .46; }
-.site-bike-road-center { fill: none; stroke: #4c956f; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 8; opacity: .43; animation: site-bike-road-flow 2.4s linear infinite; }
+.site-bike-road-avenue { stroke-width: 6.2; opacity: .6; }
+.site-bike-road-street { stroke-width: 2.8; opacity: .35; }
+.site-bike-road-center { fill: none; stroke: #4c956f; stroke-width: .9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 8; opacity: .38; animation: site-bike-road-flow 2.4s linear infinite; }
 .site-bike-road-node { fill: #e7f7dd; stroke: #32845f; stroke-width: 1.5; opacity: .68; }
 .site-bike-splash-mark { position: relative; z-index: 1; width: min(152px, 44vw); overflow: visible; animation: site-bike-splash-in .72s cubic-bezier(.2,.85,.25,1.15) both; }
 .site-bike-splash-wheel circle { fill: none; stroke: #213d31; stroke-width: 3.4; }
