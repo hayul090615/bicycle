@@ -466,8 +466,21 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       popup.append(name, available)
       element.append(count, popup)
       element.title = `${station.name} · ${available.textContent}`
-      element.setAttribute('role', 'img')
+      element.setAttribute('role', 'button')
+      element.tabIndex = 0
+      element.setAttribute('aria-expanded', 'false')
       element.setAttribute('aria-label', element.title)
+      const togglePopup = () => {
+        const isOpen = element.classList.toggle('is-open')
+        element.setAttribute('aria-expanded', String(isOpen))
+      }
+      element.addEventListener('click', togglePopup)
+      element.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          togglePopup()
+        }
+      })
       return new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([station.lng, station.lat]).addTo(map)
     })
     return () => markers.forEach(marker => marker.remove())

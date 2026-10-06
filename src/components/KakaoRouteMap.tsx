@@ -442,8 +442,21 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       popup.append(name, available)
       marker.append(count, popup)
       marker.title = `${station.name} · ${available.textContent}`
-      marker.setAttribute('role', 'img')
+      marker.setAttribute('role', 'button')
+      marker.tabIndex = 0
+      marker.setAttribute('aria-expanded', 'false')
       marker.setAttribute('aria-label', marker.title)
+      const togglePopup = () => {
+        const isOpen = marker.classList.toggle('is-open')
+        marker.setAttribute('aria-expanded', String(isOpen))
+      }
+      marker.addEventListener('click', togglePopup)
+      marker.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          togglePopup()
+        }
+      })
       return new api.CustomOverlay({ map, position: new api.LatLng(station.lat, station.lng), content: marker, xAnchor: .5, yAnchor: 1, zIndex: 9 })
     })
     return () => overlays.forEach(overlay => overlay.setMap(null))

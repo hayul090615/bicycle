@@ -440,13 +440,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 300), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
-  const nearbyStations = useMemo(() => {
-    const byId = new Map(snapshotNearby.map(station => [station.id, station]))
-    if (activeNearbyBikes?.status === 'live') {
-      for (const station of activeNearbyBikes.stations) byId.set(station.id, station)
-    }
-    return [...byId.values()].sort((first, second) => first.distanceMeters - second.distanceMeters)
-  }, [activeNearbyBikes, snapshotNearby])
+  const nearbyStations = useMemo(() => [...(activeNearbyBikes?.status === 'live'
+    ? activeNearbyBikes.stations
+    : snapshotNearby)].sort((first, second) => first.distanceMeters - second.distanceMeters), [activeNearbyBikes, snapshotNearby])
   const pickupStation = bikeUseMode === 'personal' ? null : nearbyStations.find(station => station.id === selectedBikeStationId && (station.available === null || station.available > 0))
     ?? nearbyStations.find(station => station.available === null || station.available > 0)
     ?? (activeNearbyBikes?.status === 'live' ? null : nearbyStations[0] ?? null)
@@ -520,8 +516,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const showAmenities = mapLayers.amenities
   const showBikeStations = mapLayers.bikeStations || userLocation !== null
   const mapBikeStations = useMemo(() => {
-    const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
-    for (const station of nearbyStations) byId.set(station.id, station)
+    const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).filter(station => station.available !== null).map(station => [station.id, station]))
+    for (const station of nearbyStations) if (station.available !== null) byId.set(station.id, station)
     return [...byId.values()]
   }, [courseBikeStations, mapLayers.bikeStations, nearbyStations])
   const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
