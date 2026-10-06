@@ -3616,8 +3616,35 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-map-destination-tools > .tour-height-legend { align-self: center; width: 108px; flex: 0 0 108px; padding: .38rem .48rem; border: 1px solid #d5e0d7; border-radius: 8px; background: #fffffff2; box-shadow: 0 3px 12px #17251b22; }
 .tour-screen--dark .tour-map-destination-tools > .tour-height-legend { border-color: #43574a; background: #1c2b23f2; }
 @media (max-width: 900px) {
-  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { right: auto; left: .45rem; width: clamp(150px, 42vw, 190px); }
-  .tour-screen .tour-explorer-grid--menu-open .tour-itinerary { top: 3.55rem; right: .45rem; bottom: .5rem; left: calc(clamp(150px, 42vw, 190px) + .9rem); width: auto; max-height: none; }
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { right: auto; left: .45rem; width: min(340px, calc(100vw - .9rem)); }
+}
+
+/* Expand ride details directly below the Ride plan control in the map menu. */
+.tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail {
+  width: min(360px, calc(100vw - 1rem));
+  max-height: calc(100% - 4rem);
+  overflow-y: auto;
+}
+.tour-screen .tour-map-control-rail .tour-riding-plan-toggle { min-height: 46px; border: 1px solid #8dbd8f; border-radius: 10px; color: #173b2b; background: #d7efc5; font-size: .76rem; font-weight: 900; }
+.tour-screen .tour-map-control-rail .tour-riding-plan-toggle > span { color: #155d3e; }
+.tour-screen .tour-menu-plan-slot { min-width: 0; }
+.tour-screen .tour-menu-plan-slot > .tour-itinerary {
+  position: static !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: min(56vh, 520px);
+  overflow: auto;
+  border: 1px solid #668675;
+  border-radius: 11px;
+  box-shadow: none;
+}
+.tour-screen .tour-menu-plan-slot > .tour-itinerary[hidden] { display: none !important; }
+.tour-screen .tour-menu-plan-slot .tour-sidebar-topline { position: sticky; top: 0; z-index: 2; }
+.tour-screen--dark .tour-map-control-rail .tour-riding-plan-toggle { color: #173b2b; background: #d7efc5; }
+@media (max-width: 600px) {
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { width: min(360px, calc(100vw - .9rem)); }
+  .tour-screen .tour-menu-plan-slot > .tour-itinerary { max-height: min(52vh, 440px); }
 }
 
 /* Green first-entry screen with an animated bicycle, then the main page appears. */

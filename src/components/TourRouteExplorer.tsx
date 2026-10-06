@@ -357,6 +357,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [bikeUseMode, setBikeUseMode] = useState<BikeUseMode>(readBikeUseMode)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mapMenuOpen, setMapMenuOpen] = useState(false)
+  const [menuPlanTarget, setMenuPlanTarget] = useState<HTMLDivElement | null>(null)
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
   const [flatOnly, setFlatOnly] = useState(false)
   const [durationFilter, setDurationFilter] = useState<30 | 60 | null>(null)
@@ -1131,302 +1132,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {routeInstructions.length > 0 && <div className="tour-road-sign-directions"><h3>{text('Full directions', '전체 길 안내')}</h3><ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol></div>}
   </aside> : null
 
-  return <div className={`tour-explorer-grid${sidebarOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}${mapMenuOpen ? ' tour-explorer-grid--menu-open' : ''}`}>
-    <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
-      <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
-        <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
-          <strong aria-live="polite">{customDestination ? destinationLabel : selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
-      </div>
-      <div className="tour-route-summary" aria-label={text('Selected route overview', '선택한 경로 안내')}>
-        <div className="tour-route-summary-stops"><span>{journeyOrigin}</span><i aria-hidden="true">→</i><strong>{destinationLabel}</strong></div>
-        <div className="tour-route-summary-metrics"><span><small>{text('DISTANCE', '거리')}</small><strong>{routeDistanceEstimated ? '≈ ' : ''}{distanceLabel(journeyDistance)}</strong></span>
-          <span><small>{text('ESTIMATED TIME', '예상 시간')}</small><strong>{text(`About ${journeyMinutes} min`, `약 ${journeyMinutes}분`)}</strong></span>
-          {pickupStation && <span className="tour-route-summary-bikes"><small>{text('BIKES NEARBY', '대여 가능')}</small><strong>{pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</strong></span>}
-        </div>
-        {navigationCue}
-      </div>
-
-      <div className="tour-map-quick-guide" aria-label={text('How to start', '빠른 이용 안내')}>
-        <span><b>1</b>{text('Choose a route', '코스를 골라요')}</span><i aria-hidden="true">›</i>
-        <span><b>2</b>{text('Check the map', '지도를 살펴봐요')}</span><i aria-hidden="true">›</i>
-        <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
-      </div>
-      <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}`} onMouseLeave={() => hoverStop(null)}>
-        {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack"><section className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
-          <div className="tour-rental-map-copy"><h3>{text('Return timer', '반납 타이머')}</h3><p>{text('Set minutes and start the countdown.', '분을 설정하고 타이머를 시작하세요.')}</p></div>
-          <label className="tour-rental-custom-time">{text('Minutes', '설정 시간 (분)')}<input type="number" min="1" max="720" step="1" value={rentalLimitMinutes} disabled={rentalDeadline !== null} onChange={event => setRentalLimitMinutes(Math.max(1, Math.min(720, Number(event.target.value) || 1)))} /></label>
-          <div className={`tour-rental-clock-row${rentalDeadline !== null ? ' is-running' : ''}${rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`}>
-            <div className="tour-rental-digital-panel" role="timer" aria-live="off" aria-label={`${text('Time remaining', '남은 시간')} ${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) / 3600)).padStart(2, '0')}:${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 3600 / 60)).padStart(2, '0')}:${String((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 60).padStart(2, '0')}`}>
-              <RentalDigitalDisplay seconds={rentalSecondsRemaining ?? rentalLimitMinutes * 60} />
-            </div>
-            <span className="tour-rental-timer-status"><i aria-hidden="true" />{rentalDeadline === null ? text('READY', '대기') : text('RUNNING', '작동 중')}</span>
-          </div>
-          <button type="button" className="tour-rental-start-button" aria-label={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} title={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} onClick={() => { if (rentalDeadline === null) void startRentalTimer(); else { setRentalDeadline(null); setRentalReminderStatus('idle') } }}>
-            <span className="tour-rental-button-label">{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')}</span>
-            <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
-          </button>
-          {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
-        </section>{roadSign}</div>, rentalWidgetTarget)}
-        {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
-        <div className="tour-map-destination-tools">
-          <button type="button" className="tour-map-menu-button" aria-expanded={mapMenuOpen} aria-controls="tour-map-control-rail tour-route-sidebar" aria-label={text('Menu', '메뉴')} onClick={() => {
-            const open = !mapMenuOpen
-            setMapMenuOpen(open)
-            setSidebarOpen(open)
-            setActiveMapTool(null)
-          }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
-          <button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
-          <div className="tour-height-legend" aria-label={text('Route elevation: white low, red high', '길 높낮이: 낮으면 흰색, 높으면 빨간색')}>
-            <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low → high', '낮음 → 높음')}</small>
-          </div>
-          {customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}
-          {destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}
-        </div>
-        {(bikeUseMode !== 'ttareungi' || !rentalWidgetTarget) && roadSign}
-        {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
-        </Suspense>}
-        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
-        </Suspense>}
-        <div className="tour-mobile-map-top" role="search">
-          <label className="tour-mobile-map-search"><span aria-hidden="true">&#x1F50D;</span><input value={routeSearch} onChange={event => setRouteSearch(event.currentTarget.value)} placeholder={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} aria-label={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} /></label>
-          <nav className="tour-mobile-map-chips" aria-label={text("Map shortcuts", "\uC9C0\uB3C4 \uBC14\uB85C\uAC00\uAE30")}>
-            <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer("course")}><span aria-hidden="true">&#x1F6B2;</span>{text("Bike routes", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</button>
-            <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer("restaurants"); setFoodGuideOpen(true) }}><span aria-hidden="true">&#x1F35C;</span>{text("Food", "\uB9DB\uC9D1")}</button>
-            <button type="button" aria-pressed={activeMapTool === "facilities"} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Toilets", "\uD654\uC7A5\uC2E4")}</button>
-            <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
-            <button type="button" aria-pressed={destinationPicking} onClick={() => setDestinationPicking(active => !active)}><span aria-hidden="true">&#x1F4CD;</span>{destinationPicking ? text("Tap map", "\uC9C0\uB3C4 \uC120\uD0DD") : text("Destination", "\uB3C4\uCC29\uC9C0")}</button>
-          </nav>
-        </div>
-        <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
-          <div className="tour-mobile-sheet-handle" aria-hidden="true"><i /></div>
-          <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
-        <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
-        {navigationCue}
-          <button type="button" className="tour-mobile-destination" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>
-            {destinationPicking ? text("Tap your destination on the map", "지도에서 도착지를 눌러 주세요") : customDestination ? text("Change destination on map", "지도에서 도착지 바꾸기") : text("Choose any destination on map", "지도에서 원하는 도착지 선택")}
-          </button>
-          {mobileSheetExpanded && <label className="tour-mobile-bike-mode">{text('Bike mode', '자전거 이용 모드')}
-            <select value={bikeUseMode} onChange={event => changeBikeUseMode(event.currentTarget.value as BikeUseMode)}>
-              <option value="ttareungi">{text('Ttareungi', '따릉이')}</option><option value="personal">{text('My bicycle', '내 자전거')}</option>
-            </select>
-          </label>}
-          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
-        </section>
-        <button type="button" className="tour-mobile-sheet-expand" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded}
-          aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
-          onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
-        <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
-          <section className="tour-map-rail-group">
-            <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>
-            <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>
-              <button type="button" aria-current={activeMapTool === "food" ? "true" : undefined} onClick={() => { toggleMapLayer("restaurants"); setActiveMapTool("food") }}><span aria-hidden="true">&#x2668;</span>{text("Food", "\uB9DB\uC9D1")}</button>
-              <button type="button" aria-current={activeMapTool === "facilities" ? "true" : undefined} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x2316;</span>{text("Facilities", "\uC2DC\uC124")}</button>
-              <button type="button" aria-current={activeMapTool === "cctv" ? "true" : undefined} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool("cctv") }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
-              <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
-            </nav>
-          </section>
-          <section className="tour-map-rail-group tour-map-rail-group--map">
-            <h2>{text("Map", "\uC9C0\uB3C4")}</h2>
-            <div className="tour-map-mode-switch" role="group" aria-label={text("2D or 3D map", "2D \uB610\uB294 3D \uC9C0\uB3C4")}>
-              <button type="button" aria-pressed={view === "satellite" || view === "map" || view === "kakao"} onClick={() => { setActiveMapTool(null); chooseMapView("satellite") }}>2D</button>
-              <button type="button" aria-pressed={view === "city" || view === "google"} onClick={() => { setActiveMapTool(null); chooseMapView("city") }}>3D</button>
-            </div>
-            <label className="tour-map-mode-select"><span>{text("Map type", "\uC9C0\uB3C4 \uC885\uB958")}</span>
-              <select value={view} aria-label={text("Choose a map view", "\uC9C0\uB3C4 \uC885\uB958 \uC120\uD0DD")} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
-                {hasKakaoMapsKey && locale === 'ko' && <option value="kakao">{text("Kakao map - road", "\uCE74\uCE74\uC624 \uC9C0\uB3C4 ? \uB3C4\uB85C")}</option>}
-                <option value="city">{text("3D city", "3D \uB3C4\uC2DC")}</option>
-                <option value="satellite">{text("Satellite", "\uC704\uC131")}</option>
-                <option value="map">{text("Flat map", "\uD3C9\uBA74 \uC9C0\uB3C4")}</option>
-                {hasGoogleMapsKey && locale === 'ko' && <option value="google">Google 3D</option>}
-              </select>
-            </label>
-          </section>
-          <section className="tour-map-rail-group tour-map-rail-group--other">
-            <h2>{text("Other", "\uAE30\uD0C0")}</h2>
-            <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === "settings"}
-              onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
-              <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
-            </button>
-          </section>
-        </aside>
-        <button type="button" className="tour-map-locate" onClick={() => { setActiveMapTool(null); locateNearestRoute(false) }} disabled={locating} aria-label={text("Show my current location", "\uB0B4 \uD604\uC7AC \uC704\uCE58 \uD45C\uC2DC")}>
-          <span aria-hidden="true">&#x25CE;</span>{locating ? text("Locating...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("My location", "\uB0B4 \uC704\uCE58")}
-        </button>
-        {activeMapTool && <aside className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
-          <header className="tour-map-side-panel-header">
-            <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
-              : activeMapTool === 'course' ? text('Route display', '코스 표시')
-                : activeMapTool === 'food' ? text('Food along the way', '경로 주변 맛집')
-                    : activeMapTool === 'cctv' ? text('Public CCTV', '공공 CCTV')
-                      : activeMapTool === 'settings' ? text('Map settings', '지도 설정')
-                        : activeMapTool === 'location' ? text('Nearby bikes', '내 주변 따릉이')
-                          : activeMapTool === '3d' ? text('3D city view', '3D 도시 보기')
-                            : activeMapTool === 'facilities' ? text('Rider facilities', '라이더 편의시설') : text('Map view', '지도 보기')}</strong></div>
-            <button type="button" onClick={() => setActiveMapTool(null)} aria-label={text('Close map panel', '지도 패널 닫기')}>×</button>
-          </header>
-          <div className="tour-map-side-panel-body">
-            {activeMapTool === 'routes' && <>
-              <div className="tour-map-panel-feature"><small>{text('SELECTED ROUTE', '선택한 코스')}</small><strong>{text(route.title, route.titleKo)}</strong>
-                <span>{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by bike`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</span></div>
-              {bikeUseMode === 'ttareungi' && <section className="tour-course-bike-stations"><h3>{text('Live bikes along this course', '코스 주변 실시간 대여소')}</h3>
-                <p>{courseBikeStationsState?.status === 'loading' ? text('Checking nearby stations…', '주변 대여소를 확인 중입니다…') : courseBikeStationsState?.status === 'unavailable' ? text('Live station counts are temporarily unavailable.', '실시간 대여소 정보를 가져올 수 없습니다.') : text(`${courseBikeStations.length} stations near this route`, `경로 주변 ${courseBikeStations.length}곳`)}</p>
-                {courseBikeStations.length > 0 && <ul>{courseBikeStations.map(station => <li key={station.id}><span><strong>{station.name}</strong><small>{distanceLabel(station.distanceMeters)} {text('from route', '경로 근처')}</small></span><b className={station.available === 0 ? 'is-empty' : ''}>{station.available ?? '—'}<small>{text('bikes', '대')}</small></b></li>)}</ul>}
-              </section>}
-              <section className="tour-destination-list"><h3>{text('Choose a destination on the map', '지도에서 도착지를 선택하세요')}</h3><p>{text('Tap anywhere in Seoul to get bicycle directions from your location.', '서울 지도에서 원하는 곳을 누르면 내 위치부터 자전거 길을 안내합니다.')}</p>
-                <button type="button" className="tour-destination-map-button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>{destinationPicking ? text('Tap a point on the map', '지도에서 원하는 곳을 눌러 주세요') : text('Pick a point on map', '지도에서 위치 찍기')}</button>
-              </section>
-              <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setActiveMapTool(null); setSidebarOpen(true) }}>{text('Browse all courses', '전체 코스 둘러보기')} ↗</button>
-              <section className="tour-turn-guide"><h3>{text('Turn-by-turn guide', '구간별 길 안내')}</h3>
-                {!hasDestination ? <p>{text('Choose any destination on the map to start directions from your location.', '지도에서 원하는 도착지를 선택하면 내 위치에서 길 안내를 시작합니다.')}</p>
-                  : !routeInstructions.length ? <p>{routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 경로 안내를 불러오는 중입니다…') : routeGuidanceStatus === 'unavailable' ? text('Could not load turn-by-turn directions. Check your connection and try again.', '상세 경로 안내를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.') : text('Detailed bicycle directions are unavailable for this route.', '이 코스는 상세 자전거 길 안내를 제공하지 않습니다.')}</p>
-                    : <ol>{routeInstructions.slice(0, 18).map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>}
-              </section>
-              <p>{text(route.summary, route.summaryKo)}</p>
-            </>}
-            {activeMapTool === 'course' && <>
-              <p>{text('Show the selected route and the path from your location.', '선택한 코스와 내 위치에서 출발하는 경로를 지도에 표시합니다.')}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}>{showCourse ? text('Hide route', '코스 숨기기') : text('Show route', '코스 표시')}</button>
-            </>}
-            {activeMapTool === 'food' && <>
-              <p>{!routedPath ? text('Choose a destination to find food along the route.', '도착지를 고르면 길 주변 맛집을 찾습니다.') : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? text('Finding food along your route…', '길 주변 맛집을 찾는 중…') : text(`${routeRestaurants.length} food places recommended along the route.`, `길 주변 맛집 ${routeRestaurants.length}곳을 추천합니다.`)}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}>{showRestaurants ? text('Hide food markers', '맛집 표시 끄기') : text('Show food markers', '맛집 표시 켜기')}</button>
-              <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setFoodGuideOpen(true); setMapLayers(current => ({ ...current, restaurants: true })); setActiveMapTool(null) }}>{text('Show nearby food places', '내 주변 맛집 보기')}</button>
-            </>}
-            {activeMapTool === 'cctv' && <>
-              <p>{text(`${cctvCameras.length.toLocaleString()} public CCTV locations are available.`, `공공 CCTV ${cctvCameras.length.toLocaleString()}곳 정보를 사용할 수 있습니다.`)}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>{showCctv ? text('Hide CCTV', 'CCTV 숨기기') : text('Show CCTV', 'CCTV 표시')}</button>
-            </>}
-            {activeMapTool === 'facilities' && <>
-              <p>{amenitiesState?.status === 'loading' ? text('Searching near the selected route…', '선택한 코스 주변 시설을 찾고 있습니다…')
-                : amenitiesState?.status === 'unavailable' ? text('Facility data is temporarily unavailable. Try again later.', '시설 정보를 불러오지 못했어요. 잠시 후 다시 확인해 주세요.')
-                  : routeAmenities.length ? text(`${routeAmenities.length} facilities are marked along this route.`, `이 코스 주변 편의시설 ${routeAmenities.length}곳을 지도에 표시했어요.`)
-                    : text('No facilities are currently listed near this route.', '현재 이 코스 주변에 등록된 편의시설이 없습니다.')}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showAmenities} onClick={() => toggleMapLayer('amenities')}>{showAmenities ? text('Hide facility markers', '편의시설 표시 끄기') : text('Show facility markers', '편의시설 표시 켜기')}</button>
-              <section className="tour-facility-list" aria-label={text('Facility legend and nearby places', '편의시설 범례와 주변 장소')}>
-                {(['toilet', 'convenience'] as const).map(kind => {
-                  const matches = routeAmenities.filter(place => place.kind === kind)
-                  const display = AMENITY_DISPLAY[kind]
-                  return <div className={`tour-facility-group tour-facility-group--${kind}`} key={kind}>
-                    <div className="tour-facility-heading"><span aria-hidden="true">{display.icon}</span><strong>{locale === 'ko' ? display.shortKo : display.shortEn}</strong><b>{matches.length}</b></div>
-                    {matches.length ? <ul>{matches.slice(0, 4).map(place => <li key={place.id}><span>{place.name || (locale === 'ko' ? display.shortKo : display.shortEn)}</span><small>{distanceLabel(place.distanceMeters)} {text('along route', '지점')}</small></li>)}</ul>
-                      : <p>{text('None found on this route', '이 코스 주변 등록 정보 없음')}</p>}
-                  </div>
-                })}
-              </section>
-            </>}
-            {activeMapTool === 'settings' && <>
-              <section className="tour-map-panel-section"><h3>{text('Bike mode', '자전거 이용 모드')}</h3>
-                <div className="tour-bike-mode-picker" role="group" aria-label={text('Choose a bike mode', '자전거 이용 모드 선택')}>
-                  <button type="button" aria-pressed={bikeUseMode === 'ttareungi'} onClick={() => changeBikeUseMode('ttareungi')}>{text('Ttareungi', '따릉이')}</button>
-                  <button type="button" aria-pressed={bikeUseMode === 'personal'} onClick={() => changeBikeUseMode('personal')}>{text('My bicycle', '내 자전거')}</button>
-                </div>
-                <p className="tour-map-panel-note">{text('Nearby rental stations and live bike counts are shown on the map. Rental reminders are available in Ttareungi mode.', '주변 따릉이 대여소와 실시간 잔여 대수를 지도에 표시합니다. 대여 알림은 따릉이 모드에서 사용할 수 있습니다.')}</p>
-              </section>
-              <section className="tour-map-panel-section"><h3>{text('Map style', '지도 종류')}</h3>
-                <div className="tour-map-view-options">
-                  {hasKakaoMapsKey && locale === 'ko' && <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseMapView('kakao')}>{text('Kakao street', '카카오 도로')}</button>}
-                  <button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>3D {text('City', '\uB3C4\uC2DC')}</button>
-                  <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('Satellite', '위성')}</button>
-                  <button type="button" aria-pressed={view === 'map'} onClick={() => chooseMapView('map')}>{text('Flat map', '평면')}</button>
-                  {hasGoogleMapsKey && locale === 'ko' && <button type="button" aria-pressed={view === 'google'} onClick={() => chooseMapView('google')}>Google 3D</button>}
-                </div>
-              </section>
-              <section className="tour-map-panel-section"><h3>{text('Seasonal scenery', '계절 풍경')}</h3>
-                <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
-                  {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
-                    className={`tour-season-tab tour-season-tab--${option.id}`} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
-                </div><p className="tour-map-panel-note">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</p>
-              </section>
-              <section className="tour-map-panel-section"><h3>{text('3D sky', '3D 하늘')}</h3>
-                <div className="tour-sky-mode-picker" role="group" aria-label={text('Sky lighting', '하늘 조명')}>
-                  {([['auto', 'Auto', '자동'], ['day', 'Day', '낮'], ['night', 'Night', '밤']] as const).map(([id, en, ko]) =>
-                    <button key={id} type="button" aria-pressed={skyMode === id} onClick={() => { setSkyMode(id); if (view !== 'city') chooseMapView('city') }}>{text(en, ko)}</button>)}
-                </div><p className="tour-map-panel-note">{text('The night sky follows Seoul time in Auto mode; seasons use different dusk and night colors.', '자동은 서울 시간에 맞춰 밤하늘을 보여주며 계절마다 노을과 밤 색이 달라집니다.')}</p>
-              </section>
-              <section className="tour-map-panel-section"><h3>{text('Weather', '날씨 표현')}</h3>
-                <div className="tour-weather-setting"><div role="group" aria-label={text('Choose weather appearance', '날씨 표현 선택')}>
-                  {([['sunny', '☀️', 'Sun', '햇볕'], ['cloudy', '☁️', 'Cloudy', '흐림'], ['rainy', '🌧️', 'Rain', '비']] as const).map(([id, icon, en, ko]) =>
-                    <button key={id} type="button" aria-pressed={mapWeather === id} onClick={() => setMapWeather(id)}><span aria-hidden="true">{icon}</span>{text(en, ko)}</button>)}
-                </div></div>
-              </section>
-              <section className="tour-map-panel-section tour-map-panel-section--actions"><h3>{text('On the map', '지도에 표시')}</h3>
-                <label className="tour-map-panel-check"><input type="checkbox" checked={showAmenities} onChange={() => setMapLayers(current => ({ ...current, amenities: !current.amenities }))} /><span>{text('Rider facilities', '라이더 편의시설')}</span><small>{amenitiesState?.status === 'loading' ? '…' : routeAmenities.length}</small></label>
-                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => setMapLayers(current => ({ ...current, bikeStations: !current.bikeStations }))} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{nearbyStations.length}</small></label>
-                <button type="button" className="tour-map-panel-action" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>{text('Building shadows', '건물 그림자')} · {showShadows ? text('On', '켜짐') : text('Off', '꺼짐')}</button>
-              </section>
-            </>}
-            {activeMapTool === 'location' && <>
-              <p>{bikeUseMode === 'personal'
-                ? userLocation ? text('Your location is on the map. Rental information is hidden in My bicycle mode.', '내 자전거 모드입니다. 현재 위치를 표시하고 대여 정보는 숨겼어요.') : text('Allow location access to show your starting point. Rental information stays hidden.', '출발지를 표시하려면 위치 접근을 허용해 주세요. 대여 정보는 숨겨져 있어요.')
-                : userLocation ? text('Your current location is on the map.', '현재 위치를 지도에 표시했습니다.') : text('Allow location access to find the nearest rental station.', '가까운 대여소를 찾으려면 위치 접근을 허용해 주세요.')}</p>
-              <button type="button" className="tour-map-panel-action" onClick={() => locateNearestRoute(false)} disabled={locating}>{locating ? text('Finding your location…', '위치 확인 중…') : text('Find bikes near me', '내 주변 대여소 찾기')}</button>
-              {bikeUseMode === 'ttareungi' && pickupStation && <div className="tour-map-panel-feature"><small>{text('NEAREST RENTAL STATION', '가까운 대여소')}</small><strong>{pickupStation.name}</strong><span>{pickupStation.available === null ? text('Live count unavailable', '실시간 잔여 수 확인 불가') : text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)}</span></div>}
-              {bikeUseMode === 'ttareungi' && rentalDeadline !== null && <div className="tour-transfer-recommendation" role="status"><small>{text('SUGGESTED RE-RENTAL STOP', '추천 재대여 대여소')}</small>{transferRecommendation?.status === 'loading' ? <strong>{text('Checking live bike availability…', '실시간 잔여 자전거 확인 중…')}</strong> : transferRecommendation?.station ? <><strong>{transferRecommendation.station.name}</strong><span>{transferRecommendation.station.available === null ? text('Live bike count unavailable', '실시간 잔여 대수 확인 불가') : `${transferRecommendation.station.available}${text(' bikes available', '대 대여 가능')}`} · {distanceLabel(transferRecommendation.station.distanceMeters)} {text('from route', '경로 지점')}</span></> : <strong>{text('No available station was found near the route point.', '경로 근처에 대여 가능한 대여소를 찾지 못했습니다.')}</strong>}{rentalSecondsRemaining === 0 && <b>{text('Rental time is up. Return the bike or rent again.', '이용 시간이 끝났어요. 자전거를 반납하거나 다시 대여해 주세요.')}</b>}{rentalSecondsRemaining !== null && rentalSecondsRemaining > 0 && rentalSecondsRemaining <= 900 && <b>{text('Rental time is nearly up. Return and rent again here.', '대여 시간이 얼마 남지 않았어요. 이곳에 반납 후 다시 대여하세요.')}</b>}</div>}
-            </>}
-            {activeMapTool === '3d' && <>
-              <p>{text('Explore the route with raised buildings and the 3D camera controls.', '건물 입체 표현과 카메라 조작으로 코스를 살펴보세요.')}</p>
-              <div className="tour-map-view-options"><button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>{text('City', '\uB3C4\uC2DC')}</button>
-                <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('2D satellite', '2D 위성')}</button></div>
-            </>}
-          </div>
-        </aside>}
-        {bikeUseMode === 'ttareungi' && pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
-          <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
-            ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
-            : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
-        </div>}
-        {foodGuideOpen && <aside className='tour-food-guide-panel' id='tour-food-guide-panel' aria-label={text('Food along the bicycle route', '자전거 길 주변 맛집')}>
-          <div className='tour-food-guide-heading'>
-            <span><small>{text('NEAR THE ROUTE', '자전거 길 가까이')}</small><strong>{text('Food along the way', '길 주변 맛집')}</strong></span>
-            <button type='button' aria-label={text('Close food places', '맛집 닫기')} onClick={() => setFoodGuideOpen(false)}>&#x00D7;</button>
-          </div>
-          {!routedPath ? <p className='tour-food-guide-status'>{text('Choose a destination and wait for the bicycle route.', '도착지를 선택하고 자전거 경로를 불러와 주세요.')}</p>
-            : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? <p className='tour-food-guide-status'>{text('Finding food near the bicycle route…', '자전거 길 주변 맛집을 찾는 중…')}</p>
-              : activeNearbyFood.status === 'unavailable' ? <p className='tour-food-guide-status'>{text('Food data is unavailable. Please try again shortly.', '맛집 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')}</p>
-                : routeRestaurants.length === 0 ? <p className='tour-food-guide-status'>{text('No named food places were found near this route.', '이 길 가까이에서 이름이 등록된 맛집을 찾지 못했어요.')}</p>
-                  : <div className='tour-nearby-food-list'>{routeRestaurants.map(place => <div className='tour-nearby-food-item' key={place.id}><span><strong>{place.name}</strong><small>{distanceLabel(place.distanceFromRouteMeters ?? 0)} {text('from route', '길에서')} · {place.blogMentions === undefined ? text('Blog data unavailable', '블로그 자료 없음') : text(`${place.blogMentions.toLocaleString()} blog matches`, `블로그 검색 ${place.blogMentions.toLocaleString()}건`)}</small></span><a href={'https://search.naver.com/search.naver?query=' + encodeURIComponent(place.name + ' 맛집')} target='_blank' rel='noopener noreferrer'>{text('Details ↗', '정보 ↗')}</a></div>)}</div>}
-        </aside>}
-        {view !== 'kakao' && <div className={`tour-map-rotate-controls${view === 'city' || view === 'google' ? ' tour-map-rotate-controls--tilt' : ''}`} role="group" aria-label={text('Map camera controls', '지도 방향 조작')}>
-          <button type="button" className="tour-map-arrow--up" onClick={() => rotateMap('up')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera up', '카메라 시점을 올리기') : text('Move map north', '지도를 북쪽으로 이동')} title={view === 'city' ? text('Look up to the sky', '하늘 보기') : undefined}>↑</button>
-          <button type="button" className="tour-map-arrow--left" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>
-          <button type="button" className="tour-map-arrow--right" onClick={() => rotateMap('right')} aria-label={text('Rotate map to the right', '지도를 오른쪽으로 회전')}>→</button>
-          <button type="button" className="tour-map-arrow--down" onClick={() => rotateMap('down')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera down', '카메라 시점을 내리기') : text('Move map south', '지도를 남쪽으로 이동')}>↓</button>
-        </div>}
-        {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
-          <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>
-          <span className="tour-scenery-kicker">{text('A VIEW NEAR THIS STOP', '경유지 주변 풍경')}</span>
-          {photoLoading ? <div className="tour-scenery-placeholder">{text('Finding a local photo…', '주변 사진을 찾고 있어요…')}</div>
-            : sceneryPhoto ? <>
-              <img src={sceneryPhoto.thumbnail} alt={sceneryPhoto.title} loading="lazy" />
-              <div className="tour-scenery-caption"><a href={sceneryPhoto.page} target="_blank" rel="noopener noreferrer">{sceneryPhoto.title}</a>
-                <small>{sceneryPhoto.credit} · {sceneryPhoto.license}</small></div>
-            </> : <div className="tour-scenery-placeholder">{text('No nearby public photo is available for this stop.', '이 경유지 주변에서 사용할 수 있는 공개 사진을 찾지 못했습니다.')}</div>}
-        </aside>}
-      </div>
-      <details className="tour-map-details">
-        <summary>{text('Map and route information', '지도 및 코스 안내')}</summary>
-        <div>
-          <p className="tour-map-note">{view === 'kakao'
-            ? text('Kakao street map · route line, stops and public camera locations. Building shadows are not modeled in this view; switch to 3D aerial for estimated shadows.', '카카오 도로 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 이 보기에는 건물 그림자가 없으며, 그림자는 위성 3D 보기에서 확인할 수 있어요.')
-            : view === 'map'
-            ? text('Flat street map · route line, stops and public cameras. Use the arrows to pan north and south or rotate the map.', '평면 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 화살표로 위아래 이동과 좌우 회전을 할 수 있어요.')
-            : view === 'satellite'
-              ? text('Top-down satellite imagery with no raised buildings. Use the arrows to pan or rotate the map.', '건물을 세우지 않은 위에서 본 위성 지도입니다. 화살표로 지도를 이동하거나 회전할 수 있어요.')
-            : view === 'google'
-              ? text('Explore this route in Google 3D. Building detail varies by area; Google Earth can open the selected stop or the downloaded KML can show the full route.', 'Google 3D로 코스를 살펴보세요. 지역별 건물 표현은 다를 수 있으며 Google Earth에서 선택한 경유지를 열거나 KML로 전체 코스를 볼 수 있습니다.')
-              : text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
-          <p className="tour-map-note">{routedPath
-            ? text('The line is a suggested bicycle route between stops. Check signs and path conditions before riding.', '표시된 선은 경유지 사이의 추천 자전거 경로입니다. 출발 전에 표지와 길 상태를 확인하세요.')
-            : text('The line connects stops while bicycle routing loads or is unavailable. It is not turn-by-turn directions.', '자전거 경로를 불러오는 동안 또는 불러올 수 없을 때는 경유지를 선으로 연결합니다. 이 선은 길안내가 아닙니다.')}</p>
-        </div>
-      </details>
-    </section>
+  const itineraryPanel = (
     <aside id="tour-route-sidebar" className="tour-itinerary" aria-label={text('Routes and nearby bikes', '코스와 가까운 따릉이')} hidden={!sidebarOpen}>
-      <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => { setSidebarOpen(false); setMapMenuOpen(false) }} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
+      <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => setSidebarOpen(false)} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
       <div className="tour-sidebar-heading">
         <span className="tour-card-kicker">{text('EXPLORE SEOUL BY BIKE', '따릉이로 서울 둘러보기')}</span>
         <h1>{text(route.title, route.titleKo)}</h1>
@@ -1605,5 +1313,307 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <a href={route.source} target="_blank" rel="noopener noreferrer">{text("Visit Seoul's official travel guide ↗", '서울 공식 관광 안내 ↗')}</a>
         <p>{text('Station locations: Seoul Open Data, June 2026 snapshot. Check live availability in the official app.', '대여소 위치: 서울 열린데이터광장 2026년 6월 자료. 실시간 대여 가능 여부는 공식 앱에서 확인하세요.')}</p></div>
     </aside>
+  )
+
+  return <div className={`tour-explorer-grid${sidebarOpen && !mapMenuOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}${mapMenuOpen ? ' tour-explorer-grid--menu-open' : ''}`}>
+    <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
+      <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
+        <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
+          <strong aria-live="polite">{customDestination ? destinationLabel : selectedStop === null ? text('Entire route', '전체 코스') : text(route.stops[selectedStop].place, route.stops[selectedStop].placeKo)}</strong></div>
+      </div>
+      <div className="tour-route-summary" aria-label={text('Selected route overview', '선택한 경로 안내')}>
+        <div className="tour-route-summary-stops"><span>{journeyOrigin}</span><i aria-hidden="true">→</i><strong>{destinationLabel}</strong></div>
+        <div className="tour-route-summary-metrics"><span><small>{text('DISTANCE', '거리')}</small><strong>{routeDistanceEstimated ? '≈ ' : ''}{distanceLabel(journeyDistance)}</strong></span>
+          <span><small>{text('ESTIMATED TIME', '예상 시간')}</small><strong>{text(`About ${journeyMinutes} min`, `약 ${journeyMinutes}분`)}</strong></span>
+          {pickupStation && <span className="tour-route-summary-bikes"><small>{text('BIKES NEARBY', '대여 가능')}</small><strong>{pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</strong></span>}
+        </div>
+        {navigationCue}
+      </div>
+
+      <div className="tour-map-quick-guide" aria-label={text('How to start', '빠른 이용 안내')}>
+        <span><b>1</b>{text('Choose a route', '코스를 골라요')}</span><i aria-hidden="true">›</i>
+        <span><b>2</b>{text('Check the map', '지도를 살펴봐요')}</span><i aria-hidden="true">›</i>
+        <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
+      </div>
+      <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}`} onMouseLeave={() => hoverStop(null)}>
+        {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack"><section className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
+          <div className="tour-rental-map-copy"><h3>{text('Return timer', '반납 타이머')}</h3><p>{text('Set minutes and start the countdown.', '분을 설정하고 타이머를 시작하세요.')}</p></div>
+          <label className="tour-rental-custom-time">{text('Minutes', '설정 시간 (분)')}<input type="number" min="1" max="720" step="1" value={rentalLimitMinutes} disabled={rentalDeadline !== null} onChange={event => setRentalLimitMinutes(Math.max(1, Math.min(720, Number(event.target.value) || 1)))} /></label>
+          <div className={`tour-rental-clock-row${rentalDeadline !== null ? ' is-running' : ''}${rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`}>
+            <div className="tour-rental-digital-panel" role="timer" aria-live="off" aria-label={`${text('Time remaining', '남은 시간')} ${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) / 3600)).padStart(2, '0')}:${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 3600 / 60)).padStart(2, '0')}:${String((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 60).padStart(2, '0')}`}>
+              <RentalDigitalDisplay seconds={rentalSecondsRemaining ?? rentalLimitMinutes * 60} />
+            </div>
+            <span className="tour-rental-timer-status"><i aria-hidden="true" />{rentalDeadline === null ? text('READY', '대기') : text('RUNNING', '작동 중')}</span>
+          </div>
+          <button type="button" className="tour-rental-start-button" aria-label={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} title={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} onClick={() => { if (rentalDeadline === null) void startRentalTimer(); else { setRentalDeadline(null); setRentalReminderStatus('idle') } }}>
+            <span className="tour-rental-button-label">{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')}</span>
+            <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
+          </button>
+          {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
+        </section>{roadSign}</div>, rentalWidgetTarget)}
+        {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
+        <div className="tour-map-destination-tools">
+          <button type="button" className="tour-map-menu-button" aria-expanded={mapMenuOpen} aria-controls="tour-map-control-rail" aria-label={text('Menu', '메뉴')} onClick={() => {
+            const open = !mapMenuOpen
+            setMapMenuOpen(open)
+            if (!open) setSidebarOpen(false)
+            setActiveMapTool(null)
+          }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
+          <button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
+          <div className="tour-height-legend" aria-label={text('Route elevation: white low, red high', '길 높낮이: 낮으면 흰색, 높으면 빨간색')}>
+            <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low → high', '낮음 → 높음')}</small>
+          </div>
+          {customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}
+          {destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}
+        </div>
+        {(bikeUseMode !== 'ttareungi' || !rentalWidgetTarget) && roadSign}
+        {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
+          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+        </Suspense>}
+        {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
+        {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
+        {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
+          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={showCourse ? displayStopIndexes : []} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+        </Suspense>}
+        <div className="tour-mobile-map-top" role="search">
+          <label className="tour-mobile-map-search"><span aria-hidden="true">&#x1F50D;</span><input value={routeSearch} onChange={event => setRouteSearch(event.currentTarget.value)} placeholder={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} aria-label={text("Search routes and places", "\uCF54\uC2A4\uC640 \uC7A5\uC18C \uAC80\uC0C9")} /></label>
+          <nav className="tour-mobile-map-chips" aria-label={text("Map shortcuts", "\uC9C0\uB3C4 \uBC14\uB85C\uAC00\uAE30")}>
+            <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer("course")}><span aria-hidden="true">&#x1F6B2;</span>{text("Bike routes", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</button>
+            <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer("restaurants"); setFoodGuideOpen(true) }}><span aria-hidden="true">&#x1F35C;</span>{text("Food", "\uB9DB\uC9D1")}</button>
+            <button type="button" aria-pressed={activeMapTool === "facilities"} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Toilets", "\uD654\uC7A5\uC2E4")}</button>
+            <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
+            <button type="button" aria-pressed={destinationPicking} onClick={() => setDestinationPicking(active => !active)}><span aria-hidden="true">&#x1F4CD;</span>{destinationPicking ? text("Tap map", "\uC9C0\uB3C4 \uC120\uD0DD") : text("Destination", "\uB3C4\uCC29\uC9C0")}</button>
+          </nav>
+        </div>
+        <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
+          <div className="tour-mobile-sheet-handle" aria-hidden="true"><i /></div>
+          <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
+        <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
+        {navigationCue}
+          <button type="button" className="tour-mobile-destination" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>
+            {destinationPicking ? text("Tap your destination on the map", "지도에서 도착지를 눌러 주세요") : customDestination ? text("Change destination on map", "지도에서 도착지 바꾸기") : text("Choose any destination on map", "지도에서 원하는 도착지 선택")}
+          </button>
+          {mobileSheetExpanded && <label className="tour-mobile-bike-mode">{text('Bike mode', '자전거 이용 모드')}
+            <select value={bikeUseMode} onChange={event => changeBikeUseMode(event.currentTarget.value as BikeUseMode)}>
+              <option value="ttareungi">{text('Ttareungi', '따릉이')}</option><option value="personal">{text('My bicycle', '내 자전거')}</option>
+            </select>
+          </label>}
+          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
+        </section>
+        <button type="button" className="tour-mobile-sheet-expand" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded}
+          aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
+          onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
+        <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
+          <section className="tour-map-rail-group">
+            <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>
+            <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>
+              <button type="button" aria-current={activeMapTool === "food" ? "true" : undefined} onClick={() => { toggleMapLayer("restaurants"); setActiveMapTool("food") }}><span aria-hidden="true">&#x2668;</span>{text("Food", "\uB9DB\uC9D1")}</button>
+              <button type="button" aria-current={activeMapTool === "facilities" ? "true" : undefined} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x2316;</span>{text("Facilities", "\uC2DC\uC124")}</button>
+              <button type="button" aria-current={activeMapTool === "cctv" ? "true" : undefined} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool("cctv") }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
+              <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
+            </nav>
+          </section>
+          <section className="tour-map-rail-group tour-map-rail-group--map">
+            <h2>{text("Map", "\uC9C0\uB3C4")}</h2>
+            <div className="tour-map-mode-switch" role="group" aria-label={text("2D or 3D map", "2D \uB610\uB294 3D \uC9C0\uB3C4")}>
+              <button type="button" aria-pressed={view === "satellite" || view === "map" || view === "kakao"} onClick={() => { setActiveMapTool(null); chooseMapView("satellite") }}>2D</button>
+              <button type="button" aria-pressed={view === "city" || view === "google"} onClick={() => { setActiveMapTool(null); chooseMapView("city") }}>3D</button>
+            </div>
+            <label className="tour-map-mode-select"><span>{text("Map type", "\uC9C0\uB3C4 \uC885\uB958")}</span>
+              <select value={view} aria-label={text("Choose a map view", "\uC9C0\uB3C4 \uC885\uB958 \uC120\uD0DD")} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
+                {hasKakaoMapsKey && locale === 'ko' && <option value="kakao">{text("Kakao map - road", "\uCE74\uCE74\uC624 \uC9C0\uB3C4 ? \uB3C4\uB85C")}</option>}
+                <option value="city">{text("3D city", "3D \uB3C4\uC2DC")}</option>
+                <option value="satellite">{text("Satellite", "\uC704\uC131")}</option>
+                <option value="map">{text("Flat map", "\uD3C9\uBA74 \uC9C0\uB3C4")}</option>
+                {hasGoogleMapsKey && locale === 'ko' && <option value="google">Google 3D</option>}
+              </select>
+            </label>
+          </section>
+          <section className="tour-map-rail-group tour-map-rail-group--other">
+            <h2>{text("Other", "\uAE30\uD0C0")}</h2>
+            <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === "settings"}
+              onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
+              <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
+            </button>
+          </section>
+          <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={sidebarOpen} aria-controls="tour-route-sidebar" onClick={() => setSidebarOpen(open => !open)}>
+            <span aria-hidden="true">&#x1F6B4;</span>{text("Ride plan", "\uB77C\uC774\uB529 \uACC4\uD68D")}
+          </button>
+          <div className="tour-menu-plan-slot" ref={setMenuPlanTarget} />
+        </aside>
+        <button type="button" className="tour-map-locate" onClick={() => { setActiveMapTool(null); locateNearestRoute(false) }} disabled={locating} aria-label={text("Show my current location", "\uB0B4 \uD604\uC7AC \uC704\uCE58 \uD45C\uC2DC")}>
+          <span aria-hidden="true">&#x25CE;</span>{locating ? text("Locating...", "\uC704\uCE58 \uD655\uC778 \uC911...") : text("My location", "\uB0B4 \uC704\uCE58")}
+        </button>
+        {activeMapTool && <aside className="tour-map-side-panel" aria-label={text('Map tools panel', '지도 도구 패널')}>
+          <header className="tour-map-side-panel-header">
+            <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
+              : activeMapTool === 'course' ? text('Route display', '코스 표시')
+                : activeMapTool === 'food' ? text('Food along the way', '경로 주변 맛집')
+                    : activeMapTool === 'cctv' ? text('Public CCTV', '공공 CCTV')
+                      : activeMapTool === 'settings' ? text('Map settings', '지도 설정')
+                        : activeMapTool === 'location' ? text('Nearby bikes', '내 주변 따릉이')
+                          : activeMapTool === '3d' ? text('3D city view', '3D 도시 보기')
+                            : activeMapTool === 'facilities' ? text('Rider facilities', '라이더 편의시설') : text('Map view', '지도 보기')}</strong></div>
+            <button type="button" onClick={() => setActiveMapTool(null)} aria-label={text('Close map panel', '지도 패널 닫기')}>×</button>
+          </header>
+          <div className="tour-map-side-panel-body">
+            {activeMapTool === 'routes' && <>
+              <div className="tour-map-panel-feature"><small>{text('SELECTED ROUTE', '선택한 코스')}</small><strong>{text(route.title, route.titleKo)}</strong>
+                <span>{distanceLabel(routeDistance)} · {text(`about ${bikeMinutes(routeDistance)} min by bike`, `따릉이 약 ${bikeMinutes(routeDistance)}분`)}</span></div>
+              {bikeUseMode === 'ttareungi' && <section className="tour-course-bike-stations"><h3>{text('Live bikes along this course', '코스 주변 실시간 대여소')}</h3>
+                <p>{courseBikeStationsState?.status === 'loading' ? text('Checking nearby stations…', '주변 대여소를 확인 중입니다…') : courseBikeStationsState?.status === 'unavailable' ? text('Live station counts are temporarily unavailable.', '실시간 대여소 정보를 가져올 수 없습니다.') : text(`${courseBikeStations.length} stations near this route`, `경로 주변 ${courseBikeStations.length}곳`)}</p>
+                {courseBikeStations.length > 0 && <ul>{courseBikeStations.map(station => <li key={station.id}><span><strong>{station.name}</strong><small>{distanceLabel(station.distanceMeters)} {text('from route', '경로 근처')}</small></span><b className={station.available === 0 ? 'is-empty' : ''}>{station.available ?? '—'}<small>{text('bikes', '대')}</small></b></li>)}</ul>}
+              </section>}
+              <section className="tour-destination-list"><h3>{text('Choose a destination on the map', '지도에서 도착지를 선택하세요')}</h3><p>{text('Tap anywhere in Seoul to get bicycle directions from your location.', '서울 지도에서 원하는 곳을 누르면 내 위치부터 자전거 길을 안내합니다.')}</p>
+                <button type="button" className="tour-destination-map-button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>{destinationPicking ? text('Tap a point on the map', '지도에서 원하는 곳을 눌러 주세요') : text('Pick a point on map', '지도에서 위치 찍기')}</button>
+              </section>
+              <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setActiveMapTool(null); setSidebarOpen(true) }}>{text('Browse all courses', '전체 코스 둘러보기')} ↗</button>
+              <section className="tour-turn-guide"><h3>{text('Turn-by-turn guide', '구간별 길 안내')}</h3>
+                {!hasDestination ? <p>{text('Choose any destination on the map to start directions from your location.', '지도에서 원하는 도착지를 선택하면 내 위치에서 길 안내를 시작합니다.')}</p>
+                  : !routeInstructions.length ? <p>{routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 경로 안내를 불러오는 중입니다…') : routeGuidanceStatus === 'unavailable' ? text('Could not load turn-by-turn directions. Check your connection and try again.', '상세 경로 안내를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.') : text('Detailed bicycle directions are unavailable for this route.', '이 코스는 상세 자전거 길 안내를 제공하지 않습니다.')}</p>
+                    : <ol>{routeInstructions.slice(0, 18).map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>}
+              </section>
+              <p>{text(route.summary, route.summaryKo)}</p>
+            </>}
+            {activeMapTool === 'course' && <>
+              <p>{text('Show the selected route and the path from your location.', '선택한 코스와 내 위치에서 출발하는 경로를 지도에 표시합니다.')}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}>{showCourse ? text('Hide route', '코스 숨기기') : text('Show route', '코스 표시')}</button>
+            </>}
+            {activeMapTool === 'food' && <>
+              <p>{!routedPath ? text('Choose a destination to find food along the route.', '도착지를 고르면 길 주변 맛집을 찾습니다.') : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? text('Finding food along your route…', '길 주변 맛집을 찾는 중…') : text(`${routeRestaurants.length} food places recommended along the route.`, `길 주변 맛집 ${routeRestaurants.length}곳을 추천합니다.`)}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}>{showRestaurants ? text('Hide food markers', '맛집 표시 끄기') : text('Show food markers', '맛집 표시 켜기')}</button>
+              <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setFoodGuideOpen(true); setMapLayers(current => ({ ...current, restaurants: true })); setActiveMapTool(null) }}>{text('Show nearby food places', '내 주변 맛집 보기')}</button>
+            </>}
+            {activeMapTool === 'cctv' && <>
+              <p>{text(`${cctvCameras.length.toLocaleString()} public CCTV locations are available.`, `공공 CCTV ${cctvCameras.length.toLocaleString()}곳 정보를 사용할 수 있습니다.`)}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>{showCctv ? text('Hide CCTV', 'CCTV 숨기기') : text('Show CCTV', 'CCTV 표시')}</button>
+            </>}
+            {activeMapTool === 'facilities' && <>
+              <p>{amenitiesState?.status === 'loading' ? text('Searching near the selected route…', '선택한 코스 주변 시설을 찾고 있습니다…')
+                : amenitiesState?.status === 'unavailable' ? text('Facility data is temporarily unavailable. Try again later.', '시설 정보를 불러오지 못했어요. 잠시 후 다시 확인해 주세요.')
+                  : routeAmenities.length ? text(`${routeAmenities.length} facilities are marked along this route.`, `이 코스 주변 편의시설 ${routeAmenities.length}곳을 지도에 표시했어요.`)
+                    : text('No facilities are currently listed near this route.', '현재 이 코스 주변에 등록된 편의시설이 없습니다.')}</p>
+              <button type="button" className="tour-map-panel-action" aria-pressed={showAmenities} onClick={() => toggleMapLayer('amenities')}>{showAmenities ? text('Hide facility markers', '편의시설 표시 끄기') : text('Show facility markers', '편의시설 표시 켜기')}</button>
+              <section className="tour-facility-list" aria-label={text('Facility legend and nearby places', '편의시설 범례와 주변 장소')}>
+                {(['toilet', 'convenience'] as const).map(kind => {
+                  const matches = routeAmenities.filter(place => place.kind === kind)
+                  const display = AMENITY_DISPLAY[kind]
+                  return <div className={`tour-facility-group tour-facility-group--${kind}`} key={kind}>
+                    <div className="tour-facility-heading"><span aria-hidden="true">{display.icon}</span><strong>{locale === 'ko' ? display.shortKo : display.shortEn}</strong><b>{matches.length}</b></div>
+                    {matches.length ? <ul>{matches.slice(0, 4).map(place => <li key={place.id}><span>{place.name || (locale === 'ko' ? display.shortKo : display.shortEn)}</span><small>{distanceLabel(place.distanceMeters)} {text('along route', '지점')}</small></li>)}</ul>
+                      : <p>{text('None found on this route', '이 코스 주변 등록 정보 없음')}</p>}
+                  </div>
+                })}
+              </section>
+            </>}
+            {activeMapTool === 'settings' && <>
+              <section className="tour-map-panel-section"><h3>{text('Bike mode', '자전거 이용 모드')}</h3>
+                <div className="tour-bike-mode-picker" role="group" aria-label={text('Choose a bike mode', '자전거 이용 모드 선택')}>
+                  <button type="button" aria-pressed={bikeUseMode === 'ttareungi'} onClick={() => changeBikeUseMode('ttareungi')}>{text('Ttareungi', '따릉이')}</button>
+                  <button type="button" aria-pressed={bikeUseMode === 'personal'} onClick={() => changeBikeUseMode('personal')}>{text('My bicycle', '내 자전거')}</button>
+                </div>
+                <p className="tour-map-panel-note">{text('Nearby rental stations and live bike counts are shown on the map. Rental reminders are available in Ttareungi mode.', '주변 따릉이 대여소와 실시간 잔여 대수를 지도에 표시합니다. 대여 알림은 따릉이 모드에서 사용할 수 있습니다.')}</p>
+              </section>
+              <section className="tour-map-panel-section"><h3>{text('Map style', '지도 종류')}</h3>
+                <div className="tour-map-view-options">
+                  {hasKakaoMapsKey && locale === 'ko' && <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseMapView('kakao')}>{text('Kakao street', '카카오 도로')}</button>}
+                  <button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>3D {text('City', '\uB3C4\uC2DC')}</button>
+                  <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('Satellite', '위성')}</button>
+                  <button type="button" aria-pressed={view === 'map'} onClick={() => chooseMapView('map')}>{text('Flat map', '평면')}</button>
+                  {hasGoogleMapsKey && locale === 'ko' && <button type="button" aria-pressed={view === 'google'} onClick={() => chooseMapView('google')}>Google 3D</button>}
+                </div>
+              </section>
+              <section className="tour-map-panel-section"><h3>{text('Seasonal scenery', '계절 풍경')}</h3>
+                <div className="tour-season-picker" role="group" aria-label={text('Seasonal map scenery', '계절별 지도 풍경')}>
+                  {seasonOptions.map(option => <button key={option.id} type="button" aria-pressed={displaySeason === option.id}
+                    className={`tour-season-tab tour-season-tab--${option.id}`} onClick={() => chooseSeason(option.id)}>{text(option.en, option.ko)}</button>)}
+                </div><p className="tour-map-panel-note">{text(activeSeason.sceneryEn, activeSeason.sceneryKo)}</p>
+              </section>
+              <section className="tour-map-panel-section"><h3>{text('3D sky', '3D 하늘')}</h3>
+                <div className="tour-sky-mode-picker" role="group" aria-label={text('Sky lighting', '하늘 조명')}>
+                  {([['auto', 'Auto', '자동'], ['day', 'Day', '낮'], ['night', 'Night', '밤']] as const).map(([id, en, ko]) =>
+                    <button key={id} type="button" aria-pressed={skyMode === id} onClick={() => { setSkyMode(id); if (view !== 'city') chooseMapView('city') }}>{text(en, ko)}</button>)}
+                </div><p className="tour-map-panel-note">{text('The night sky follows Seoul time in Auto mode; seasons use different dusk and night colors.', '자동은 서울 시간에 맞춰 밤하늘을 보여주며 계절마다 노을과 밤 색이 달라집니다.')}</p>
+              </section>
+              <section className="tour-map-panel-section"><h3>{text('Weather', '날씨 표현')}</h3>
+                <div className="tour-weather-setting"><div role="group" aria-label={text('Choose weather appearance', '날씨 표현 선택')}>
+                  {([['sunny', '☀️', 'Sun', '햇볕'], ['cloudy', '☁️', 'Cloudy', '흐림'], ['rainy', '🌧️', 'Rain', '비']] as const).map(([id, icon, en, ko]) =>
+                    <button key={id} type="button" aria-pressed={mapWeather === id} onClick={() => setMapWeather(id)}><span aria-hidden="true">{icon}</span>{text(en, ko)}</button>)}
+                </div></div>
+              </section>
+              <section className="tour-map-panel-section tour-map-panel-section--actions"><h3>{text('On the map', '지도에 표시')}</h3>
+                <label className="tour-map-panel-check"><input type="checkbox" checked={showAmenities} onChange={() => setMapLayers(current => ({ ...current, amenities: !current.amenities }))} /><span>{text('Rider facilities', '라이더 편의시설')}</span><small>{amenitiesState?.status === 'loading' ? '…' : routeAmenities.length}</small></label>
+                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => setMapLayers(current => ({ ...current, bikeStations: !current.bikeStations }))} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{nearbyStations.length}</small></label>
+                <button type="button" className="tour-map-panel-action" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>{text('Building shadows', '건물 그림자')} · {showShadows ? text('On', '켜짐') : text('Off', '꺼짐')}</button>
+              </section>
+            </>}
+            {activeMapTool === 'location' && <>
+              <p>{bikeUseMode === 'personal'
+                ? userLocation ? text('Your location is on the map. Rental information is hidden in My bicycle mode.', '내 자전거 모드입니다. 현재 위치를 표시하고 대여 정보는 숨겼어요.') : text('Allow location access to show your starting point. Rental information stays hidden.', '출발지를 표시하려면 위치 접근을 허용해 주세요. 대여 정보는 숨겨져 있어요.')
+                : userLocation ? text('Your current location is on the map.', '현재 위치를 지도에 표시했습니다.') : text('Allow location access to find the nearest rental station.', '가까운 대여소를 찾으려면 위치 접근을 허용해 주세요.')}</p>
+              <button type="button" className="tour-map-panel-action" onClick={() => locateNearestRoute(false)} disabled={locating}>{locating ? text('Finding your location…', '위치 확인 중…') : text('Find bikes near me', '내 주변 대여소 찾기')}</button>
+              {bikeUseMode === 'ttareungi' && pickupStation && <div className="tour-map-panel-feature"><small>{text('NEAREST RENTAL STATION', '가까운 대여소')}</small><strong>{pickupStation.name}</strong><span>{pickupStation.available === null ? text('Live count unavailable', '실시간 잔여 수 확인 불가') : text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)}</span></div>}
+              {bikeUseMode === 'ttareungi' && rentalDeadline !== null && <div className="tour-transfer-recommendation" role="status"><small>{text('SUGGESTED RE-RENTAL STOP', '추천 재대여 대여소')}</small>{transferRecommendation?.status === 'loading' ? <strong>{text('Checking live bike availability…', '실시간 잔여 자전거 확인 중…')}</strong> : transferRecommendation?.station ? <><strong>{transferRecommendation.station.name}</strong><span>{transferRecommendation.station.available === null ? text('Live bike count unavailable', '실시간 잔여 대수 확인 불가') : `${transferRecommendation.station.available}${text(' bikes available', '대 대여 가능')}`} · {distanceLabel(transferRecommendation.station.distanceMeters)} {text('from route', '경로 지점')}</span></> : <strong>{text('No available station was found near the route point.', '경로 근처에 대여 가능한 대여소를 찾지 못했습니다.')}</strong>}{rentalSecondsRemaining === 0 && <b>{text('Rental time is up. Return the bike or rent again.', '이용 시간이 끝났어요. 자전거를 반납하거나 다시 대여해 주세요.')}</b>}{rentalSecondsRemaining !== null && rentalSecondsRemaining > 0 && rentalSecondsRemaining <= 900 && <b>{text('Rental time is nearly up. Return and rent again here.', '대여 시간이 얼마 남지 않았어요. 이곳에 반납 후 다시 대여하세요.')}</b>}</div>}
+            </>}
+            {activeMapTool === '3d' && <>
+              <p>{text('Explore the route with raised buildings and the 3D camera controls.', '건물 입체 표현과 카메라 조작으로 코스를 살펴보세요.')}</p>
+              <div className="tour-map-view-options"><button type="button" aria-pressed={view === 'city'} onClick={() => chooseMapView('city')}>{text('City', '\uB3C4\uC2DC')}</button>
+                <button type="button" aria-pressed={view === 'satellite'} onClick={() => chooseMapView('satellite')}>{text('2D satellite', '2D 위성')}</button></div>
+            </>}
+          </div>
+        </aside>}
+        {bikeUseMode === 'ttareungi' && pickupStation && <div className="tour-bike-stock-overlay" role="status" aria-live="polite">
+          <span aria-hidden="true">🚲</span><div><strong>{pickupStation.available !== null
+            ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
+            : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
+        </div>}
+        {foodGuideOpen && <aside className='tour-food-guide-panel' id='tour-food-guide-panel' aria-label={text('Food along the bicycle route', '자전거 길 주변 맛집')}>
+          <div className='tour-food-guide-heading'>
+            <span><small>{text('NEAR THE ROUTE', '자전거 길 가까이')}</small><strong>{text('Food along the way', '길 주변 맛집')}</strong></span>
+            <button type='button' aria-label={text('Close food places', '맛집 닫기')} onClick={() => setFoodGuideOpen(false)}>&#x00D7;</button>
+          </div>
+          {!routedPath ? <p className='tour-food-guide-status'>{text('Choose a destination and wait for the bicycle route.', '도착지를 선택하고 자전거 경로를 불러와 주세요.')}</p>
+            : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? <p className='tour-food-guide-status'>{text('Finding food near the bicycle route…', '자전거 길 주변 맛집을 찾는 중…')}</p>
+              : activeNearbyFood.status === 'unavailable' ? <p className='tour-food-guide-status'>{text('Food data is unavailable. Please try again shortly.', '맛집 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')}</p>
+                : routeRestaurants.length === 0 ? <p className='tour-food-guide-status'>{text('No named food places were found near this route.', '이 길 가까이에서 이름이 등록된 맛집을 찾지 못했어요.')}</p>
+                  : <div className='tour-nearby-food-list'>{routeRestaurants.map(place => <div className='tour-nearby-food-item' key={place.id}><span><strong>{place.name}</strong><small>{distanceLabel(place.distanceFromRouteMeters ?? 0)} {text('from route', '길에서')} · {place.blogMentions === undefined ? text('Blog data unavailable', '블로그 자료 없음') : text(`${place.blogMentions.toLocaleString()} blog matches`, `블로그 검색 ${place.blogMentions.toLocaleString()}건`)}</small></span><a href={'https://search.naver.com/search.naver?query=' + encodeURIComponent(place.name + ' 맛집')} target='_blank' rel='noopener noreferrer'>{text('Details ↗', '정보 ↗')}</a></div>)}</div>}
+        </aside>}
+        {view !== 'kakao' && <div className={`tour-map-rotate-controls${view === 'city' || view === 'google' ? ' tour-map-rotate-controls--tilt' : ''}`} role="group" aria-label={text('Map camera controls', '지도 방향 조작')}>
+          <button type="button" className="tour-map-arrow--up" onClick={() => rotateMap('up')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera up', '카메라 시점을 올리기') : text('Move map north', '지도를 북쪽으로 이동')} title={view === 'city' ? text('Look up to the sky', '하늘 보기') : undefined}>↑</button>
+          <button type="button" className="tour-map-arrow--left" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>
+          <button type="button" className="tour-map-arrow--right" onClick={() => rotateMap('right')} aria-label={text('Rotate map to the right', '지도를 오른쪽으로 회전')}>→</button>
+          <button type="button" className="tour-map-arrow--down" onClick={() => rotateMap('down')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera down', '카메라 시점을 내리기') : text('Move map south', '지도를 남쪽으로 이동')}>↓</button>
+        </div>}
+        {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
+          <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>
+          <span className="tour-scenery-kicker">{text('A VIEW NEAR THIS STOP', '경유지 주변 풍경')}</span>
+          {photoLoading ? <div className="tour-scenery-placeholder">{text('Finding a local photo…', '주변 사진을 찾고 있어요…')}</div>
+            : sceneryPhoto ? <>
+              <img src={sceneryPhoto.thumbnail} alt={sceneryPhoto.title} loading="lazy" />
+              <div className="tour-scenery-caption"><a href={sceneryPhoto.page} target="_blank" rel="noopener noreferrer">{sceneryPhoto.title}</a>
+                <small>{sceneryPhoto.credit} · {sceneryPhoto.license}</small></div>
+            </> : <div className="tour-scenery-placeholder">{text('No nearby public photo is available for this stop.', '이 경유지 주변에서 사용할 수 있는 공개 사진을 찾지 못했습니다.')}</div>}
+        </aside>}
+      </div>
+      <details className="tour-map-details">
+        <summary>{text('Map and route information', '지도 및 코스 안내')}</summary>
+        <div>
+          <p className="tour-map-note">{view === 'kakao'
+            ? text('Kakao street map · route line, stops and public camera locations. Building shadows are not modeled in this view; switch to 3D aerial for estimated shadows.', '카카오 도로 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 이 보기에는 건물 그림자가 없으며, 그림자는 위성 3D 보기에서 확인할 수 있어요.')
+            : view === 'map'
+            ? text('Flat street map · route line, stops and public cameras. Use the arrows to pan north and south or rotate the map.', '평면 지도에 코스 선·경유지·공공 CCTV를 표시합니다. 화살표로 위아래 이동과 좌우 회전을 할 수 있어요.')
+            : view === 'satellite'
+              ? text('Top-down satellite imagery with no raised buildings. Use the arrows to pan or rotate the map.', '건물을 세우지 않은 위에서 본 위성 지도입니다. 화살표로 지도를 이동하거나 회전할 수 있어요.')
+            : view === 'google'
+              ? text('Explore this route in Google 3D. Building detail varies by area; Google Earth can open the selected stop or the downloaded KML can show the full route.', 'Google 3D로 코스를 살펴보세요. 지역별 건물 표현은 다를 수 있으며 Google Earth에서 선택한 경유지를 열거나 KML로 전체 코스를 볼 수 있습니다.')
+              : text('The 3D aerial view combines satellite imagery with OpenStreetMap building heights. Building detail varies by area. Google Earth opens in a new tab at the selected stop; import the KML to see all stops.', '위성 사진 위에 OpenStreetMap 건물 높이 데이터를 입체로 겹쳐 보여줍니다. 건물 표현은 지역별 지도 데이터에 따라 달라집니다. Google Earth는 선택한 경유지를 새 탭에서 열며, KML을 가져오면 전체 경유지를 볼 수 있습니다.')}</p>
+          <p className="tour-map-note">{routedPath
+            ? text('The line is a suggested bicycle route between stops. Check signs and path conditions before riding.', '표시된 선은 경유지 사이의 추천 자전거 경로입니다. 출발 전에 표지와 길 상태를 확인하세요.')
+            : text('The line connects stops while bicycle routing loads or is unavailable. It is not turn-by-turn directions.', '자전거 경로를 불러오는 동안 또는 불러올 수 없을 때는 경유지를 선으로 연결합니다. 이 선은 길안내가 아닙니다.')}</p>
+        </div>
+      </details>
+    </section>
+
+    {mapMenuOpen && menuPlanTarget ? createPortal(itineraryPanel, menuPlanTarget) : itineraryPanel}
   </div>
 }
