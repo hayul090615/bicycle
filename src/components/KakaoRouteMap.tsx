@@ -438,7 +438,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const name = document.createElement('strong')
       name.textContent = station.name
       const available = document.createElement('small')
-      available.textContent = `${station.available ?? '—'} ${locale === 'ko' ? '대 대여 가능' : 'bikes available'}`
+      available.textContent = station.available === null
+        ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable')
+        : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
       popup.append(name, available)
       marker.append(count, popup)
       marker.title = `${station.name} · ${available.textContent}`

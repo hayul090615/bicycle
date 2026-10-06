@@ -440,9 +440,19 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 300), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
-  const nearbyStations = useMemo(() => [...(activeNearbyBikes?.status === 'live'
-    ? activeNearbyBikes.stations
-    : snapshotNearby)].sort((first, second) => first.distanceMeters - second.distanceMeters), [activeNearbyBikes, snapshotNearby])
+  const nearbyStations = useMemo(() => {
+    const stationsById = new Map(snapshotNearby.map(station => [station.id, station]))
+    if (activeNearbyBikes?.status === 'live') {
+      for (const liveStation of activeNearbyBikes.stations) {
+        const normalizedName = liveStation.name.normalize('NFKC').replace(/\s+/g, '').toLocaleLowerCase()
+        const snapshotMatch = [...stationsById.values()].find(station => station.id === liveStation.id
+          || station.name.normalize('NFKC').replace(/\s+/g, '').toLocaleLowerCase() === normalizedName)
+        if (snapshotMatch) stationsById.delete(snapshotMatch.id)
+        stationsById.set(liveStation.id, { ...snapshotMatch, ...liveStation })
+      }
+    }
+    return [...stationsById.values()].sort((first, second) => first.distanceMeters - second.distanceMeters)
+  }, [activeNearbyBikes, snapshotNearby])
   const pickupStation = bikeUseMode === 'personal' ? null : nearbyStations.find(station => station.id === selectedBikeStationId && (station.available === null || station.available > 0))
     ?? nearbyStations.find(station => station.available === null || station.available > 0)
     ?? (activeNearbyBikes?.status === 'live' ? null : nearbyStations[0] ?? null)
@@ -500,7 +510,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const activePathKey = routedPath && selectedRouteOption ? `${routeGuidanceKey}:${activeRouteOptions.indexOf(selectedRouteOption)}` : null
   const routeInstructions = routeGeometry?.instructions ?? []
   const activeElevation = elevationState?.key === activePathKey ? elevationState : null
-  const routeAmenities = amenitiesState?.routeId === route.id ? amenitiesState.places : []
+  const routeAmenities = (amenitiesState?.routeId === route.id ? amenitiesState.places : [])
+    .filter(amenity => amenity.kind !== 'pump' && amenity.kind !== 'water')
   const courseBikeStations = courseBikeStationsState?.routeId === route.id ? courseBikeStationsState.stations : []
   const activeRoadConditions = roadConditions.key === activePathKey ? roadConditions : null
   const activeNearbyFood = nearbyFoodState?.routeKey === activePathKey ? nearbyFoodState : null
@@ -516,8 +527,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const showAmenities = mapLayers.amenities
   const showBikeStations = mapLayers.bikeStations || userLocation !== null
   const mapBikeStations = useMemo(() => {
-    const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).filter(station => station.available !== null).map(station => [station.id, station]))
-    for (const station of nearbyStations) if (station.available !== null) byId.set(station.id, station)
+    const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
+    for (const station of nearbyStations) byId.set(station.id, station)
     return [...byId.values()]
   }, [courseBikeStations, mapLayers.bikeStations, nearbyStations])
   const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
@@ -1060,7 +1071,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
     {showBikeStations && mapBikeStations.map(station => <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}
       icon={divIcon({ className: 'tour-live-bike-icon', html: `<span>${station.available ?? '–'}</span>`, iconSize: [34, 34], iconAnchor: [17, 30] })}>
-      <Tooltip>{station.name} · {station.available === null ? '—' : station.available} {text('bikes available', '대 대여 가능')}</Tooltip>
+      <Tooltip>{station.name} · {station.available === null ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text(`${station.available} bikes available`, `${station.available}대 대여 가능`)}</Tooltip>
     </Marker>)}
     {showAmenities && routeAmenities.map(amenity => <Marker key={amenity.id} position={[amenity.lat, amenity.lng]}
       icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
@@ -1280,7 +1291,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                     : text('No facilities are currently listed near this route.', '현재 이 코스 주변에 등록된 편의시설이 없습니다.')}</p>
               <button type="button" className="tour-map-panel-action" aria-pressed={showAmenities} onClick={() => toggleMapLayer('amenities')}>{showAmenities ? text('Hide facility markers', '편의시설 표시 끄기') : text('Show facility markers', '편의시설 표시 켜기')}</button>
               <section className="tour-facility-list" aria-label={text('Facility legend and nearby places', '편의시설 범례와 주변 장소')}>
-                {(['pump', 'water', 'toilet', 'convenience'] as const).map(kind => {
+                {(['toilet', 'convenience'] as const).map(kind => {
                   const matches = routeAmenities.filter(place => place.kind === kind)
                   const display = AMENITY_DISPLAY[kind]
                   return <div className={`tour-facility-group tour-facility-group--${kind}`} key={kind}>
@@ -1421,7 +1432,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               if (userLocation) setLocationFocusRequest(request => request + 1)
             }}>
               <span><strong>{station.name}</strong><small>#{station.id} · {distanceLabel(station.distanceMeters)}</small></span>
-              <b>{station.available === null ? '—' : station.available}<small>{text('bikes', '대')}</small></b>
+              <b>{station.available === null ? text('N/A', '확인 불가') : station.available}<small>{station.available === null ? '' : text('bikes', '대')}</small></b>
             </button>)}</div>}
         {userLocation && <p className="tour-nearby-status">{activeNearbyBikes?.status === 'loading' ? text('Checking live bike counts…', '남은 자전거 수 확인 중…')
           : activeNearbyBikes?.status === 'live' ? text(`Updated ${new Date(activeNearbyBikes.updatedAt ?? '').toLocaleTimeString(locale === 'ko' ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit' })} · availability may change`, `최근 조회 ${new Date(activeNearbyBikes.updatedAt ?? '').toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · 재고는 바뀔 수 있어요`)
