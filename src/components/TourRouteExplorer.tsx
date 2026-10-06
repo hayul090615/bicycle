@@ -276,6 +276,20 @@ function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedS
   return null
 }
 
+function MapCenterReporter({ onChange }: { onChange: (center: Coordinates) => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const report = () => {
+      const center = map.getCenter()
+      onChange({ lat: center.lat, lng: center.lng })
+    }
+    report()
+    map.on('moveend zoomend', report)
+    return () => { map.off('moveend zoomend', report) }
+  }, [map, onChange])
+  return null
+}
+
 function DestinationPickerMapEvents({ enabled, onPick }: { enabled: boolean; onPick: (point: Coordinates) => void }) {
   useMapEvents({ click: event => { if (enabled) onPick({ lat: event.latlng.lat, lng: event.latlng.lng }) } })
   return null
@@ -334,6 +348,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [view, setView] = useState<'city' | 'satellite' | 'map' | 'google' | 'kakao'>(() => hasKakaoMapsKey && locale === 'ko' ? 'kakao' : 'city')
   const [activeMapTool, setActiveMapTool] = useState<MapTool | null>(null)
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
+  const [mapCenter, setMapCenter] = useState<Coordinates>(SEOUL_REFERENCE)
   const [trackingLocation, setTrackingLocation] = useState(false)
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<'denied' | 'unavailable' | 'timeout' | null>(null)
@@ -351,6 +366,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [approachRoute, setApproachRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [walkingRoute, setWalkingRoute] = useState<{ key: string; points: LonLat[]; estimated: boolean; loading: boolean; distanceMeters?: number } | null>(null)
   const [nearbyBikes, setNearbyBikes] = useState<{ key: string; stations: NearbyBikeStation[]; updatedAt: string | null; status: 'loading' | 'live' | 'unavailable' } | null>(null)
+  const [viewportBikes, setViewportBikes] = useState<{ key: string; stations: NearbyBikeStation[]; updatedAt: string | null; status: 'loading' | 'live' | 'unavailable' } | null>(null)
   const [selectedBikeStationId, setSelectedBikeStationId] = useState<string | null>(() => {
     try { return localStorage.getItem('seoul-bike-selected-pickup-station') } catch { return null }
   })
@@ -439,10 +455,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const locationLat = userLocation?.lat ?? null
   const locationLng = userLocation?.lng ?? null
   const locationKey = locationLat === null || locationLng === null ? null : `${locationLat.toFixed(6)}:${locationLng.toFixed(6)}`
+  const mapCenterKey = `${mapCenter.lat.toFixed(5)}:${mapCenter.lng.toFixed(5)}`
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
+  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1000, 500), [mapCenter])
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 500), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
+  const activeViewportBikes = viewportBikes?.key === mapCenterKey ? viewportBikes : null
   const nearbyStations = useMemo(() => {
     const stationsById = new Map(snapshotNearby.map(station => [station.id, station]))
     if (activeNearbyBikes?.status === 'live') {
@@ -528,12 +547,19 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const showRoadInfo = mapLayers.roadInfo
   const showRiders = mapLayers.riders
   const showAmenities = mapLayers.amenities
-  const showBikeStations = mapLayers.bikeStations || userLocation !== null
+  const showBikeStations = mapLayers.bikeStations || userLocation !== null || mapNearbySnapshot.length > 0
   const mapBikeStations = useMemo(() => {
     const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
-    for (const station of nearbyStations) byId.set(station.id, station)
-    return [...byId.values()]
-  }, [courseBikeStations, mapLayers.bikeStations, nearbyStations])
+    const liveStations = activeViewportBikes?.stations ?? activeNearbyBikes?.stations ?? []
+    for (const station of mapNearbySnapshot) {
+      const liveStation = liveStations.find(candidate => candidate.id === station.id)
+      byId.set(station.id, liveStation ? { ...station, ...liveStation, distanceMeters: station.distanceMeters } : station)
+    }
+    for (const station of liveStations) {
+      if (distanceMeters(mapCenter, station) <= 500) byId.set(station.id, station)
+    }
+    return [...byId.values()].sort((first, second) => first.distanceMeters - second.distanceMeters)
+  }, [activeNearbyBikes, activeViewportBikes, courseBikeStations, mapCenter, mapLayers.bikeStations, mapNearbySnapshot])
   const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
   const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
     : activeRoadConditions?.signalsStatus === 'ready' ? String(routeSignals.length) : '—'
@@ -923,6 +949,25 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return () => { active = false; window.clearInterval(interval); controller.abort() }
   }, [locationKey, locationLat, locationLng])
   useEffect(() => {
+    if (userLocation && distanceMeters(mapCenter, userLocation) <= 30) {
+      setViewportBikes(null)
+      return
+    }
+    const controller = new AbortController()
+    let active = true
+    setViewportBikes({ key: mapCenterKey, stations: mapNearbySnapshot, updatedAt: null, status: 'loading' })
+    const refresh = () => {
+      void fetchNearbyBikeStations(mapCenter, controller.signal, 500).then(result => {
+        if (active) setViewportBikes({ key: mapCenterKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
+      }).catch(() => {
+        if (active) setViewportBikes(current => current?.key === mapCenterKey ? { ...current, status: 'unavailable' } : current)
+      })
+    }
+    refresh()
+    const interval = window.setInterval(refresh, 30_000)
+    return () => { active = false; window.clearInterval(interval); controller.abort() }
+  }, [locationKey, mapCenter, mapCenterKey, mapNearbySnapshot, userLocation])
+  useEffect(() => {
     if (rentalDeadline === null) return
     const interval = window.setInterval(() => setRentalNow(Date.now()), 1000)
     return () => window.clearInterval(interval)
@@ -1065,6 +1110,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
+    <MapCenterReporter onChange={setMapCenter} />
     <DestinationPickerMapEvents enabled={destinationPicking} onPick={chooseCustomDestination} />
     {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 5, opacity: 1 }} />)}
