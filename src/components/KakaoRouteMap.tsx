@@ -105,6 +105,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   useEffect(() => {
     let disposed = false
     let timeout = 0
+    let mapCreated = false
     setStatus('loading')
     void loadKakaoMaps().then(api => {
       if (disposed || !host.current) return
@@ -116,6 +117,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         draggable: true,
         scrollwheel: true,
       })
+      apiRef.current = api
+      mapRef.current = map
+      mapCreated = true
       const maskPaths = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => new api.LatLng(lat, lng)))
       cityMaskOverlayRef.current = new api.Polygon({
         map,
@@ -151,13 +155,14 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         }
       })
       map.addControl(new api.MapTypeControl(), api.ControlPosition.TOPRIGHT)
-      apiRef.current = api
-      mapRef.current = map
       window.requestAnimationFrame(() => map.relayout())
       setStatus('ready')
-    }).catch(() => {
+    }).catch(error => {
       window.clearTimeout(timeout)
-      if (!disposed) setStatus('error')
+      if (!disposed) {
+        console.error('[KakaoRouteMap] Map initialization failed', error)
+        setStatus(mapCreated ? 'ready' : 'error')
+      }
     })
     timeout = window.setTimeout(() => {
       if (!mapRef.current && !disposed) setStatus('error')
@@ -178,6 +183,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cityMaskOverlayRef.current?.setMap(null)
       cityBoundaryOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
+      mapRef.current = null
+      apiRef.current = null
       routeOverlaysRef.current = []
       accessOverlaysRef.current = []
       conditionOverlaysRef.current = []
