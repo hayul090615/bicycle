@@ -12,6 +12,16 @@ import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 type MapPoint = { lat: number; lng: number }
 
+function isValidLonLat(point: LonLat): boolean {
+  const [lng, lat] = point
+  return Number.isFinite(lat) && Number.isFinite(lng)
+    && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+}
+
+function isValidPath(path: LonLat[] | null): path is LonLat[] {
+  return Boolean(path && path.length >= 2 && path.every(isValidLonLat))
+}
+
 function readMapCenter(map: KakaoMap): MapPoint | null {
   try {
     const bounds = map.getBounds()
@@ -113,7 +123,10 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
   }), [route])
-  const linePoints = useMemo(() => routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [routePath, points])
+  const safeRoutePath = useMemo(() => isValidPath(routePath) ? routePath : null, [routePath])
+  const safeAccessPath = useMemo(() => isValidPath(accessPath) ? accessPath : null, [accessPath])
+  const safeWalkPath = useMemo(() => isValidPath(walkPath) ? walkPath : null, [walkPath])
+  const linePoints = useMemo(() => safeRoutePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [safeRoutePath, points])
 
   useEffect(() => {
     let disposed = false
@@ -238,7 +251,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const path = linePoints.map(point => new api.LatLng(point.lat, point.lng))
     const casing = new api.Polyline({ map: showCourse ? map : null, path, strokeWeight: 9, strokeColor: '#294c3a', strokeOpacity: .98, strokeStyle: 'solid' })
     routeOverlaysRef.current.push(casing)
-    for (const segment of coloredRouteSegments(routePath ?? [], elevationProfile)) {
+    for (const segment of coloredRouteSegments(safeRoutePath ?? [], elevationProfile)) {
       routeOverlaysRef.current.push(new api.Polyline({ map: showCourse ? map : null, path: segment.path.map(([lng, lat]) => new api.LatLng(lat, lng)), strokeWeight: 5, strokeColor: segment.color, strokeOpacity: 1, strokeStyle: 'solid' }))
     }
     activeStopIndexes.forEach(index => {
@@ -269,20 +282,22 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       }))
     })
 
-    if (!hasDestination && locationFocusRequest === 0 && selectedStop === null) {
-      map.setLevel(8, { animate: false })
-      map.setCenter(new api.LatLng(37.5665, 126.978))
+    if (!hasDestination && selectedStop === null) {
+      if (locationFocusRequest === 0) {
+        map.setLevel(8, { animate: false })
+        map.setCenter(new api.LatLng(37.5665, 126.978))
+      }
       return
     }
-    if (accessPath && accessPath.length >= 2) {
-      const framed = selectedStop === null ? [...linePoints, ...accessPath.map(([lng, lat]) => ({ lng, lat })), ...(walkPath ?? []).map(([lng, lat]) => ({ lng, lat }))] : accessPath.map(([lng, lat]) => ({ lng, lat }))
+    if (safeAccessPath) {
+      const framed = selectedStop === null ? [...linePoints, ...safeAccessPath.map(([lng, lat]) => ({ lng, lat })), ...(safeWalkPath ?? []).map(([lng, lat]) => ({ lng, lat }))] : safeAccessPath.map(([lng, lat]) => ({ lng, lat }))
       const south = Math.min(...framed.map(point => point.lat)), north = Math.max(...framed.map(point => point.lat))
       const west = Math.min(...framed.map(point => point.lng)), east = Math.max(...framed.map(point => point.lng))
       const spanKm = Math.max((north - south) * 111, (east - west) * 88)
       map.setLevel(spanKm > 25 ? 9 : spanKm > 16 ? 8 : spanKm > 10 ? 7 : spanKm > 5 ? 6 : 5, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     } else if (selectedStop !== null && points[selectedStop]) {
-      map.setLevel(4, { animate: true })
+      map.setLevel(4, { animate: false })
       map.setCenter(new api.LatLng(points[selectedStop].lat, points[selectedStop].lng))
     } else {
       const south = Math.min(...linePoints.map(point => point.lat))
@@ -294,7 +309,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [accessPath, activeStopIndexes, elevationProfile, hasDestination, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, routePath, selectedStop, showCourse, status, viaStopIndex, walkPath])
+  }, [activeStopIndexes, elevationProfile, hasDestination, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, safeAccessPath, safeRoutePath, safeWalkPath, selectedStop, showCourse, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -348,8 +363,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const api = apiRef.current
     if (!map || !api || status !== 'ready' || hasDestination || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
-    map.setLevel(4, { animate: true })
+    map.setLevel(4, { animate: false })
     map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
+    window.requestAnimationFrame(() => map.relayout())
   }, [hasDestination, locationFocusRequest, status, userLocation])
 
   useEffect(() => {
@@ -357,23 +373,23 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     if (!map || !api || status !== 'ready') return
     accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
     accessOverlaysRef.current = []
-    if (!showCourse || routePath || !accessPath || accessPath.length < 2) return
-    const path = accessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
+    if (!showCourse || safeRoutePath || !safeAccessPath) return
+    const path = safeAccessPath.map(([lng, lat]) => new api.LatLng(lat, lng))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 9, strokeColor: '#ffffff', strokeOpacity: .98, strokeStyle: 'solid' }))
     accessOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 5, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: accessEstimated ? 'shortdash' : 'solid' }))
-  }, [accessEstimated, accessPath, routePath, showCourse, status])
+  }, [accessEstimated, safeAccessPath, safeRoutePath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
     walkOverlaysRef.current.forEach(overlay => overlay.setMap(null))
     walkOverlaysRef.current = []
-    if (!map || !api || status !== 'ready' || !showCourse || !walkPath || walkPath.length < 2) return
-    const path = walkPath.map(([lng, lat]) => new api.LatLng(lat, lng))
+    if (!map || !api || status !== 'ready' || !showCourse || !safeWalkPath) return
+    const path = safeWalkPath.map(([lng, lat]) => new api.LatLng(lat, lng))
     walkOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: 1, strokeStyle: 'solid' }))
     walkOverlaysRef.current.push(new api.Polyline({ map, path, strokeWeight: 4, strokeColor: '#e33d3d', strokeOpacity: 1, strokeStyle: 'shortdash' }))
     return () => { walkOverlaysRef.current.forEach(overlay => overlay.setMap(null)); walkOverlaysRef.current = [] }
-  }, [showCourse, status, walkPath])
+  }, [safeWalkPath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -382,7 +398,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
     sceneryOverlaysRef.current = []
     if (!showCourse) return
-    const path = routePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
+    const path = safeRoutePath?.map(([lng, lat]) => ({ lat, lng })) ?? points
     const riderOverlays: Array<{ overlay: KakaoOverlay; phase: number; person: HTMLElement }> = []
     let riderFrame = 0
     if (showRiders) {
@@ -423,7 +439,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current = []
     }
-  }, [locale, points, routePath, showCourse, showRiders, status])
+  }, [locale, points, safeRoutePath, showCourse, showRiders, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -580,7 +596,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
           button.setAttribute('aria-label', `${group.length} public CCTV locations`)
           button.title = locale === 'ko' ? `CCTV ${group.length}곳 · 눌러서 확대` : `${group.length} CCTV locations · click to zoom`
           button.addEventListener('click', () => {
-            map.setLevel(Math.max(1, level - 2), { animate: true })
+            map.setLevel(Math.max(1, level - 2), { animate: false })
             map.setCenter(new api.LatLng(lat, lng))
           })
           cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(lat, lng), content: button, xAnchor: .5, yAnchor: .5, zIndex: 4 }))
