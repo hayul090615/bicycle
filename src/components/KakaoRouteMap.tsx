@@ -139,7 +139,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         strokeStyle: 'solid',
       })
       let correctingCenter = false
-      api.addListener(map, 'center_changed', () => {
+      api.event.addListener(map, 'center_changed', () => {
         if (correctingCenter) return
         const bounds = map.getBounds()
         const southwest = bounds.getSouthWest()
@@ -215,8 +215,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       })
     }
     reportCenter()
-    api.addListener(map, 'idle', reportCenter)
-    return () => api.removeListener(map, 'idle', reportCenter)
+    api.event.addListener(map, 'idle', reportCenter)
+    return () => api.event.removeListener(map, 'idle', reportCenter)
   }, [onMapCenterChange, status])
 
   useEffect(() => {
@@ -298,10 +298,10 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const position = event?.latLng
       if (position) onPickDestination({ lat: position.getLat(), lng: position.getLng() })
     }
-    api.addListener(map, 'click', onMapClick)
+    api.event.addListener(map, 'click', onMapClick)
     host.current?.classList.add('is-picking-destination')
     return () => {
-      api.removeListener(map, 'click', onMapClick)
+      api.event.removeListener(map, 'click', onMapClick)
       host.current?.classList.remove('is-picking-destination')
     }
   }, [destinationPicking, onPickDestination, status])
@@ -620,9 +620,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     activePopupRef.current = null
     activePopupIdRef.current = null
     renderCameras()
-    api.addListener(map, 'idle', renderCameras)
+    api.event.addListener(map, 'idle', renderCameras)
     return () => {
-      api.removeListener(map, 'idle', renderCameras)
+      api.event.removeListener(map, 'idle', renderCameras)
       clearOverlays()
     }
   }, [cctvCameras, locale, showCctv, status])
