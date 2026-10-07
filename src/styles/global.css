@@ -3870,3 +3870,50 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-header-actions .tour-language-button { width: 38px; min-width: 38px; height: 28px; padding: 0 .2rem; font-size: .47rem; }
   .tour-screen .tour-header-actions .tour-back { width: 64px; min-width: 64px; height: 28px; padding: .22rem .28rem; font-size: .49rem; line-height: 1; }
 }
+
+/* Keep map mode controls on the left, clear of the right-side ride guidance. */
+.tour-screen .tour-map-view-dock {
+  position: absolute;
+  z-index: 1431;
+  top: 4.1rem;
+  left: .65rem;
+  width: 154px;
+  display: grid;
+  gap: .28rem;
+  padding: .32rem;
+  border: 1px solid #d5e0d7;
+  border-radius: 10px;
+  background: #fffefaed;
+  box-shadow: 0 3px 12px #17251b32;
+  backdrop-filter: blur(8px);
+}
+.tour-screen .tour-map-view-dock > div,
+.tour-screen .tour-map-type-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem; }
+.tour-screen .tour-map-view-dock button,
+.tour-screen .tour-map-type-switch button {
+  min-width: 0;
+  min-height: 34px;
+  padding: .3rem .2rem;
+  border: 1px solid #d7e0d7;
+  border-radius: 7px;
+  color: #315342;
+  background: #f8faf6;
+  font: 800 .65rem 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+}
+.tour-screen .tour-map-view-dock button[aria-pressed="true"],
+.tour-screen .tour-map-type-switch button[aria-pressed="true"] {
+  border-color: #18533a;
+  color: #fff;
+  background: #18533a;
+}
+.tour-screen--dark .tour-map-view-dock { border-color: #43574a; background: #1c2b23ed; }
+.tour-screen--dark .tour-map-view-dock button,
+.tour-screen--dark .tour-map-type-switch button { border-color: #43574a; color: #e4ede4; background: #26372d; }
+.tour-screen--dark .tour-map-view-dock button[aria-pressed="true"],
+.tour-screen--dark .tour-map-type-switch button[aria-pressed="true"] { border-color: #49835e; color: #fff; background: #286344; }
+.tour-screen .tour-explorer-grid--menu-open .tour-map-view-dock { display: none; }
+@media (max-width: 900px) {
+  .tour-screen .tour-map-view-dock { top: 7rem; left: .55rem; width: 118px; padding: .25rem; gap: .22rem; }
+  .tour-screen .tour-map-view-dock button { min-height: 35px; padding: .25rem .1rem; font-size: .58rem; }
+}

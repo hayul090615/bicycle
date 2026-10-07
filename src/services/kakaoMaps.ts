@@ -22,6 +22,7 @@ export interface KakaoVisibleBounds {
 export interface KakaoMap {
   setCenter(position: KakaoLatLng): void
   setLevel(level: number, options?: { animate?: boolean }): void
+  setMapTypeId(mapTypeId: string): void
   getBounds(): KakaoVisibleBounds
   getLevel(): number
   addControl(control: unknown, position: string): void
@@ -90,7 +91,7 @@ export interface KakaoMapsApi {
   MapTypeControl: new () => unknown
   ZoomControl: new () => unknown
   ControlPosition: { TOPRIGHT: string; RIGHT: string }
-  MapTypeId: { ROADMAP: string }
+  MapTypeId: { ROADMAP: string; SKYVIEW: string }
   services: {
     Status: { OK: string; ZERO_RESULT: string }
     Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number; page?: number }) : void }

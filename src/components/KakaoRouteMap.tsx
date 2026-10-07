@@ -65,7 +65,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, onMapCenterChange, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, onMapCenterChange, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, kakaoMapType, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -93,6 +93,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
+  kakaoMapType: 'roadmap' | 'skyview'
   onSelectStop: (index: number) => void
   destinationPicking: boolean
   customDestination: { lat: number; lng: number } | null
@@ -112,6 +113,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
+  const userAccuracyOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
@@ -178,7 +180,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
           window.setTimeout(() => { correctingCenter = false }, 0)
         }
       })
-      map.addControl(new api.MapTypeControl(), api.ControlPosition.TOPRIGHT)
       window.requestAnimationFrame(() => map.relayout())
       setStatus('ready')
     }).catch(error => {
@@ -204,6 +205,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
+      userAccuracyOverlayRef.current?.setMap(null)
       cityMaskOverlayRef.current?.setMap(null)
       cityBoundaryOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
@@ -216,6 +218,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cctvOverlaysRef.current = []
       sceneryOverlaysRef.current = []
       userOverlayRef.current = null
+      userAccuracyOverlayRef.current = null
       cityMaskOverlayRef.current = null
       cityBoundaryOverlayRef.current = null
       activePopupRef.current = null
@@ -289,16 +292,21 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       }
       return
     }
-    if (safeAccessPath) {
+    if (customDestination) {
+      map.setLevel(3, { animate: false })
+      map.setCenter(new api.LatLng(customDestination.lat, customDestination.lng))
+      window.requestAnimationFrame(() => map.relayout())
+    } else if (selectedStop !== null && points[selectedStop]) {
+      map.setLevel(3, { animate: false })
+      map.setCenter(new api.LatLng(points[selectedStop].lat, points[selectedStop].lng))
+      window.requestAnimationFrame(() => map.relayout())
+    } else if (safeAccessPath) {
       const framed = selectedStop === null ? [...linePoints, ...safeAccessPath.map(([lng, lat]) => ({ lng, lat })), ...(safeWalkPath ?? []).map(([lng, lat]) => ({ lng, lat }))] : safeAccessPath.map(([lng, lat]) => ({ lng, lat }))
       const south = Math.min(...framed.map(point => point.lat)), north = Math.max(...framed.map(point => point.lat))
       const west = Math.min(...framed.map(point => point.lng)), east = Math.max(...framed.map(point => point.lng))
       const spanKm = Math.max((north - south) * 111, (east - west) * 88)
       map.setLevel(spanKm > 25 ? 9 : spanKm > 16 ? 8 : spanKm > 10 ? 7 : spanKm > 5 ? 6 : 5, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
-    } else if (selectedStop !== null && points[selectedStop]) {
-      map.setLevel(4, { animate: false })
-      map.setCenter(new api.LatLng(points[selectedStop].lat, points[selectedStop].lng))
     } else {
       const south = Math.min(...linePoints.map(point => point.lat))
       const north = Math.max(...linePoints.map(point => point.lat))
@@ -309,7 +317,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       map.setLevel(level, { animate: false })
       map.setCenter(new api.LatLng((south + north) / 2, (west + east) / 2))
     }
-  }, [activeStopIndexes, elevationProfile, hasDestination, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, safeAccessPath, safeRoutePath, safeWalkPath, selectedStop, showCourse, status, viaStopIndex])
+  }, [activeStopIndexes, customDestination, elevationProfile, hasDestination, linePoints, locale, locationFocusRequest, onHoverStop, onSelectStop, originStopIndex, points, route, safeAccessPath, safeRoutePath, safeWalkPath, selectedStop, showCourse, status, viaStopIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -653,9 +661,30 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const map = mapRef.current
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
+    map.setMapTypeId(kakaoMapType === 'skyview' ? api.MapTypeId.SKYVIEW : api.MapTypeId.ROADMAP)
+  }, [kakaoMapType, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
     userOverlayRef.current?.setMap(null)
     userOverlayRef.current = null
+    userAccuracyOverlayRef.current?.setMap(null)
+    userAccuracyOverlayRef.current = null
     if (!userLocation) return
+    if (Number.isFinite(userLocation.accuracy) && userLocation.accuracy! > 0) {
+      userAccuracyOverlayRef.current = new api.Circle({
+        map,
+        center: new api.LatLng(userLocation.lat, userLocation.lng),
+        radius: Math.max(5, Math.min(3000, userLocation.accuracy!)),
+        strokeWeight: 2,
+        strokeColor: '#1683ed',
+        strokeOpacity: .68,
+        fillColor: '#1683ed',
+        fillOpacity: .12,
+      })
+    }
     const marker = document.createElement('div')
     marker.className = 'tour-journey-pin tour-journey-pin--start'
     const pinLabel = document.createElement('span')
