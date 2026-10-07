@@ -377,7 +377,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, destinationPickRequest, searchedDestination }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, destinationPickRequest, searchedDestination }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -392,6 +392,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onDestinationStopChange: (index: number | null) => void
   onViaStopChange: (index: number | null) => void
   rentalWidgetTarget: HTMLDivElement | null
+  rentalTimerOpen: boolean
   destinationPickRequest: number
   searchedDestination: { lat: number; lng: number; serial: number } | null
 }) {
@@ -1433,7 +1434,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
       <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}`} onMouseLeave={() => hoverStop(null)}>
-        {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack"><section className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
+        {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack">{rentalTimerOpen && <section id="tour-rental-timer-panel" className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
           <div className="tour-rental-map-copy"><h3>{text('Return timer', '반납 타이머')}</h3><p>{text('Set minutes and start the countdown.', '분을 설정하고 타이머를 시작하세요.')}</p></div>
           <label className="tour-rental-custom-time">{text('Minutes', '설정 시간 (분)')}<input type="number" min="1" max="720" step="1" value={rentalLimitMinutes} disabled={rentalDeadline !== null} onChange={event => setRentalLimitMinutes(Math.max(1, Math.min(720, Number(event.target.value) || 1)))} /></label>
           <div className={`tour-rental-clock-row${rentalDeadline !== null ? ' is-running' : ''}${rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`}>
@@ -1447,7 +1448,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
           </button>
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
-        </section>{roadSign}</div>, rentalWidgetTarget)}
+        </section>}{roadSign}</div>, rentalWidgetTarget)}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
         <div className="tour-map-destination-tools">
           <button type="button" className="tour-map-menu-button" aria-expanded={mapMenuOpen} aria-controls="tour-map-control-rail" aria-label={text('Menu', '메뉴')} onClick={() => {

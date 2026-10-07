@@ -3755,3 +3755,27 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 /* Keep camera arrows below the rental timer at every screen size. */
 .tour-screen .tour-map-rotate-controls,
 .tour-screen .tour-map-rotate-controls--tilt { top: 14rem; }
+
+.tour-screen .tour-timer-toggle {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  padding: .35rem .55rem;
+  border: 1px solid #cbd5cc;
+  border-radius: 8px;
+  color: #315b44;
+  background: #f3f6f1;
+  font: 800 .68rem/1 "Noto Sans KR", sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tour-screen .tour-timer-toggle[aria-expanded="true"] { border-color: #18533a; color: #fff; background: #18533a; }
+.tour-screen .tour-timer-toggle > span { font-size: .86rem; }
+.tour-screen--dark .tour-timer-toggle { border-color: #43574a; color: #e4ede4; background: #1c2b23; }
+.tour-screen--dark .tour-timer-toggle[aria-expanded="true"] { color: #fff; background: #286344; }
+@media (max-width: 420px) {
+  .tour-screen .tour-timer-toggle { min-width: 48px; min-height: 30px; gap: .12rem; padding: .22rem .28rem; font-size: .48rem; }
+  .tour-screen .tour-timer-toggle > span { font-size: .68rem; }
+}
