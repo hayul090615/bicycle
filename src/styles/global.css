@@ -3675,6 +3675,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-map-stage > .tour-map-side-panel { top: 3.55rem; }
 @media (max-width: 900px) { .tour-screen .tour-map-stage > .tour-map-side-panel { top: 22.2rem; } }
 @media (max-width: 600px) { .tour-screen .tour-map-stage > .tour-map-side-panel { top: 25.2rem; bottom: 11.8rem; max-height: min(54vh, 440px); } }
+@media (min-width: 601px) and (max-width: 900px) { .tour-screen .tour-map-stage > .tour-map-side-panel { bottom: .5rem; } }
 
 /* Green first-entry screen with an animated bicycle, then the main page appears. */
 .site-bike-splash {
