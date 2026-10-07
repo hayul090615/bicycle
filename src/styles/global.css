@@ -3205,8 +3205,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-topbar { grid-template-columns: minmax(0, 1fr) auto; column-gap: .15rem; padding-right: .45rem; padding-left: .45rem; }
   .tour-screen .tour-header-actions { min-width: 0; max-width: 100%; gap: .12rem; }
   .tour-screen .tour-header-actions > button { min-width: 0; padding: .25rem .28rem; font-size: .46rem; }
-  .tour-screen .tour-header-actions .tour-back { width: 29px; flex: 0 0 29px; overflow: hidden; padding: .25rem 0; font-size: 0; }
-  .tour-screen .tour-header-actions .tour-back::before { content: '\2328'; font-size: .86rem; }
+  .tour-screen .tour-header-actions .tour-back { width: auto; min-width: 58px; flex: 0 0 auto; overflow: visible; padding: .28rem .34rem; font-size: .52rem; line-height: 1.15; white-space: nowrap; }
+  .tour-screen .tour-header-actions .tour-back::before { content: none; }
   .tour-screen .tour-mobile-sheet-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; }
   .tour-screen .tour-mobile-sheet-actions button { min-width: 0; min-height: 44px; padding: .3rem .25rem; font-size: .61rem; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; text-align: center; }
   .tour-screen .tour-mobile-sheet-actions button > span { flex: 0 0 auto; }
@@ -3713,11 +3713,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @keyframes site-bike-splash-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 
 @media (max-width: 700px) {
+  /* Keep a real-height map canvas between the compact header and the screen edge. */
+  .tour-screen .tour-content { position: relative; min-height: 0; height: 0; padding: 0; overflow: hidden; }
+  .tour-screen .tour-map-first-panel { height: 100%; min-height: 0; overflow: hidden; }
+  .tour-screen .tour-explorer-grid { display: block !important; height: 100% !important; min-height: 0 !important; overflow: hidden; }
+  .tour-screen .tour-earth-preview { position: relative; display: flex; height: 100% !important; min-height: 0 !important; overflow: hidden; }
+  .tour-screen .tour-map-stage,
+  .tour-screen:has(.tour-rental-header-widget) .tour-map-stage { position: relative; display: block; width: 100%; height: 100% !important; min-height: 0 !important; flex: 1 1 auto; overflow: hidden; }
+  .tour-screen .tour-map-stage > .tour-maplibre-3d,
+  .tour-screen .tour-map-stage > .google-route-3d,
+  .tour-screen .tour-map-stage > .kakao-route-map { position: absolute !important; inset: 0; width: 100%; height: 100% !important; min-height: 0 !important; }
   .tour-screen .tour-content { padding-top: .35rem; }
-  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { min-height: 104px; }
+  .tour-screen .tour-topbar:has(.tour-rental-header-widget) { min-height: 104px; flex: 0 0 auto; }
   .tour-journey-start > span { font-size: .53rem; }
   .tour-journey-start > strong { height: 32px; padding: 0 .35rem; font-size: .58rem; }
-  .tour-rental-guidance-stack { top: calc(100% + 1.25rem); right: .5rem; width: min(270px, calc(100vw - 1rem)); max-height: calc(100dvh - 140px); gap: .55rem; }
+  .tour-rental-guidance-stack { top: calc(100% + .35rem); right: .5rem; width: min(250px, calc(100vw - 1rem)); max-height: min(38dvh, 310px); gap: .4rem; }
+  .tour-rental-guidance-stack .tour-road-sign-directions { display: none; }
   .tour-rental-header-widget { gap: .4rem; padding: .6rem; }
   .tour-rental-header-widget .tour-rental-duration button { min-height: 34px; padding: .3rem .35rem; font-size: .65rem; }
   .tour-rental-header-widget .tour-rental-clock-row { gap: .38rem; }
