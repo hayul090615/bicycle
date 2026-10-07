@@ -12,6 +12,19 @@ import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 type MapPoint = { lat: number; lng: number }
 
+function readMapCenter(map: KakaoMap): MapPoint | null {
+  try {
+    const bounds = map.getBounds()
+    const southwest = bounds.getSouthWest()
+    const northeast = bounds.getNorthEast()
+    const lat = (southwest.getLat() + northeast.getLat()) / 2
+    const lng = (southwest.getLng() + northeast.getLng()) / 2
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
+  } catch {
+    return null
+  }
+}
+
 function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
   const popup = document.createElement('div')
   popup.className = 'tour-cctv-popup tour-cctv-popup--kakao'
@@ -141,11 +154,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       let correctingCenter = false
       api.event.addListener(map, 'center_changed', () => {
         if (correctingCenter) return
-        const bounds = map.getBounds()
-        const southwest = bounds.getSouthWest()
-        const northeast = bounds.getNorthEast()
-        const centerLat = (southwest.getLat() + northeast.getLat()) / 2
-        const centerLng = (southwest.getLng() + northeast.getLng()) / 2
+        const center = readMapCenter(map)
+        if (!center) return
+        const { lat: centerLat, lng: centerLng } = center
         const lat = Math.max(37.40, Math.min(37.72, centerLat))
         const lng = Math.max(126.75, Math.min(127.19, centerLng))
         if (lat !== centerLat || lng !== centerLng) {
@@ -206,13 +217,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
     const reportCenter = () => {
-      const bounds = map.getBounds()
-      const southwest = bounds.getSouthWest()
-      const northeast = bounds.getNorthEast()
-      onMapCenterChange({
-        lat: (southwest.getLat() + northeast.getLat()) / 2,
-        lng: (southwest.getLng() + northeast.getLng()) / 2,
-      })
+      const center = readMapCenter(map)
+      if (center) onMapCenterChange(center)
     }
     reportCenter()
     api.event.addListener(map, 'idle', reportCenter)

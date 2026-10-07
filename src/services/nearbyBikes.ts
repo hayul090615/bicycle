@@ -17,6 +17,12 @@ export type NearbyBikeResult = {
 
 const radians = Math.PI / 180
 
+function hasValidCoordinates(location: MapCoordinate) {
+  return Number.isFinite(location.lat) && Number.isFinite(location.lng)
+    && location.lat >= -90 && location.lat <= 90
+    && location.lng >= -180 && location.lng <= 180
+}
+
 export function metersBetween(from: MapCoordinate, to: MapCoordinate) {
   const latitude = (to.lat - from.lat) * radians
   const longitude = (to.lng - from.lng) * radians
@@ -25,6 +31,7 @@ export function metersBetween(from: MapCoordinate, to: MapCoordinate) {
 }
 
 export function nearestSnapshotStations(location: MapCoordinate, count = 5, radiusMeters = 5_000): NearbyBikeStation[] {
+  if (!hasValidCoordinates(location)) return []
   return bundledBikeStations.map(station => ({
     id: station.id,
     name: station.name,
@@ -38,6 +45,7 @@ export function nearestSnapshotStations(location: MapCoordinate, count = 5, radi
 }
 
 export async function fetchNearbyBikeStations(location: MapCoordinate, signal: AbortSignal, radiusMeters = 5_000): Promise<NearbyBikeResult> {
+  if (!hasValidCoordinates(location)) throw new Error('Invalid bike station search coordinates')
   const origin = window.location.hostname.endsWith('github.io') ? 'https://seoul-ttareungi-typing.vercel.app' : ''
   const url = `${origin}/api/nearby-bikes?lat=${location.lat.toFixed(6)}&lng=${location.lng.toFixed(6)}&radius=${radiusMeters}`
   const response = await fetch(url, { signal, cache: 'no-store' })

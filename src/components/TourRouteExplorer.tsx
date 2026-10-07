@@ -479,8 +479,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapLayers(current => ({ ...current, restaurants: true }))
   }, [])
   const publishLocation = (position: GeolocationPosition) => {
+    const latitude = position.coords.latitude
+    const longitude = position.coords.longitude
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      setLocationError('unavailable')
+      return false
+    }
     const previous = previousLocationRef.current
-    const next = { lat: position.coords.latitude, lng: position.coords.longitude }
+    const next = { lat: latitude, lng: longitude }
     const moved = previous ? distanceMeters(previous, next) : 0
     const sensorHeading = position.coords.heading
     const heading = sensorHeading !== null && Number.isFinite(sensorHeading)
@@ -497,6 +503,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       }
     }
     setLocationError(null)
+    return true
   }
   const selectedStop = selection?.routeId === route.id ? selection.index : null
   const hoveredStop = hover?.routeId === route.id ? hover.index : null
@@ -515,6 +522,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const locationKey = locationLat === null || locationLng === null ? null : `${locationLat.toFixed(6)}:${locationLng.toFixed(6)}`
   const mapCenterKey = `${mapCenter.lat.toFixed(5)}:${mapCenter.lng.toFixed(5)}`
   const reportMapCenter = useCallback((center: Coordinates) => {
+    if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return
     const nextKey = `${center.lat.toFixed(5)}:${center.lng.toFixed(5)}`
     setMapCenter(current => `${current.lat.toFixed(5)}:${current.lng.toFixed(5)}` === nextKey ? current : center)
   }, [])
@@ -708,7 +716,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setLocating(true)
     setLocationError(null)
     navigator.geolocation.getCurrentPosition(position => {
-      publishLocation(position)
+      if (!publishLocation(position)) { setLocating(false); return }
       const location = { lat: position.coords.latitude, lng: position.coords.longitude }
       let closest: { route: TouristRoute; distance: number } | null = null
       for (const candidate of routes) {
