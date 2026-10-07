@@ -408,8 +408,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       marker.setAttribute('role', 'img')
       marker.setAttribute('aria-label', label)
       marker.title = label
-      if (condition.kind !== 'signal') marker.dataset.grade = `${condition.grade}%`
-      if (condition.kind !== 'signal') marker.textContent = condition.kind === 'uphill' ? '↗' : '↘'
+      if (condition.kind !== 'signal') marker.textContent = `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
       return new api.CustomOverlay({
         map,
         position: new api.LatLng(condition.lat, condition.lng),
