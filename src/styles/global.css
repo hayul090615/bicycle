@@ -3554,7 +3554,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-map-stage > .google-route-3d,
   .tour-screen .tour-map-stage > .kakao-route-map { position: absolute; inset: 0; width: 100%; height: 100% !important; min-height: 0; }
 }
-.tour-screen .tour-topbar:has(.tour-rental-header-widget) .tour-journey-map-pick {
+.tour-screen .tour-journey-map-pick {
   min-width: 0;
   min-height: 34px;
   flex: 1.25 1 0;
@@ -3778,4 +3778,95 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 @media (max-width: 420px) {
   .tour-screen .tour-timer-toggle { min-width: 48px; min-height: 30px; gap: .12rem; padding: .22rem .28rem; font-size: .48rem; }
   .tour-screen .tour-timer-toggle > span { font-size: .68rem; }
+}
+
+/* Keep the mobile map clear and fit the trip controls above it. */
+@media (max-width: 700px) {
+  .tour-screen .tour-topbar {
+    box-sizing: border-box;
+    height: auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 36px auto;
+    align-content: start;
+    align-items: center;
+    gap: .32rem .25rem;
+    flex: 0 0 auto;
+    padding: .35rem .55rem .45rem;
+  }
+  .tour-screen .tour-brand { grid-column: 1; grid-row: 1; min-width: 0; width: auto; gap: .4rem; font-size: .65rem; letter-spacing: 0; }
+  .tour-screen .tour-brand img { width: 32px; height: 32px; }
+  .tour-screen .tour-brand span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tour-screen .tour-brand small { display: none; }
+  .tour-screen .tour-header-actions { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: 34px 46px 54px 70px; gap: .12rem; width: max-content; max-width: 100%; justify-self: end; }
+  .tour-screen .tour-header-actions > button { width: 100%; min-width: 0; min-height: 28px; padding: .22rem .24rem; font-size: .48rem; }
+  .tour-screen .tour-header-actions .tour-theme-button { font-size: 0; }
+  .tour-screen .tour-header-actions .tour-theme-button::before { content: "☾"; font-size: .76rem; }
+  .tour-screen .tour-header-actions .tour-theme-button[aria-pressed="true"]::before { content: "☀"; }
+  .tour-screen .tour-header-actions .tour-timer-toggle { gap: .12rem; font-size: .46rem; }
+  .tour-screen .tour-header-actions .tour-timer-toggle > span { font-size: .65rem; }
+  .tour-screen .tour-header-actions .tour-typing-action { width: 70px; min-width: 70px; }
+  .tour-screen .tour-header-actions .tour-back { width: 100%; min-width: 0; padding: .22rem .2rem; font-size: .5rem; }
+  .tour-screen .tour-journey-planner {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: end;
+    gap: .25rem .35rem;
+    order: initial;
+    flex: none;
+  }
+  .tour-screen .tour-journey-start { grid-column: 1; grid-row: 1; }
+  .tour-screen .tour-journey-start > span { font-size: .52rem; }
+  .tour-screen .tour-journey-start > strong { height: 32px; padding: 0 .38rem; font-size: .61rem; }
+  .tour-screen .tour-journey-arrow { grid-column: 2; grid-row: 1; padding: .45rem 0 0; }
+  .tour-screen .tour-journey-map-pick { grid-column: 3; grid-row: 1; width: 100%; min-height: 32px; padding: .25rem .4rem; }
+  .tour-screen .tour-journey-map-pick > span { font-size: .52rem; }
+  .tour-screen .tour-journey-map-pick > strong { font-size: .59rem; }
+  .tour-screen .tour-place-search { grid-column: 1 / -1; grid-row: 2; width: 100%; min-width: 0; flex: none; gap: .12rem; }
+  .tour-screen .tour-place-search > label { font-size: .52rem; }
+  .tour-screen .tour-place-search > div:first-of-type { height: 32px; }
+  .tour-screen .tour-place-search input { font-size: .62rem; }
+  .tour-screen .tour-place-search button[type='submit'] { padding: 0 .5rem; font-size: .59rem; }
+
+  .tour-screen .tour-mobile-map-top { top: max(.5rem, env(safe-area-inset-top)); right: .55rem; left: .55rem; gap: .35rem; }
+  .tour-screen .tour-mobile-map-search { display: none; }
+  .tour-screen .tour-mobile-map-chips { gap: .32rem; }
+  .tour-screen .tour-mobile-map-chips button { min-height: 33px; padding: .34rem .58rem; font-size: .65rem; }
+  .tour-screen .tour-map-destination-tools {
+    top: 3.45rem;
+    right: .55rem;
+    left: .55rem;
+    display: grid;
+    grid-template-columns: 46px 108px minmax(0, 1fr);
+    gap: .32rem;
+    max-width: none;
+  }
+  .tour-screen .tour-map-destination-tools > .tour-height-legend { width: 108px; flex-basis: 108px; }
+  .tour-screen .tour-map-destination-tools > button:not(.tour-map-menu-button) { width: 100%; min-width: 0; padding: .35rem .25rem; font-size: .59rem; }
+
+  .tour-screen .tour-mobile-route-sheet { gap: .42rem; padding: .3rem .72rem calc(.55rem + env(safe-area-inset-bottom)); max-height: min(34dvh, 290px); }
+  .tour-screen .tour-mobile-route-sheet.is-expanded { max-height: min(76dvh, 640px); }
+  .tour-screen .tour-mobile-sheet-handle { padding-bottom: .08rem; }
+  .tour-screen .tour-mobile-sheet-metrics { padding: .38rem 0; }
+  .tour-screen .tour-mobile-sheet-actions { gap: .38rem; }
+  .tour-screen .tour-mobile-sheet-actions button { min-height: 38px; }
+  .tour-screen .tour-map-stage > .tour-map-locate { bottom: calc(min(34dvh, 290px) + .65rem); }
+  .tour-screen .tour-map-stage .maplibregl-ctrl-top-right { bottom: calc(min(34dvh, 290px) + .65rem); }
+}
+@media (max-width: 420px) {
+  .tour-screen .tour-header-actions { display: grid; grid-template-columns: 30px 38px 30px 64px; gap: .12rem; width: max-content; max-width: 100%; overflow: visible; }
+  .tour-screen .tour-header-actions .tour-typing-action { width: 64px; min-width: 64px; }
+  .tour-screen .tour-header-actions .tour-theme-button,
+  .tour-screen .tour-header-actions .tour-timer-toggle { width: 30px; min-width: 30px; height: 28px; justify-content: center; padding: 0; font-size: 0; }
+  .tour-screen .tour-header-actions .tour-theme-button::before { content: "☾"; font-size: .78rem; }
+  .tour-screen .tour-header-actions .tour-theme-button[aria-pressed="true"]::before { content: "☀"; }
+  .tour-screen .tour-header-actions .tour-timer-toggle > span { font-size: .76rem; }
+  .tour-screen .tour-header-actions .tour-language-button { width: 38px; min-width: 38px; height: 28px; padding: 0 .2rem; font-size: .47rem; }
+  .tour-screen .tour-header-actions .tour-back { width: 64px; min-width: 64px; height: 28px; padding: .22rem .28rem; font-size: .49rem; line-height: 1; }
 }
