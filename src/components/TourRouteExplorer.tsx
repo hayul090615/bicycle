@@ -1190,9 +1190,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <Tooltip direction="top" permanent>{text('Pick up a bike', '자전거 대여')} · {pickupStation.available === null ? '—' : `${pickupStation.available}${text(' bikes', '대')}`}</Tooltip>
     </CircleMarker>}
     {showRoadInfo && routeConditions.map(condition => <CircleMarker key={condition.id} center={[condition.lat, condition.lng]}
-      radius={condition.kind === 'signal' ? 7 : 9} pathOptions={{ color: '#fff', weight: 2,
+      radius={condition.kind === 'signal' ? 7 : 6} pathOptions={{ color: '#fff', weight: 2,
         fillColor: condition.kind === 'signal' ? '#e3aa45' : condition.kind === 'uphill' ? '#c85c43' : '#428cba', fillOpacity: 1 }}>
-      <Tooltip direction="top" permanent>{condition.kind === 'signal' ? text('Signal', '신호등') : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`}</Tooltip>
+      <Tooltip direction="top">{condition.kind === 'signal' ? text('Signal', '신호등') : `${condition.kind === 'uphill' ? text('Uphill', '오르막') : text('Downhill', '내리막')} ${condition.grade}%`}</Tooltip>
     </CircleMarker>)}
     {showRestaurants && routeRestaurants.map(place => <CircleMarker key={`place-${place.id}`} center={[place.lat, place.lng]} radius={8}
       pathOptions={{ color: '#fff', weight: 2, fillColor: place.kind === 'cafe' ? '#8d6246' : '#d8723b', fillOpacity: 1 }}>

@@ -606,7 +606,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       element.setAttribute('role', 'img')
       element.setAttribute('aria-label', label)
       element.title = label
-      element.textContent = condition.kind === 'signal' ? '' : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
+      if (condition.kind !== 'signal') element.dataset.grade = `${condition.grade}%`
+      element.textContent = condition.kind === 'signal' ? '' : condition.kind === 'uphill' ? '↗' : '↘'
       return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([condition.lng, condition.lat]).addTo(map)
     }) : []
     let frame = 0
