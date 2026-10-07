@@ -1488,8 +1488,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {(bikeUseMode !== 'ttareungi' || !rentalWidgetTarget) && roadSign}
         {hasKakaoMapsKey && locale === 'ko' && <nav className="tour-map-view-dock" aria-label={text('Map view and type', '지도 화면과 종류')}>
           <div role="group" aria-label={text('2D or 3D', '2D 또는 3D')}>
-            <button type="button" aria-pressed={view === 'kakao'} onClick={() => chooseKakaoMapType('roadmap')}>2D</button>
-            <button type="button" aria-pressed={view === 'city'} onClick={() => { setActiveMapTool(null); chooseMapView('city') }}>3D</button>
+            <button type="button" aria-pressed={view === 'satellite' || view === 'map'} onClick={() => { setActiveMapTool(null); chooseMapView('satellite') }}>2D</button>
+            <button type="button" aria-pressed={view === 'city' || view === 'google'} onClick={() => { setActiveMapTool(null); chooseMapView('city') }}>3D</button>
           </div>
           <div role="group" aria-label={text('Map type', '지도 종류')}>
             <button type="button" aria-pressed={view === 'kakao' && kakaoMapType === 'roadmap'} onClick={() => chooseKakaoMapType('roadmap')}>{text('Map', '지도')}</button>
@@ -1554,7 +1554,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <section className="tour-map-rail-group tour-map-rail-group--map">
             <h2>{text("Map", "\uC9C0\uB3C4")}</h2>
             <div className="tour-map-mode-switch" role="group" aria-label={text("2D or 3D map", "2D \uB610\uB294 3D \uC9C0\uB3C4")}>
-              <button type="button" aria-pressed={view === "satellite" || view === "map" || view === "kakao"} onClick={() => { setActiveMapTool(null); chooseMapView("satellite") }}>2D</button>
+              <button type="button" aria-pressed={view === "satellite" || view === "map"} onClick={() => { setActiveMapTool(null); chooseMapView("satellite") }}>2D</button>
               <button type="button" aria-pressed={view === "city" || view === "google"} onClick={() => { setActiveMapTool(null); chooseMapView("city") }}>3D</button>
             </div>
             <label className="tour-map-mode-select"><span>{text("Map type", "\uC9C0\uB3C4 \uC885\uB958")}</span>
