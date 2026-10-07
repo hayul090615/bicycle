@@ -1359,8 +1359,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-journey-pin::before { position: absolute; top: 10px; left: 5px; width: 36px; height: 36px; border: 2px solid #fff; border-radius: 50% 50% 50% 5px; background: var(--pin-color); transform: rotate(-45deg); content: ''; }
 .tour-journey-pin > span { position: relative; z-index: 1; width: 28px; height: 28px; margin-top: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--pin-color); background: #fff; font: 900 10px/1 'Noto Sans KR', sans-serif; white-space: nowrap; }
 .tour-journey-pin--destination > span { width: 36px; color: #fff; background: transparent; font-size: 11px; text-shadow: 0 1px 2px #a51717aa; }
-.tour-journey-pin--start { width: 20px; height: 20px; filter: drop-shadow(0 2px 4px #481d1d88); }
-.tour-journey-pin--start::before { top: 1px; left: 1px; width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%; background: #ed3636; transform: none; box-shadow: 0 0 0 2px #ed363655; }
+.tour-journey-pin--start { width: 20px; height: 20px; filter: drop-shadow(0 2px 4px #123f8c88); }
+.tour-journey-pin--start::before { top: 1px; left: 1px; width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%; background: #2878e5; transform: none; box-shadow: 0 0 0 2px #2878e566; }
 .tour-journey-pin--start > span { display: none; }
 .tour-leaflet-location-icon { border: 0 !important; background: transparent !important; }
 @media (max-width: 990px) {
