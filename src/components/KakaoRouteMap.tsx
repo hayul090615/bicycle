@@ -42,7 +42,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, onMapCenterChange, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -56,6 +56,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   showAmenities: boolean
   bikeStations: NearbyBikeStation[]
   showBikeStations: boolean
+  onMapCenterChange: (center: MapPoint) => void
   showRiders: boolean
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
@@ -192,6 +193,24 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       apiRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    const reportCenter = () => {
+      const bounds = map.getBounds()
+      const southwest = bounds.getSouthWest()
+      const northeast = bounds.getNorthEast()
+      onMapCenterChange({
+        lat: (southwest.getLat() + northeast.getLat()) / 2,
+        lng: (southwest.getLng() + northeast.getLng()) / 2,
+      })
+    }
+    reportCenter()
+    api.addListener(map, 'idle', reportCenter)
+    return () => api.removeListener(map, 'idle', reportCenter)
+  }, [onMapCenterChange, status])
 
   useEffect(() => {
     const map = mapRef.current
