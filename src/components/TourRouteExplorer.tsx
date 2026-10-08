@@ -10,6 +10,7 @@ import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
+import { routeArrivalBearing } from '../utils/routeArrival'
 import { fetchBikePath, fetchBikePaths, fetchWalkingPath, type BikeRouteInstruction, type BikeRouteResult, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
@@ -524,7 +525,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapCenter(current => `${current.lat.toFixed(5)}:${current.lng.toFixed(5)}` === nextKey ? current : center)
   }, [])
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
-  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1000, 500), [mapCenter])
+  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 500, 5_000), [mapCenter])
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 500), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
@@ -593,7 +594,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return [station.lat, station.lng]
   }), [route])
   const activeRouteOptions = routeOptions?.key === routeGuidanceKey ? routeOptions.routes : []
-  const selectedRouteOption = [...activeRouteOptions].sort((a, b) => (a.route.distanceMeters ?? Infinity) - (b.route.distanceMeters ?? Infinity))[0]
+  const selectedRouteOption = activeRouteOptions[0]
   const routeGeometry = selectedRouteOption ? { key: routeGuidanceKey, points: selectedRouteOption.route.geometry, distanceMeters: selectedRouteOption.route.distanceMeters ?? pathDistance(selectedRouteOption.route.geometry), instructions: selectedRouteOption.route.instructions } : null
   const routedPath = routeGeometry?.points ?? null
   const activePathKey = routedPath && selectedRouteOption ? `${routeGuidanceKey}:${activeRouteOptions.indexOf(selectedRouteOption)}` : null
@@ -1181,7 +1182,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   }), [locale])
-  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
+  const arrivalBearing = routeArrivalBearing(displayRoutePath)
+  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination" style="--arrival-bearing:${arrivalBearing}deg"><i class="tour-arrival-direction-arrow" aria-hidden="true">↑</i><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [arrivalBearing, locale])
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} hasDestination={hasDestination} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />

@@ -3943,6 +3943,35 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-amenity-icon > span { font-size: .76rem; line-height: 1; }
 .tour-screen .tour-amenity-icon > b { display: inline; font-size: .58rem; }
 
+.tour-arrival-direction-arrow {
+  position: absolute;
+  z-index: 3;
+  top: -13px;
+  left: 50%;
+  color: #e83933;
+  font: 950 20px/1 'Noto Sans KR', sans-serif;
+  text-shadow: 0 1px 2px #fff, 0 0 3px #fff;
+  transform: translateX(-50%) rotate(var(--arrival-bearing, 0deg));
+  transform-origin: 50% 22px;
+}
+
+/* Match the search control and header buttons so their rows line up. */
+@media (min-width: 901px) {
+  .tour-screen .tour-place-search > div:first-of-type { height: 40px; }
+  .tour-screen .tour-place-search button[type='submit'] { min-width: 3.4rem; padding: 0 .65rem; line-height: 1; white-space: nowrap; }
+  .tour-screen .tour-header-actions { transform: translateY(6px); }
+  .tour-screen .tour-header-actions > button,
+  .tour-screen .tour-header-actions .tour-back { box-sizing: border-box; height: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+}
+@media (max-width: 700px) {
+  .tour-screen .tour-place-search > div:first-of-type { height: 34px; }
+  .tour-screen .tour-place-search button[type='submit'] { min-width: 3.1rem; padding: 0 .45rem; line-height: 1; white-space: nowrap; }
+  .tour-screen .tour-header-actions > button,
+  .tour-screen .tour-header-actions .tour-back { box-sizing: border-box; height: 34px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0 .35rem; }
+  .tour-screen .tour-header-actions .tour-typing-action { height: 34px; }
+  .tour-screen .tour-header-actions .tour-typing-action .tour-back { height: 34px; }
+}
+
 /* On phones, directions live in the bottom sheet and leave the map controls clear. */
 @media (max-width: 700px) {
   .tour-screen .tour-rental-guidance-stack .tour-road-sign,

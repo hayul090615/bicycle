@@ -2,21 +2,22 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 
 export type LonLat = [number, number]
 export interface BikeRouteInstruction { point: LonLat; maneuver: string; modifier?: string; roadName: string; distanceMeters: number }
-export interface BikeRouteResult { geometry: LonLat[]; waypoints: LonLat[]; distanceMeters?: number; instructions: BikeRouteInstruction[] }
+export interface BikeRouteResult { geometry: LonLat[]; waypoints: LonLat[]; distanceMeters?: number; instructions: BikeRouteInstruction[]; routingScore?: number }
 
 // BRouter's safety profile assigns a high cost to roads with fast traffic and
 // prefers cycleways and quiet streets. The public OSRM bicycle server remains
 // a fallback when BRouter cannot calculate a route.
-async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal): Promise<BikeRouteResult> {
+async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal, profile = 'fastbike-lowtraffic', alternative = 0): Promise<BikeRouteResult> {
   const params = new URLSearchParams({
     lonlats: waypoints.map(point => point.join(',')).join('|'),
-    profile: 'safety',
+    profile,
+    alternativeidx: String(alternative),
     format: 'geojson',
     timode: '4',
   })
   const response = await fetch(`https://brouter.de/brouter?${params}`, { signal })
   if (!response.ok) throw new Error(`safe bicycle route ${response.status}`)
-  const data = await response.json() as { features?: Array<{ geometry?: { coordinates?: number[][] }; properties?: { 'track-length'?: string; voicehints?: Array<[number, number, number, number, number]> } }> }
+  const data = await response.json() as { features?: Array<{ geometry?: { coordinates?: number[][] }; properties?: { 'track-length'?: string; voicehints?: Array<[number, number, number, number, number]>; messages?: string[][] } }> }
   const feature = data.features?.[0]
   const geometry = feature?.geometry?.coordinates?.map(point => [point[0], point[1]] as LonLat).filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
   if (!geometry || geometry.length < 2) throw new Error('safe bicycle route unavailable')
@@ -44,11 +45,36 @@ async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal): Pro
       distanceMeters: step < turnIndexes.length - 1 ? distanceBetween(index, turnIndexes[step + 1]) : 0,
     }
   })
-  return { geometry, waypoints, distanceMeters: Number(feature?.properties?.['track-length']) || distanceBetween(0, geometry.length - 1), instructions }
+  const distanceMeters = Number(feature?.properties?.['track-length']) || distanceBetween(0, geometry.length - 1)
+  const roadPenalty = (feature?.properties?.messages ?? []).slice(1).reduce((total, row) => {
+    const segmentMeters = Number(row[3]) || 0
+    const tags = row[9] ?? ''
+    if (/highway=(motorway|trunk)\b/.test(tags)) return total + segmentMeters * 2.5
+    if (/highway=primary\b/.test(tags)) return total + segmentMeters * .9
+    if (/highway=secondary\b/.test(tags)) return total + segmentMeters * .35
+    if (/highway=tertiary\b/.test(tags)) return total + segmentMeters * .12
+    if (/highway=cycleway\b/.test(tags) || /bicycle=designated\b/.test(tags)) return total - segmentMeters * .18
+    return total
+  }, 0)
+  return { geometry, waypoints, distanceMeters, instructions, routingScore: Math.max(distanceMeters * .65, distanceMeters + roadPenalty) }
 }
 
 export async function fetchBikePaths(waypoints: LonLat[], signal: AbortSignal): Promise<BikeRouteResult[]> {
-  try { return [await fetchSaferBikePath(waypoints, signal)] } catch (error) { if (signal.aborted) throw error }
+  const candidateRequests = [
+    fetchSaferBikePath(waypoints, signal, 'safety', 0),
+    fetchSaferBikePath(waypoints, signal, 'fastbike-lowtraffic', 0),
+    fetchSaferBikePath(waypoints, signal, 'safety', 1),
+  ]
+  const candidates = (await Promise.allSettled(candidateRequests)).flatMap(result => result.status === 'fulfilled' ? [result.value] : [])
+  if (signal.aborted) throw new DOMException('Route request cancelled', 'AbortError')
+  if (candidates.length) {
+    const unique = candidates.filter((candidate, index, all) => all.findIndex(other => other.geometry.length === candidate.geometry.length
+      && other.geometry[0][0] === candidate.geometry[0][0]
+      && other.geometry.at(-1)?.[0] === candidate.geometry.at(-1)?.[0]
+      && other.geometry[Math.floor(other.geometry.length / 2)][0] === candidate.geometry[Math.floor(candidate.geometry.length / 2)][0]
+      && other.geometry[Math.floor(other.geometry.length / 2)][1] === candidate.geometry[Math.floor(candidate.geometry.length / 2)][1]) === index)
+    return unique.sort((first, second) => (first.routingScore ?? Infinity) - (second.routingScore ?? Infinity))
+  }
   const path = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
   const url = `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${path}?overview=full&geometries=geojson&steps=true&alternatives=true`
   const response = await fetch(url, { signal })
@@ -84,7 +110,7 @@ export async function fetchBikePath(waypoints: LonLat[], signal: AbortSignal, ca
     } catch { /* cache is optional */ }
   }
   try {
-    const saferRoute = await fetchSaferBikePath(waypoints, signal)
+    const saferRoute = await fetchSaferBikePath(waypoints, signal, 'safety')
     if (cache) { try { localStorage.setItem(cacheKey, JSON.stringify(saferRoute)) } catch { /* cache is optional */ } }
     return saferRoute
   } catch (error) { if (signal.aborted) throw error }

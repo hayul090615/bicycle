@@ -5,6 +5,7 @@ import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import { routeArrivalBearing } from '../utils/routeArrival'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
@@ -355,9 +356,14 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     if (destinationPoint) {
       const marker = document.createElement('div')
       marker.className = 'tour-journey-pin tour-journey-pin--destination'
+      marker.style.setProperty('--arrival-bearing', `${routeArrivalBearing(safeRoutePath)}deg`)
+      const arrow = document.createElement('i')
+      arrow.className = 'tour-arrival-direction-arrow'
+      arrow.setAttribute('aria-hidden', 'true')
+      arrow.textContent = '↑'
       const pinLabel = document.createElement('span')
       pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
-      marker.append(pinLabel)
+      marker.append(arrow, pinLabel)
       destinationOverlayRef.current = new api.CustomOverlay({
         map,
         position: new api.LatLng(destinationPoint.lat, destinationPoint.lng),
@@ -368,7 +374,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       })
     }
     return () => { destinationOverlayRef.current?.setMap(null); destinationOverlayRef.current = null }
-  }, [customDestination, locale, points, selectedStop, status])
+  }, [customDestination, locale, points, safeRoutePath, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current
