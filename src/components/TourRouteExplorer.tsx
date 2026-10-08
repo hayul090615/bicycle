@@ -1478,8 +1478,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             if (!open) setSidebarOpen(false)
             setActiveMapTool(null)
           }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
-          <div className="tour-height-legend" aria-label={text('Route elevation: white low, red high', '길 높낮이: 낮으면 흰색, 높으면 빨간색')}>
-            <span>{text('Elevation /', '길 높낮이 /')}</span><i aria-hidden="true" /><small>{text('low > high', '낮음 > 높음')}</small>
+          <div className="tour-height-legend" aria-label={text('Route elevation: rose low, red high', '길 높낮이: 낮으면 연한 빨강, 높으면 진한 빨강')}>
+            <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low > high', '낮음 > 높음')}</small>
           </div>
           <button type="button" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
           {customDestination && <button type="button" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}

@@ -9,13 +9,13 @@ function lengthMeters(a: LonLat, b: LonLat): number {
 }
 
 export function routeElevationColor(elevation: number, minimum: number, maximum: number): string {
-  if (maximum - minimum < 1.2) return '#ffffff'
+  if (maximum - minimum < 1.2) return '#f7b7b0'
   const t = Math.max(0, Math.min(1, (elevation - minimum) / (maximum - minimum)))
-  return `rgb(255,${Math.round(255 - 193 * t)},${Math.round(255 - 199 * t)})`
+  return `rgb(${Math.round(247 - 7 * t)},${Math.round(183 - 131 * t)},${Math.round(176 - 127 * t)})`
 }
 
 export function routeGradientStops(profile: RouteElevationPoint[]): Array<[number, string]> {
-  if (profile.length < 2) return [[0, '#ffffff'], [1, '#ffffff']]
+  if (profile.length < 2) return [[0, '#f7b7b0'], [1, '#f7b7b0']]
   const minimum = Math.min(...profile.map(point => point.elevationMeters))
   const maximum = Math.max(...profile.map(point => point.elevationMeters))
   const total = Math.max(1, profile.at(-1)!.distanceMeters)
@@ -24,13 +24,13 @@ export function routeGradientStops(profile: RouteElevationPoint[]): Array<[numbe
 
 export function coloredRouteSegments(path: LonLat[], profile: RouteElevationPoint[]): ColoredRouteSegment[] {
   if (path.length < 2) return []
-  if (profile.length < 2) return [{ path, color: '#ffffff' }]
+  if (profile.length < 2) return [{ path, color: '#f7b7b0' }]
   const minimum = Math.min(...profile.map(point => point.elevationMeters))
   const maximum = Math.max(...profile.map(point => point.elevationMeters))
   const cumulative = [0]
   for (let index = 1; index < path.length; index++) cumulative.push(cumulative[index - 1] + lengthMeters(path[index - 1], path[index]))
   const total = cumulative.at(-1) ?? 0
-  if (total <= 0) return [{ path, color: '#ffffff' }]
+  if (total <= 0) return [{ path, color: '#f7b7b0' }]
   const sampleTotal = Math.max(1, profile.at(-1)!.distanceMeters)
   const pointAt = (target: number): LonLat => {
     let index = 1

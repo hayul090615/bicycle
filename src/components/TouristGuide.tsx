@@ -130,7 +130,10 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         </div>}
       </form>
       <div className="tour-header-actions">
-        <button type="button" className="tour-theme-button" aria-pressed={darkMode} onClick={onToggleTheme}>{darkMode ? textFor(locale, '☀ Light', '☀ 라이트') : textFor(locale, '☾ Dark', '☾ 다크')}</button>
+        <button type="button" className="tour-theme-button" aria-label={textFor(locale, darkMode ? 'Switch to light mode' : 'Switch to dark mode', darkMode ? '라이트 모드로 전환' : '다크 모드로 전환')} aria-pressed={darkMode} onClick={onToggleTheme}>
+          <span className="tour-theme-icon" aria-hidden="true">{darkMode ? '☀' : '☾'}</span>
+          <span className="tour-theme-label">{darkMode ? textFor(locale, 'Light', '라이트') : textFor(locale, 'Dark', '다크')}</span>
+        </button>
         <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
         <button type="button" className="tour-timer-toggle" aria-expanded={rentalTimerOpen} aria-controls="tour-rental-timer-panel" onClick={() => setRentalTimerOpen(open => !open)}><span aria-hidden="true">⏱</span>{textFor(locale, 'Timer', '타이머')}</button>
         <div className="tour-typing-action">
