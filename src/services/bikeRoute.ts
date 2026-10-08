@@ -2,7 +2,17 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 
 export type LonLat = [number, number]
 export interface BikeRouteInstruction { point: LonLat; maneuver: string; modifier?: string; roadName: string; distanceMeters: number }
-export interface BikeRouteResult { geometry: LonLat[]; waypoints: LonLat[]; distanceMeters?: number; instructions: BikeRouteInstruction[]; routingScore?: number }
+export interface BikeRouteResult { geometry: LonLat[]; waypoints: LonLat[]; distanceMeters?: number; durationSeconds?: number; instructions: BikeRouteInstruction[]; routingScore?: number }
+
+function compareRouteDuration(first: BikeRouteResult, second: BikeRouteResult) {
+  const firstDuration = first.durationSeconds ?? Infinity
+  const secondDuration = second.durationSeconds ?? Infinity
+  if (firstDuration !== secondDuration) return firstDuration < secondDuration ? -1 : 1
+  const firstDistance = first.distanceMeters ?? Infinity
+  const secondDistance = second.distanceMeters ?? Infinity
+  if (firstDistance !== secondDistance) return firstDistance - secondDistance
+  return (first.routingScore ?? Infinity) - (second.routingScore ?? Infinity)
+}
 
 // BRouter's safety profile assigns a high cost to roads with fast traffic and
 // prefers cycleways and quiet streets. The public OSRM bicycle server remains
@@ -17,7 +27,7 @@ async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal, prof
   })
   const response = await fetch(`https://brouter.de/brouter?${params}`, { signal })
   if (!response.ok) throw new Error(`safe bicycle route ${response.status}`)
-  const data = await response.json() as { features?: Array<{ geometry?: { coordinates?: number[][] }; properties?: { 'track-length'?: string; voicehints?: Array<[number, number, number, number, number]>; messages?: string[][] } }> }
+  const data = await response.json() as { features?: Array<{ geometry?: { coordinates?: number[][] }; properties?: { 'track-length'?: string; 'total-time'?: string; voicehints?: Array<[number, number, number, number, number]>; messages?: string[][] } }> }
   const feature = data.features?.[0]
   const geometry = feature?.geometry?.coordinates?.map(point => [point[0], point[1]] as LonLat).filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
   if (!geometry || geometry.length < 2) throw new Error('safe bicycle route unavailable')
@@ -56,13 +66,22 @@ async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal, prof
     if (/highway=cycleway\b/.test(tags) || /bicycle=designated\b/.test(tags)) return total - segmentMeters * .18
     return total
   }, 0)
-  return { geometry, waypoints, distanceMeters, instructions, routingScore: Math.max(distanceMeters * .65, distanceMeters + roadPenalty) }
+  const durationSeconds = Number(feature?.properties?.['total-time'])
+  return {
+    geometry,
+    waypoints,
+    distanceMeters,
+    ...(Number.isFinite(durationSeconds) && durationSeconds > 0 ? { durationSeconds } : {}),
+    instructions,
+    routingScore: Math.max(distanceMeters * .65, distanceMeters + roadPenalty),
+  }
 }
 
 export async function fetchBikePaths(waypoints: LonLat[], signal: AbortSignal): Promise<BikeRouteResult[]> {
   const candidateRequests = [
-    fetchSaferBikePath(waypoints, signal, 'safety', 0),
     fetchSaferBikePath(waypoints, signal, 'fastbike-lowtraffic', 0),
+    fetchSaferBikePath(waypoints, signal, 'fastbike-lowtraffic', 1),
+    fetchSaferBikePath(waypoints, signal, 'safety', 0),
     fetchSaferBikePath(waypoints, signal, 'safety', 1),
   ]
   const candidates = (await Promise.allSettled(candidateRequests)).flatMap(result => result.status === 'fulfilled' ? [result.value] : [])
@@ -73,13 +92,13 @@ export async function fetchBikePaths(waypoints: LonLat[], signal: AbortSignal): 
       && other.geometry.at(-1)?.[0] === candidate.geometry.at(-1)?.[0]
       && other.geometry[Math.floor(other.geometry.length / 2)][0] === candidate.geometry[Math.floor(candidate.geometry.length / 2)][0]
       && other.geometry[Math.floor(other.geometry.length / 2)][1] === candidate.geometry[Math.floor(candidate.geometry.length / 2)][1]) === index)
-    return unique.sort((first, second) => (first.routingScore ?? Infinity) - (second.routingScore ?? Infinity))
+    return unique.sort(compareRouteDuration)
   }
   const path = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
   const url = `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${path}?overview=full&geometries=geojson&steps=true&alternatives=true`
   const response = await fetch(url, { signal })
   if (!response.ok) throw new Error(`bike route ${response.status}`)
-  const data = await response.json() as { code: string; routes?: Array<{ geometry?: { coordinates?: LonLat[] }; distance?: number; legs?: Array<{ steps?: Array<{ distance?: number; name?: string; maneuver?: { type?: string; modifier?: string; location?: LonLat } }> }> }>; waypoints?: Array<{ location: LonLat }> }
+  const data = await response.json() as { code: string; routes?: Array<{ geometry?: { coordinates?: LonLat[] }; distance?: number; duration?: number; legs?: Array<{ steps?: Array<{ distance?: number; name?: string; maneuver?: { type?: string; modifier?: string; location?: LonLat } }> }> }>; waypoints?: Array<{ location: LonLat }> }
   if (data.code !== 'Ok') throw new Error('bike route unavailable')
   const routes = (data.routes ?? []).flatMap(candidate => {
     const geometry = candidate.geometry?.coordinates
@@ -89,10 +108,10 @@ export async function fetchBikePaths(waypoints: LonLat[], signal: AbortSignal): 
       if (!location || !step.maneuver?.type) return []
       return [{ point: location, maneuver: step.maneuver.type, modifier: step.maneuver.modifier, roadName: step.name?.trim() ?? '', distanceMeters: step.distance ?? 0 }]
     })
-    return [{ geometry, waypoints: data.waypoints?.map(({ location }) => location) ?? waypoints, distanceMeters: candidate.distance, instructions }]
+    return [{ geometry, waypoints: data.waypoints?.map(({ location }) => location) ?? waypoints, distanceMeters: candidate.distance, durationSeconds: candidate.duration, instructions }]
   })
   if (!routes.length) throw new Error('bike route unavailable')
-  return routes
+  return routes.sort(compareRouteDuration)
 }
 
 export async function fetchBikeRoute(route: TouristRoute, signal: AbortSignal): Promise<BikeRouteResult> {

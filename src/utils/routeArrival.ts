@@ -2,7 +2,7 @@ import type { LonLat } from '../services/bikeRoute'
 
 export type RouteArrivalMarker = { point: LonLat; bearing: number }
 
-/** One direction marker placed just before the route endpoint. */
+/** Route endpoint and bearing of its final non-zero segment. */
 export function routeArrivalMarker(points: LonLat[] | null | undefined): RouteArrivalMarker | null {
   if (!points || points.length < 2) return null
   const [toLng, toLat] = points.at(-1)!
@@ -18,15 +18,7 @@ export function routeArrivalMarker(points: LonLat[] | null | undefined): RouteAr
     const bearingX = Math.cos(latitude1) * Math.sin(latitude2)
       - Math.sin(latitude1) * Math.cos(latitude2) * Math.cos(longitudeDelta * radians)
     const bearing = (Math.atan2(bearingY, bearingX) / radians + 360) % 360
-    const segmentMeters = Math.hypot(
-      longitudeDelta * 111_320 * Math.cos((latitude1 + latitude2) / 2),
-      latitudeDelta * 110_540,
-    )
-    const fraction = segmentMeters > 30 ? 1 - 22 / segmentMeters : 0.65
-    return {
-      point: [fromLng + longitudeDelta * fraction, fromLat + latitudeDelta * fraction],
-      bearing,
-    }
+    return { point: [toLng, toLat], bearing }
   }
   return null
 }

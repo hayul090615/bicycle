@@ -6,6 +6,7 @@ import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
 import { routeArrivalMarker } from '../utils/routeArrival'
+import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
@@ -378,17 +379,23 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     }
     const arrival = hasDestination ? routeArrivalMarker(safeRoutePath) : null
     if (arrival) {
-      const arrow = document.createElement('span')
-      arrow.className = 'tour-route-end-arrow'
-      arrow.style.setProperty('--route-bearing', `${arrival.bearing}deg`)
+      const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      arrow.setAttribute('class', 'tour-route-end-arrow')
+      arrow.setAttribute('viewBox', '0 0 20 20')
       arrow.setAttribute('aria-hidden', 'true')
-      arrow.textContent = '↑'
+      arrow.style.setProperty('--route-bearing', `${arrival.bearing}deg`)
+      const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      arrowHead.setAttribute('d', 'M10 1 L19 19 L10 14.5 L1 19 Z')
+      arrow.append(arrowHead)
+      const arrowWrapper = document.createElement('span')
+      arrowWrapper.className = 'tour-route-end-icon-wrap'
+      arrowWrapper.append(arrow)
       arrivalOverlayRef.current = new api.CustomOverlay({
         map,
         position: new api.LatLng(arrival.point[1], arrival.point[0]),
-        content: arrow,
+        content: arrowWrapper,
         xAnchor: .5,
-        yAnchor: .5,
+        yAnchor: .05,
         zIndex: 21,
       })
     }
@@ -409,12 +416,12 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
-    if (!map || !api || status !== 'ready' || hasDestination || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || !api || status !== 'ready' || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
     map.setLevel(4, { animate: false })
     map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
     window.requestAnimationFrame(() => map.relayout())
-  }, [hasDestination, locationFocusRequest, status, userLocation])
+  }, [locationFocusRequest, status, userLocation])
 
   useEffect(() => {
     const map = mapRef.current, api = apiRef.current
@@ -533,7 +540,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const popup = document.createElement('span')
       popup.className = 'tour-live-bike-popup'
       const name = document.createElement('strong')
-      name.textContent = station.name
+      name.textContent = localizeBikeStationName(station.name, locale)
       const separator = document.createElement('i')
       separator.textContent = '—'
       const available = document.createElement('small')
@@ -543,7 +550,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
       popup.append(name, separator, available)
       marker.append(count, popup)
-      marker.title = `${station.name} · ${available.textContent}`
+      marker.title = `${localizeBikeStationName(station.name, locale)} · ${available.textContent}`
       marker.setAttribute('role', 'button')
       marker.tabIndex = 0
       marker.setAttribute('aria-expanded', 'false')

@@ -3027,7 +3027,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-map-rail-group h2 { margin: 0; padding: 0 .15rem .1rem; color: #b9d4bd; font-size: .61rem; font-weight: 850; letter-spacing: .08em; }
 .tour-screen .tour-map-quick-filters { display: flex; flex-direction: column; gap: .25rem; }
 .tour-screen .tour-map-quick-filters button { min-height: 37px; }
-.tour-screen .tour-map-control-rail .tour-map-mode-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .3rem; }
+.tour-screen .tour-map-control-rail .tour-map-mode-switch { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; }
 .tour-screen .tour-map-control-rail .tour-map-mode-switch button { min-height: 34px; justify-content: center; padding: .35rem; font-size: .72rem; }
 .tour-screen .tour-map-control-rail .tour-map-mode-select { display: grid; gap: .24rem; }
 .tour-screen .tour-map-control-rail .tour-map-mode-select > span { color: #c5d9c7; font-size: .62rem; font-weight: 750; }
@@ -3902,6 +3902,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 .tour-screen .tour-map-view-dock > div,
 .tour-screen .tour-map-type-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem; }
+.tour-screen .tour-map-view-dock > div:first-child { grid-template-columns: minmax(0, 1fr); }
 .tour-screen .tour-map-view-dock button,
 .tour-screen .tour-map-type-switch button {
   min-width: 0;
@@ -3957,16 +3958,20 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-amenity-icon > b { display: inline; font-size: .58rem; }
 
 .tour-route-end-arrow {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font: 950 20px/1 'Noto Sans KR', sans-serif;
-  text-shadow: 0 1px 3px #123d2d, 0 0 2px #123d2d;
+  width: 20px;
+  height: 20px;
+  display: block;
+  overflow: visible;
+  fill: #fff;
+  stroke: #124830;
+  stroke-width: 1.7px;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px #123d2d99);
   transform: rotate(var(--route-bearing, 0deg));
+  transform-origin: 50% 1px;
   pointer-events: none;
 }
+.tour-route-end-icon-wrap { display: block; width: 20px; height: 20px; pointer-events: none; }
 .tour-leaflet-route-end-icon { border: 0 !important; background: transparent !important; }
 @media (min-width: 901px) {
   .tour-screen .tour-explorer-grid--destination-picking .tour-map-destination-tools { top: 4rem; left: 1rem; }
@@ -4029,4 +4034,90 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-mobile-route-sheet.is-navigating.is-expanded .tour-mobile-sheet-actions { display: grid; }
   .tour-screen .tour-map-stage > .tour-map-locate,
   .tour-screen .tour-map-stage .maplibregl-ctrl-top-right { bottom: calc(min(35dvh, 265px) + .7rem); }
+}
+
+/* Move camera arrows out of the route card while directions are active. */
+.tour-screen .tour-map-rotate-controls--directions {
+  z-index: 1432;
+  top: auto;
+  right: auto;
+  bottom: 1rem;
+  left: max(15rem, calc(50% - 17rem));
+  transform: none;
+}
+@media (min-width: 701px) and (max-width: 900px) {
+  .tour-screen .tour-map-rotate-controls--directions {
+    bottom: calc(min(34dvh, 290px) + 8rem);
+    left: calc(50% - 7.5rem);
+  }
+}
+@media (max-width: 700px) {
+  .tour-screen .tour-map-rotate-controls--directions {
+    top: 17rem;
+    right: .6rem;
+    bottom: auto;
+    left: auto;
+    width: 100px;
+    height: 100px;
+  }
+  .tour-screen:has(.tour-mobile-route-sheet.is-expanded) .tour-map-rotate-controls--directions { display: none; }
+}
+
+/* Rounded header pills with a dark active action and a soft logout accent. */
+.typing-main-nav > button {
+  min-height: 38px;
+  padding: .45rem .9rem;
+  border: 1px solid #dce2e7;
+  border-radius: 999px;
+  color: #26333d;
+  background: #fff;
+  font-weight: 750;
+  transition: background .16s ease, color .16s ease, border-color .16s ease, transform .16s ease;
+}
+.typing-main-nav > button:hover { transform: translateY(-1px); border-color: #aebbc4; }
+.typing-main-nav > button.is-active { border-color: #18232d; color: #fff; background: #18232d; box-shadow: none; }
+.typing-account-actions button {
+  min-height: 36px;
+  padding: .42rem .85rem;
+  border: 1px solid #dce2e7;
+  border-radius: 999px;
+  color: #26333d;
+  background: #fff;
+  font-weight: 750;
+}
+.typing-account-actions:has(.typing-account-email) button { border-color: #f1d1ce; color: #c7433b; background: #fff3f2; }
+.typing-account-actions button:hover { border-color: #aebbc4; }
+.tour-screen .tour-header-actions .tour-theme-button,
+.tour-screen .tour-header-actions .tour-language-button,
+.tour-screen .tour-header-actions .tour-timer-toggle {
+  min-height: 42px;
+  padding: .55rem .95rem;
+  border: 1px solid #dce2e7;
+  border-radius: 999px;
+  color: #26333d;
+  background: #fff;
+  font-weight: 800;
+}
+.tour-screen .tour-header-actions .tour-theme-button { background: #f5f7f8; }
+.tour-screen .tour-header-actions .tour-theme-icon { color: #d2a52e; }
+.tour-screen .tour-header-actions .tour-back {
+  min-height: 42px;
+  padding: .55rem 1rem;
+  border: 1px solid #18232d;
+  border-radius: 999px;
+  color: #fff;
+  background: #18232d;
+  font-weight: 800;
+}
+.tour-screen--dark .tour-header-actions .tour-theme-button,
+.tour-screen--dark .tour-header-actions .tour-language-button,
+.tour-screen--dark .tour-header-actions .tour-timer-toggle { border-color: #46545c; color: #eaf0f1; background: #202c33; }
+.tour-screen--dark .tour-header-actions .tour-back { border-color: #31444d; background: #31444d; }
+@media (max-width: 700px) {
+  .typing-main-nav > button { min-height: 32px; padding: .32rem .62rem; font-size: .68rem; }
+  .typing-account-actions button { min-height: 30px; padding: .3rem .55rem; font-size: .58rem; }
+  .tour-screen .tour-header-actions .tour-theme-button,
+  .tour-screen .tour-header-actions .tour-language-button,
+  .tour-screen .tour-header-actions .tour-timer-toggle,
+  .tour-screen .tour-header-actions .tour-back { min-height: 34px; }
 }

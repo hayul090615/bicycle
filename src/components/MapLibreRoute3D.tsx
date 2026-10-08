@@ -4,6 +4,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker as MapLibreMarker, SkySpecification } from 'maplibre-gl'
 import { getTouristStation, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { castBuildingShadow } from '../utils/buildingShadow'
+import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { createCyclistMarker } from './cyclistMarker'
 import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
@@ -461,7 +462,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       const popup = document.createElement('span')
       popup.className = 'tour-live-bike-popup'
       const name = document.createElement('strong')
-      name.textContent = station.name
+      name.textContent = localizeBikeStationName(station.name, locale)
       const separator = document.createElement('i')
       separator.textContent = '—'
       const available = document.createElement('small')
@@ -471,7 +472,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
         : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
       popup.append(name, separator, available)
       element.append(count, popup)
-      element.title = `${station.name} · ${available.textContent}`
+      element.title = `${localizeBikeStationName(station.name, locale)} · ${available.textContent}`
       element.setAttribute('role', 'button')
       element.tabIndex = 0
       element.setAttribute('aria-expanded', 'false')
@@ -838,7 +839,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || status !== 'ready' || hasDestination || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
     if (selectedStop === null) {
       map.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 16, pitch: is3DView ? 66 : 0, bearing: is3DView ? userLocation.heading ?? 0 : 0, duration: 700, essential: false })
@@ -855,7 +856,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       duration: 720,
       essential: false,
     })
-  }, [accessPath, hasDestination, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
+  }, [accessPath, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
     const map = mapRef.current
