@@ -5,7 +5,7 @@ import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
-import { routeArrivalBearing } from '../utils/routeArrival'
+import { routeDirectionPoints } from '../utils/routeDirections'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
@@ -107,6 +107,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const mapRef = useRef<KakaoMap | null>(null)
   const apiRef = useRef<KakaoMapsApi | null>(null)
   const routeOverlaysRef = useRef<KakaoOverlay[]>([])
+  const directionOverlaysRef = useRef<KakaoOverlay[]>([])
   const accessOverlaysRef = useRef<KakaoOverlay[]>([])
   const walkOverlaysRef = useRef<KakaoOverlay[]>([])
   const conditionOverlaysRef = useRef<KakaoOverlay[]>([])
@@ -199,6 +200,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       window.clearTimeout(timeout)
       resizeObserver?.disconnect()
       routeOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      directionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       restaurantOverlaysRef.current.forEach(overlay => overlay.setMap(null))
@@ -211,6 +213,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       mapRef.current = null
       apiRef.current = null
       routeOverlaysRef.current = []
+      directionOverlaysRef.current = []
       accessOverlaysRef.current = []
       conditionOverlaysRef.current = []
       restaurantOverlaysRef.current = []
@@ -356,14 +359,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     if (destinationPoint) {
       const marker = document.createElement('div')
       marker.className = 'tour-journey-pin tour-journey-pin--destination'
-      marker.style.setProperty('--arrival-bearing', `${routeArrivalBearing(safeRoutePath)}deg`)
-      const arrow = document.createElement('i')
-      arrow.className = 'tour-arrival-direction-arrow'
-      arrow.setAttribute('aria-hidden', 'true')
-      arrow.textContent = '↑'
       const pinLabel = document.createElement('span')
       pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
-      marker.append(arrow, pinLabel)
+      marker.append(pinLabel)
       destinationOverlayRef.current = new api.CustomOverlay({
         map,
         position: new api.LatLng(destinationPoint.lat, destinationPoint.lng),
@@ -374,7 +372,28 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       })
     }
     return () => { destinationOverlayRef.current?.setMap(null); destinationOverlayRef.current = null }
-  }, [customDestination, locale, points, safeRoutePath, selectedStop, status])
+  }, [customDestination, locale, points, selectedStop, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    directionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+    directionOverlaysRef.current = []
+    if ((showCourse || hasDestination) && safeRoutePath && safeRoutePath.length > 1) {
+      directionOverlaysRef.current = routeDirectionPoints(safeRoutePath, 180).map(({ point, bearing }) => {
+        const arrow = document.createElement('span')
+        arrow.className = 'tour-route-direction-arrow'
+        arrow.style.setProperty('--route-bearing', `${bearing}deg`)
+        arrow.textContent = '↑'
+        return new api.CustomOverlay({ map, position: new api.LatLng(point[1], point[0]), content: arrow, xAnchor: .5, yAnchor: .5, zIndex: 12 })
+      })
+    }
+    return () => {
+      directionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      directionOverlaysRef.current = []
+    }
+  }, [hasDestination, safeRoutePath, showCourse, status])
 
   useEffect(() => {
     const map = mapRef.current

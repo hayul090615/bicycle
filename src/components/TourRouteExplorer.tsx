@@ -10,7 +10,7 @@ import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
-import { routeArrivalBearing } from '../utils/routeArrival'
+import { routeDirectionPoints } from '../utils/routeDirections'
 import { fetchBikePath, fetchBikePaths, fetchWalkingPath, type BikeRouteInstruction, type BikeRouteResult, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
@@ -525,9 +525,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapCenter(current => `${current.lat.toFixed(5)}:${current.lng.toFixed(5)}` === nextKey ? current : center)
   }, [])
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
-  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 500, 5_000), [mapCenter])
+  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1_000, 1_000), [mapCenter])
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
-    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 500), [locationLat, locationLng])
+    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 1_000), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
   const activeViewportBikes = viewportBikes?.key === mapCenterKey ? viewportBikes : null
   const nearbyStations = useMemo(() => {
@@ -625,9 +625,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       byId.set(station.id, liveStation ? { ...station, ...liveStation, distanceMeters: station.distanceMeters } : station)
     }
     for (const station of liveStations) {
-      if (distanceMeters(mapCenter, station) <= 500) byId.set(station.id, station)
+      if (distanceMeters(mapCenter, station) <= 1_000) byId.set(station.id, station)
     }
-    return [...byId.values()].sort((first, second) => first.distanceMeters - second.distanceMeters)
+    return [...byId.values()]
+      .filter(station => distanceMeters(mapCenter, station) <= 1_000)
+      .sort((first, second) => distanceMeters(mapCenter, first) - distanceMeters(mapCenter, second))
   }, [activeNearbyBikes, activeViewportBikes, courseBikeStations, mapCenter, mapLayers.bikeStations, mapNearbySnapshot])
   const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
   const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
@@ -670,6 +672,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const elevationProfileLine = elevationPoints.map((point, index) => `${(index / Math.max(1, elevationPoints.length - 1) * 320).toFixed(1)},${(76 - (point.elevationMeters - elevationMinimum) / Math.max(1, elevationMaximum - elevationMinimum) * 58).toFixed(1)}`).join(' ')
   const totalAscent = elevationPoints.slice(1).reduce((total, point, index) => total + Math.max(0, point.elevationMeters - elevationPoints[index].elevationMeters), 0)
   const displayRoutePath = routedPath ?? routeWaypoints
+  const routeArrows = useMemo(() => routeDirectionPoints(displayRoutePath, 180), [displayRoutePath])
   const coloredSegments = useMemo(() => routedPath ? coloredRouteSegments(routedPath, elevationPoints) : [], [routedPath, elevationPoints])
   const displayStopIndexes = useMemo(() => customDestination ? EMPTY_STOP_INDEXES : selectedStop === null ? route.stops.map((_, index) => index)
     : [...new Set([originStopIndex ?? (userLocation ? null : 0), viaStopIndex, selectedStop].filter((index): index is number => index !== null))],
@@ -1012,9 +1015,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const controller = new AbortController()
     let active = true
     const location = { lat: locationLat, lng: locationLng }
-    setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1000, 500), updatedAt: null, status: 'loading' })
+    setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1_000, 1_000), updatedAt: null, status: 'loading' })
     const refresh = () => {
-      void fetchNearbyBikeStations(location, controller.signal, 500).then(result => {
+      void fetchNearbyBikeStations(location, controller.signal, 1_000).then(result => {
         if (active) setNearbyBikes({ key: locationKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
       }).catch(() => {
         if (active) setNearbyBikes(current => current?.key === locationKey ? { ...current, status: 'unavailable' } : current)
@@ -1033,7 +1036,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     let active = true
     setViewportBikes({ key: mapCenterKey, stations: mapNearbySnapshot, updatedAt: null, status: 'loading' })
     const refresh = () => {
-      void fetchNearbyBikeStations(mapCenter, controller.signal, 500).then(result => {
+      void fetchNearbyBikeStations(mapCenter, controller.signal, 1_000).then(result => {
         if (active) setViewportBikes({ key: mapCenterKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
       }).catch(() => {
         if (active) setViewportBikes(current => current?.key === mapCenterKey ? { ...current, status: 'unavailable' } : current)
@@ -1182,14 +1185,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   }), [locale])
-  const arrivalBearing = routeArrivalBearing(displayRoutePath)
-  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination" style="--arrival-bearing:${arrivalBearing}deg"><i class="tour-arrival-direction-arrow" aria-hidden="true">↑</i><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [arrivalBearing, locale])
+  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} hasDestination={hasDestination} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     <MapCenterReporter onChange={reportMapCenter} />
     <DestinationPickerMapEvents enabled={destinationPicking} onPick={chooseCustomDestination} />
     {showRidingRoute && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
+    {showRidingRoute && routeArrows.map((arrow, index) => <Marker key={`route-direction-${index}`} position={[arrow.point[1], arrow.point[0]]}
+      icon={divIcon({ className: 'tour-route-direction-icon', html: `<span style="--route-bearing:${arrow.bearing}deg" aria-hidden="true">↑</span>`, iconSize: [24, 24], iconAnchor: [12, 12] })} interactive={false} />)}
     {showRidingRoute && coloredSegments.map((segment, index) => <Polyline key={`slope-${index}`} positions={segment.path.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: segment.color, weight: 5, opacity: 1 }} />)}
     {showRidingRoute && linePoints.length > 1 && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 2.5, opacity: .92, dashArray: '2 8', lineCap: 'round', interactive: false }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
