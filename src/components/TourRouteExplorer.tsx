@@ -377,7 +377,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, destinationPickRequest, searchedDestination }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -393,8 +393,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onViaStopChange: (index: number | null) => void
   rentalWidgetTarget: HTMLDivElement | null
   rentalTimerOpen: boolean
-  destinationPickRequest: number
-  searchedDestination: { lat: number; lng: number; serial: number } | null
 }) {
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
   const [customDestination, setCustomDestination] = useState<Coordinates | null>(null)
@@ -463,15 +461,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
-  useEffect(() => {
-    if (destinationPickRequest === 0) return
-    setDestinationError(false)
-    setMapLayers(current => ({ ...current, course: false }))
-    setDestinationPicking(true)
-    setActiveMapTool(null)
-    setSidebarOpen(false)
-    setMapMenuOpen(false)
-  }, [destinationPickRequest])
   useEffect(() => {
     if (locale === 'en' && (view === 'kakao' || view === 'google')) setView('city')
   }, [locale, view])
@@ -765,9 +754,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     if (!userLocation) locateNearestRoute(false)
     else setLocationFocusRequest(request => request + 1)
   }, [locale, onDestinationStopChange, onOriginStopChange, onViaStopChange, userLocation])
-  useEffect(() => {
-    if (searchedDestination) chooseCustomDestination(searchedDestination)
-  }, [searchedDestination?.serial])
   const navigateRouteFromLocation = (routeId: string) => {
     setMapLayers(current => ({ ...current, course: true }))
     if (originStopIndex === null && !userLocation) locateNearestRoute(false)

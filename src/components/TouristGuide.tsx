@@ -1,10 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { getTouristStation, touristRoutes, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { nowInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { TourRouteExplorer } from './TourRouteExplorer'
-import { isInsideSeoul } from '../data/seoulBoundary'
-import { searchSeoulPlaces } from '../services/kakaoMaps'
 
 type Locale = 'en' | 'ko'
 const textFor = <T,>(locale: Locale, english: T, korean: T): T => locale === 'en' ? english : korean
@@ -21,11 +19,6 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const [originStopIndex, setOriginStopIndex] = useState<number | null>(null)
   const [destinationStopIndex, setDestinationStopIndex] = useState<number | null>(null)
   const [viaStopIndex, setViaStopIndex] = useState<number | null>(null)
-  const [destinationPickRequest, setDestinationPickRequest] = useState(0)
-  const [placeQuery, setPlaceQuery] = useState('')
-  const [placeResults, setPlaceResults] = useState<Array<{ id: string; name: string; address: string; lat: number; lng: number }>>([])
-  const [placeSearchStatus, setPlaceSearchStatus] = useState<'idle' | 'loading' | 'empty' | 'error'>('idle')
-  const [searchedDestination, setSearchedDestination] = useState<{ lat: number; lng: number; serial: number } | null>(null)
   const [rentalWidgetTarget, setRentalWidgetTarget] = useState<HTMLDivElement | null>(null)
   const [rentalTimerOpen, setRentalTimerOpen] = useState(false)
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
@@ -95,46 +88,9 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
     setLocale(nextLocale)
   }
 
-  const searchPlaces = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const query = placeQuery.trim()
-    if (!query) return
-    setPlaceSearchStatus('loading')
-    setPlaceResults([])
-    try {
-      const results = (await searchSeoulPlaces(query)).filter(place => isInsideSeoul(place.lat, place.lng))
-      setPlaceResults(results)
-      setPlaceSearchStatus(results.length ? 'idle' : 'empty')
-      if (results.length === 1) {
-        const place = results[0]
-        setSearchedDestination(current => ({ lat: place.lat, lng: place.lng, serial: (current?.serial ?? 0) + 1 }))
-        setPlaceQuery(place.name)
-        setPlaceResults([])
-      }
-    } catch { setPlaceSearchStatus('error') }
-  }
-
   return <main className={`tour-screen${darkMode ? ' tour-screen--dark' : ''}`}>
     <header className="tour-topbar">
       <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'TTAREUNGI SEOUL JOURNEY', '따릉이 서울 여행')}<small>{textFor(locale, 'Find your bike route through Seoul', '서울에서 자전거 길을 찾아보세요')}</small></span></div>
-      <div className="tour-journey-planner" aria-label={textFor(locale, 'Plan your bike journey', '자전거 경로 설정')}>
-        <div className="tour-journey-start"><span>{textFor(locale, 'Start', '출발')}</span><strong>{textFor(locale, 'My location', '내 위치')}</strong></div>
-        <span className="tour-journey-arrow" aria-hidden="true">→</span>
-        <button type="button" className="tour-journey-map-pick" onClick={() => { setDestinationStopIndex(null); setViaStopIndex(null); setOriginStopIndex(null); setDestinationPickRequest(request => request + 1) }}>
-          <span>{textFor(locale, 'Destination', '도착지')}</span>
-          <strong>{textFor(locale, 'Choose any point on map', '지도에서 원하는 곳 선택')}</strong>
-        </button>
-        <form className="tour-place-search" onSubmit={searchPlaces}>
-          <label htmlFor="tour-place-query">{textFor(locale, 'Search destination', '목적지 검색')}</label>
-          <div><input id="tour-place-query" value={placeQuery} onChange={event => { setPlaceQuery(event.target.value); setPlaceResults([]); setPlaceSearchStatus('idle') }} placeholder={textFor(locale, 'Search a Seoul place', '서울 장소 검색')} autoComplete="off" /><button type="submit" disabled={placeSearchStatus === 'loading'}>{textFor(locale, 'Search', '검색')}</button></div>
-          {(placeResults.length > 0 || placeSearchStatus !== 'idle') && <div className="tour-place-results" role="status">
-            {placeSearchStatus === 'loading' && <p>{textFor(locale, 'Searching places…', '장소를 찾는 중…')}</p>}
-            {placeSearchStatus === 'empty' && <p>{textFor(locale, 'No Seoul places found.', '서울 안의 검색 결과가 없습니다.')}</p>}
-            {placeSearchStatus === 'error' && <p>{textFor(locale, 'Place search is unavailable.', '장소 검색을 사용할 수 없습니다.')}</p>}
-            {placeResults.map(place => <button type="button" key={place.id} onClick={() => { setSearchedDestination(current => ({ lat: place.lat, lng: place.lng, serial: (current?.serial ?? 0) + 1 })); setPlaceQuery(place.name); setPlaceResults([]); setPlaceSearchStatus('idle') }}><strong>{place.name}</strong><small>{place.address}</small></button>)}
-          </div>}
-        </form>
-      </div>
       <div className="tour-header-actions">
         <button type="button" className="tour-theme-button" aria-pressed={darkMode} onClick={onToggleTheme}>{darkMode ? textFor(locale, '☀ Light', '☀ 라이트') : textFor(locale, '☾ Dark', '☾ 다크')}</button>
         <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
@@ -150,7 +106,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
           originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
           onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
-          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} destinationPickRequest={destinationPickRequest} searchedDestination={searchedDestination} />
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} />
       </section>
       <details className="tour-more-details" id="tour-routes">
         <summary><span><small>{textFor(locale, 'MORE TO EXPLORE', '서울을 더 둘러보기')}</small><strong>{textFor(locale, 'Browse ride themes and seasonal routes', '계절별 풍경과 테마 코스 보기')}</strong></span><i aria-hidden="true">＋</i></summary>

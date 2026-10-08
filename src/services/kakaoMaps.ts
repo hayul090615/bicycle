@@ -21,6 +21,7 @@ export interface KakaoVisibleBounds {
 
 export interface KakaoMap {
   setCenter(position: KakaoLatLng): void
+  setBounds(bounds: KakaoBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void
   setLevel(level: number, options?: { animate?: boolean }): void
   setMapTypeId(mapTypeId: string): void
   getBounds(): KakaoVisibleBounds
@@ -51,6 +52,7 @@ export interface KakaoMapsApi {
     scrollwheel: boolean
   }) => KakaoMap
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
+  LatLngBounds: new () => KakaoBounds
   Roadview: new (container: HTMLElement) => KakaoRoadview
   RoadviewClient: new () => KakaoRoadviewClient
   Polyline: new (options: {

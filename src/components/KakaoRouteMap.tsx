@@ -171,8 +171,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         const center = readMapCenter(map)
         if (!center) return
         const { lat: centerLat, lng: centerLng } = center
-        const lat = Math.max(37.40, Math.min(37.72, centerLat))
-        const lng = Math.max(126.75, Math.min(127.19, centerLng))
+        const lat = Math.max(37.28, Math.min(37.84, centerLat))
+        const lng = Math.max(126.62, Math.min(127.34, centerLng))
         if (lat !== centerLat || lng !== centerLng) {
           correctingCenter = true
           map.setCenter(new api.LatLng(lat, lng))
@@ -287,6 +287,19 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         map.setLevel(8, { animate: false })
         map.setCenter(new api.LatLng(37.5665, 126.978))
       }
+      return
+    }
+    if (hasDestination && safeRoutePath && safeRoutePath.length > 1) {
+      const framed = [
+        ...linePoints,
+        ...(safeAccessPath ?? []).map(([lng, lat]) => ({ lat, lng })),
+        ...(safeWalkPath ?? []).map(([lng, lat]) => ({ lat, lng })),
+      ]
+      const bounds = new api.LatLngBounds()
+      framed.forEach(point => bounds.extend(new api.LatLng(point.lat, point.lng)))
+      const bottomPadding = window.matchMedia('(max-width: 700px)').matches ? 280 : 72
+      map.setBounds(bounds, 76, 56, bottomPadding, 56)
+      window.requestAnimationFrame(() => map.relayout())
       return
     }
     if (customDestination) {
