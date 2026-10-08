@@ -1509,11 +1509,19 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <button type="button" aria-pressed={destinationPicking} onClick={() => setDestinationPicking(active => !active)}><span aria-hidden="true">&#x1F4CD;</span>{destinationPicking ? text("Tap map", "\uC9C0\uB3C4 \uC120\uD0DD") : text("Destination", "\uB3C4\uCC29\uC9C0")}</button>
           </nav>
         </div>
-        <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
-          <div className="tour-mobile-sheet-handle" aria-hidden="true"><i /></div>
-          <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
-        <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
-        {navigationCue}
+        <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}${hasDestination ? ' is-navigating' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
+          <button type="button" className="tour-mobile-sheet-handle" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded} aria-label={mobileSheetExpanded ? text('Collapse directions', '길 안내 접기') : text('Show all directions', '전체 길 안내 보기')} onClick={() => setMobileSheetExpanded(expanded => !expanded)}><i /></button>
+          {hasDestination ? <>
+            <div className="tour-mobile-nav-summary" role="status" aria-live="polite">
+              <span className="tour-mobile-nav-arrow" aria-hidden="true">{walkingToPickup ? '🚶' : instructionArrow(nextInstruction?.instruction)}</span>
+              <span><small>{walkingToPickup ? text('Walk to the rental station', '먼저 대여소까지 도보') : text('Bicycle directions', '자전거 길 안내')}</small><strong>{walkingToPickup ? pickupStation.name : routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Finding a safer bicycle route…', '안전한 자전거 경로를 찾는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{walkingToPickup ? distanceLabel(walkingDistance ?? distanceMeters(userLocation, pickupStation)) : `${distanceLabel(remainingRouteMeters)} ${text('remaining', '남음')}`}</em></span>
+            </div>
+            <div className="tour-mobile-nav-stats"><strong>{text(`About ${bikeMinutes(remainingRouteMeters)} min`, `약 ${bikeMinutes(remainingRouteMeters)}분`)}</strong><span>{distanceLabel(remainingRouteMeters)} · {destinationLabel}</span></div>
+            {mobileSheetExpanded && <div className="tour-mobile-nav-details"><h3>{text('Full bicycle directions', '전체 자전거 길 안내')}</h3>{routeInstructions.length ? <ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span aria-hidden="true">{instructionArrow(instruction)}</span><div><strong>{instructionLabel(instruction, locale)}</strong><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></div></li>)}</ol> : <p>{text('Route details will appear when the route loads.', '경로를 불러오면 상세 안내가 표시됩니다.')}</p>}</div>}
+          </> : <>
+            <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
+            <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
+          </>}
           <button type="button" className="tour-mobile-destination" aria-pressed={destinationPicking} onClick={() => { setDestinationError(false); setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setActiveMapTool(null); setSidebarOpen(false); setMapMenuOpen(false) }}>
             {destinationPicking ? text("Tap your destination on the map", "지도에서 도착지를 눌러 주세요") : customDestination ? text("Change destination on map", "지도에서 도착지 바꾸기") : text("Choose any destination on map", "지도에서 원하는 도착지 선택")}
           </button>
@@ -1524,9 +1532,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </label>}
           <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
         </section>
-        <button type="button" className="tour-mobile-sheet-expand" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded}
-          aria-label={mobileSheetExpanded ? text('Collapse route details', '코스 정보를 접기') : text('Expand route details', '코스 정보를 위로 펼치기')}
-          onClick={() => setMobileSheetExpanded(expanded => !expanded)}>{mobileSheetExpanded ? '⌄' : '⌃'}</button>
         <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
           <section className="tour-map-rail-group">
             <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>

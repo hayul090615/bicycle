@@ -3942,3 +3942,44 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 .tour-screen .tour-amenity-icon > span { font-size: .76rem; line-height: 1; }
 .tour-screen .tour-amenity-icon > b { display: inline; font-size: .58rem; }
+
+/* On phones, directions live in the bottom sheet and leave the map controls clear. */
+@media (max-width: 700px) {
+  .tour-screen .tour-rental-guidance-stack .tour-road-sign,
+  .tour-screen .tour-map-stage > .tour-road-sign { display: none; }
+  .tour-screen .tour-mobile-route-sheet {
+    gap: .4rem;
+    max-height: min(35dvh, 265px);
+    padding: .35rem .8rem calc(.65rem + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+  .tour-screen .tour-mobile-route-sheet.is-expanded { max-height: min(76dvh, 650px); }
+  .tour-screen .tour-mobile-sheet-handle {
+    width: 100%; min-height: 20px; padding: .2rem 0; border: 0;
+    background: transparent; cursor: pointer;
+  }
+  .tour-screen .tour-mobile-route-sheet.is-navigating { background: #1c2221f5; color: #fff; }
+  .tour-screen .tour-mobile-nav-summary { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: .7rem; align-items: center; }
+  .tour-screen .tour-mobile-nav-summary > span:last-child { min-width: 0; display: grid; gap: .12rem; }
+  .tour-screen .tour-mobile-nav-summary small { color: #95b9e4; font-size: .63rem; font-weight: 800; }
+  .tour-screen .tour-mobile-nav-summary strong { overflow: hidden; font-size: 1.1rem; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+  .tour-screen .tour-mobile-nav-summary em { color: #d4dfd7; font-size: .69rem; font-style: normal; }
+  .tour-screen .tour-mobile-nav-arrow { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: #fff; background: #178c55; font-size: 1.7rem; font-weight: 900; }
+  .tour-screen .tour-mobile-nav-stats { display: flex; align-items: baseline; gap: .5rem; min-width: 0; padding: .42rem 0; border-top: 1px solid #ffffff24; }
+  .tour-screen .tour-mobile-nav-stats strong { flex: 0 0 auto; font-size: 1.22rem; }
+  .tour-screen .tour-mobile-nav-stats span { overflow: hidden; color: #c6d3c9; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+  .tour-screen .tour-mobile-nav-details { min-height: 0; border-top: 1px solid #ffffff24; }
+  .tour-screen .tour-mobile-nav-details h3 { margin: .5rem 0; font-size: .75rem; }
+  .tour-screen .tour-mobile-nav-details ol { max-height: min(36dvh, 310px); margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+  .tour-screen .tour-mobile-nav-details li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: .55rem; padding: .48rem .25rem; border-bottom: 1px solid #ffffff20; }
+  .tour-screen .tour-mobile-nav-details li > span { color: #42c878; font-size: 1.1rem; text-align: center; }
+  .tour-screen .tour-mobile-nav-details li div { min-width: 0; display: grid; gap: .14rem; }
+  .tour-screen .tour-mobile-nav-details li strong { font-size: .72rem; }
+  .tour-screen .tour-mobile-nav-details li small { color: #b7c5bc; font-size: .61rem; }
+  .tour-screen .tour-mobile-route-sheet.is-navigating .tour-mobile-destination,
+  .tour-screen .tour-mobile-route-sheet.is-navigating .tour-mobile-sheet-actions { display: none; }
+  .tour-screen .tour-mobile-route-sheet.is-navigating.is-expanded .tour-mobile-destination,
+  .tour-screen .tour-mobile-route-sheet.is-navigating.is-expanded .tour-mobile-sheet-actions { display: grid; }
+  .tour-screen .tour-map-stage > .tour-map-locate,
+  .tour-screen .tour-map-stage .maplibregl-ctrl-top-right { bottom: calc(min(35dvh, 265px) + .7rem); }
+}
