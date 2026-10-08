@@ -3573,11 +3573,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-journey-map-pick > strong { overflow: hidden; font: 700 .64rem/1.2 "Noto Sans KR", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 .tour-screen--dark .tour-journey-map-pick { border-color: #43574a; color: #e5ede4; background: #293a30; }
 .tour-screen--dark .tour-journey-map-pick > span { color: #bdcabe; }
-.tour-place-search { position: relative; min-width: 155px; flex: 1 1 185px; display: grid; gap: .2rem; }
-.tour-place-search > label, .tour-height-legend > span { color: #64756a; font: 800 .58rem 'Noto Sans KR', sans-serif; }
-.tour-place-search > div:first-of-type { display: flex; height: 34px; border: 1px solid #d5e0d7; border-radius: 8px; background: #fff; }
-.tour-place-search input { width: 100%; min-width: 0; padding: 0 .45rem; border: 0; outline: 0; border-radius: 8px; color: #244536; background: transparent; font: 700 .65rem 'Noto Sans KR', sans-serif; }
-.tour-place-search button[type='submit'] { padding: 0 .55rem; border: 0; border-radius: 0 7px 7px 0; color: #fff; background: #18533a; font: 800 .62rem 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-place-search { position: relative; min-width: 155px; flex: 1 1 185px; display: grid; }
+.tour-place-search > div:first-of-type { min-width: 0; display: flex; align-items: center; gap: .75rem; height: 48px; padding: 0 .42rem 0 1.05rem; border: 1px solid #e0e3e7; border-radius: 999px; background: #fff; box-shadow: 0 1px 4px #172b200d; transition: border-color .15s, box-shadow .15s; }
+.tour-place-search > div:first-of-type:focus-within { border-color: #b5c7bb; box-shadow: 0 2px 8px #172b201c; }
+.tour-place-search-icon { flex: 0 0 auto; width: 21px; height: 21px; display: grid; place-items: center; color: #5f6962; }
+.tour-place-search-icon svg, .tour-place-search button[type='submit'] svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tour-place-search input { width: 100%; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; color: #26352d; background: transparent; font: 500 .88rem 'Noto Sans KR', sans-serif; }
+.tour-place-search input::placeholder { color: #929aa3; opacity: 1; }
+.tour-place-search button[type='submit'] { flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #56645b; background: transparent; cursor: pointer; }
+.tour-place-search button[type='submit']:hover, .tour-place-search button[type='submit']:focus-visible { color: #18533a; background: #eef3ef; }
+.tour-place-search button[type='submit']:disabled { opacity: .55; cursor: wait; }
 .tour-place-results { position: absolute; z-index: 2000; top: calc(100% + .2rem); right: 0; left: 0; max-height: 250px; overflow-y: auto; border: 1px solid #ccdacc; border-radius: 9px; background: #fff; box-shadow: 0 10px 25px #183b2a33; }
 .tour-place-results > button { width: 100%; display: grid; gap: .12rem; padding: .5rem .6rem; border: 0; border-bottom: 1px solid #e5ebe5; color: #234731; background: #fff; text-align: left; cursor: pointer; }
 .tour-place-results > button:hover { background: #eaf5ed; }
@@ -3588,6 +3593,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-height-legend small { color: #66766a; font-size: .52rem; }
 .tour-screen--dark .tour-place-search > div:first-of-type, .tour-screen--dark .tour-place-results { border-color: #405348; background: #26372c; }
 .tour-screen--dark .tour-place-search input, .tour-screen--dark .tour-place-results > button { color: #e5ede4; background: #26372c; }
+.tour-screen--dark .tour-place-search-icon, .tour-screen--dark .tour-place-search button[type='submit'] { color: #ccd8cf; }
+.tour-screen--dark .tour-place-search button[type='submit']:hover { color: #fff; background: #344a3c; }
 @media (max-width: 700px) { .tour-journey-planner { flex-wrap: wrap; } .tour-place-search { flex-basis: 100%; } .tour-height-legend { width: 90px; flex-basis: 90px; } }
 .tour-destination-list > .tour-destination-map-button { width: 100%; min-height: 38px; justify-content: center; padding: .45rem .6rem; border: 0; border-radius: 8px; color: #fff; background: #18533a; font: 800 .68rem 'Noto Sans KR', sans-serif; cursor: pointer; }
 .tour-destination-list > .tour-destination-map-button[aria-pressed='true'] { background: #286344; }
@@ -3958,15 +3965,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 
 /* Match the search control and header buttons so their rows line up. */
 @media (min-width: 901px) {
-  .tour-screen .tour-place-search > div:first-of-type { height: 40px; }
-  .tour-screen .tour-place-search button[type='submit'] { min-width: 3.4rem; padding: 0 .65rem; line-height: 1; white-space: nowrap; }
-  .tour-screen .tour-header-actions { transform: translateY(6px); }
+  .tour-screen .tour-place-search > div:first-of-type { height: 50px; }
+  .tour-screen .tour-place-search button[type='submit'] { flex-basis: 40px; width: 40px; min-width: 40px; height: 40px; padding: 0; line-height: 1; }
+  .tour-screen .tour-header-actions { display: grid; grid-template-columns: repeat(4, 5.4rem); gap: .4rem; transform: none; }
+  .tour-screen .tour-header-actions .tour-typing-action { width: 100%; min-width: 0; }
   .tour-screen .tour-header-actions > button,
-  .tour-screen .tour-header-actions .tour-back { box-sizing: border-box; height: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+  .tour-screen .tour-header-actions .tour-back { box-sizing: border-box; width: 100%; height: 50px; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 0 .3rem; border-radius: 14px; font-size: .69rem; }
 }
 @media (max-width: 700px) {
-  .tour-screen .tour-place-search > div:first-of-type { height: 34px; }
-  .tour-screen .tour-place-search button[type='submit'] { min-width: 3.1rem; padding: 0 .45rem; line-height: 1; white-space: nowrap; }
+  .tour-screen .tour-place-search > div:first-of-type { height: 42px; }
+  .tour-screen .tour-place-search button[type='submit'] { flex-basis: 36px; width: 36px; min-width: 36px; height: 36px; padding: 0; line-height: 1; }
   .tour-screen .tour-header-actions > button,
   .tour-screen .tour-header-actions .tour-back { box-sizing: border-box; height: 34px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0 .35rem; }
   .tour-screen .tour-header-actions .tour-typing-action { height: 34px; }

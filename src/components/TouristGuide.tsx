@@ -116,9 +116,12 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   return <main className={`tour-screen${darkMode ? ' tour-screen--dark' : ''}`}>
     <header className="tour-topbar">
       <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'TTAREUNGI SEOUL JOURNEY', '따릉이 서울 여행')}<small>{textFor(locale, 'Find your bike route through Seoul', '서울에서 자전거 길을 찾아보세요')}</small></span></div>
-      <form className="tour-place-search" onSubmit={searchPlaces}>
-        <label htmlFor="tour-place-query">{textFor(locale, 'Search destination', '목적지 검색')}</label>
-        <div><input id="tour-place-query" value={placeQuery} onChange={event => { setPlaceQuery(event.target.value); setPlaceResults([]); setPlaceSearchStatus('idle') }} placeholder={textFor(locale, 'Search a Seoul place', '서울 장소 검색')} autoComplete="off" /><button type="submit" disabled={placeSearchStatus === 'loading'}>{textFor(locale, 'Search', '검색')}</button></div>
+      <form className="tour-place-search" role="search" aria-label={textFor(locale, 'Search Seoul places', '서울 장소 검색')} onSubmit={searchPlaces}>
+        <div>
+          <span className="tour-place-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg></span>
+          <input id="tour-place-query" aria-label={textFor(locale, 'Search destination', '목적지 검색')} value={placeQuery} onChange={event => { setPlaceQuery(event.target.value); setPlaceResults([]); setPlaceSearchStatus('idle') }} placeholder={textFor(locale, 'Search a Seoul place', '서울 장소 검색')} autoComplete="off" />
+          <button type="submit" aria-label={textFor(locale, 'Search', '검색')} title={textFor(locale, 'Search', '검색')} disabled={placeSearchStatus === 'loading'}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg></button>
+        </div>
         {(placeResults.length > 0 || placeSearchStatus !== 'idle') && <div className="tour-place-results" role="status">
           {placeSearchStatus === 'loading' && <p>{textFor(locale, 'Searching places…', '장소를 찾는 중…')}</p>}
           {placeSearchStatus === 'empty' && <p>{textFor(locale, 'No Seoul places found.', '서울 안의 검색 결과가 없습니다.')}</p>}
