@@ -113,7 +113,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
-  const userAccuracyOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
@@ -205,7 +204,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
-      userAccuracyOverlayRef.current?.setMap(null)
       cityMaskOverlayRef.current?.setMap(null)
       cityBoundaryOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
@@ -218,7 +216,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cctvOverlaysRef.current = []
       sceneryOverlaysRef.current = []
       userOverlayRef.current = null
-      userAccuracyOverlayRef.current = null
       cityMaskOverlayRef.current = null
       cityBoundaryOverlayRef.current = null
       activePopupRef.current = null
@@ -670,21 +667,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     if (!map || !api || status !== 'ready') return
     userOverlayRef.current?.setMap(null)
     userOverlayRef.current = null
-    userAccuracyOverlayRef.current?.setMap(null)
-    userAccuracyOverlayRef.current = null
     if (!userLocation) return
-    if (Number.isFinite(userLocation.accuracy) && userLocation.accuracy! > 0) {
-      userAccuracyOverlayRef.current = new api.Circle({
-        map,
-        center: new api.LatLng(userLocation.lat, userLocation.lng),
-        radius: Math.max(5, Math.min(3000, userLocation.accuracy!)),
-        strokeWeight: 2,
-        strokeColor: '#1683ed',
-        strokeOpacity: .68,
-        fillColor: '#1683ed',
-        fillOpacity: .12,
-      })
-    }
     const marker = document.createElement('div')
     marker.className = 'tour-journey-pin tour-journey-pin--start'
     const pinLabel = document.createElement('span')
