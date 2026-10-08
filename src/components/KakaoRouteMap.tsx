@@ -5,7 +5,7 @@ import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
-import { routeArrivalBearing } from '../utils/routeArrival'
+import { routeArrivalMarker } from '../utils/routeArrival'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
@@ -117,6 +117,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
+  const arrivalOverlayRef = useRef<KakaoOverlay | null>(null)
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
@@ -207,6 +208,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       userOverlayRef.current?.setMap(null)
       cityMaskOverlayRef.current?.setMap(null)
       cityBoundaryOverlayRef.current?.setMap(null)
+      destinationOverlayRef.current?.setMap(null)
+      arrivalOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       mapRef.current = null
       apiRef.current = null
@@ -219,6 +222,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       userOverlayRef.current = null
       cityMaskOverlayRef.current = null
       cityBoundaryOverlayRef.current = null
+      destinationOverlayRef.current = null
+      arrivalOverlayRef.current = null
       activePopupRef.current = null
       activePopupIdRef.current = null
       mapRef.current = null
@@ -352,19 +357,16 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const api = apiRef.current
     if (!map || !api || status !== 'ready') return
     destinationOverlayRef.current?.setMap(null)
+    arrivalOverlayRef.current?.setMap(null)
     destinationOverlayRef.current = null
+    arrivalOverlayRef.current = null
     const destinationPoint = customDestination ?? (selectedStop !== null ? points[selectedStop] : null)
     if (destinationPoint) {
       const marker = document.createElement('div')
       marker.className = 'tour-journey-pin tour-journey-pin--destination'
-      marker.style.setProperty('--arrival-bearing', `${routeArrivalBearing(safeRoutePath)}deg`)
-      const arrow = document.createElement('i')
-      arrow.className = 'tour-arrival-direction-arrow'
-      arrow.setAttribute('aria-hidden', 'true')
-      arrow.textContent = '↑'
       const pinLabel = document.createElement('span')
       pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
-      marker.append(arrow, pinLabel)
+      marker.append(pinLabel)
       destinationOverlayRef.current = new api.CustomOverlay({
         map,
         position: new api.LatLng(destinationPoint.lat, destinationPoint.lng),
@@ -374,8 +376,29 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         zIndex: 20,
       })
     }
-    return () => { destinationOverlayRef.current?.setMap(null); destinationOverlayRef.current = null }
-  }, [customDestination, locale, points, safeRoutePath, selectedStop, status])
+    const arrival = hasDestination ? routeArrivalMarker(safeRoutePath) : null
+    if (arrival) {
+      const arrow = document.createElement('span')
+      arrow.className = 'tour-route-end-arrow'
+      arrow.style.setProperty('--route-bearing', `${arrival.bearing}deg`)
+      arrow.setAttribute('aria-hidden', 'true')
+      arrow.textContent = '↑'
+      arrivalOverlayRef.current = new api.CustomOverlay({
+        map,
+        position: new api.LatLng(arrival.point[1], arrival.point[0]),
+        content: arrow,
+        xAnchor: .5,
+        yAnchor: .5,
+        zIndex: 21,
+      })
+    }
+    return () => {
+      destinationOverlayRef.current?.setMap(null)
+      arrivalOverlayRef.current?.setMap(null)
+      destinationOverlayRef.current = null
+      arrivalOverlayRef.current = null
+    }
+  }, [customDestination, hasDestination, locale, points, safeRoutePath, selectedStop, status])
 
   useEffect(() => {
     const map = mapRef.current

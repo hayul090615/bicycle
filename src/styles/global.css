@@ -3956,17 +3956,20 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-amenity-icon > span { font-size: .76rem; line-height: 1; }
 .tour-screen .tour-amenity-icon > b { display: inline; font-size: .58rem; }
 
-.tour-arrival-direction-arrow {
-  position: absolute;
-  z-index: 3;
-  top: -13px;
-  left: 50%;
-  color: #e83933;
+.tour-route-end-arrow {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: #fff;
   font: 950 20px/1 'Noto Sans KR', sans-serif;
-  text-shadow: 0 1px 2px #fff, 0 0 3px #fff;
-  transform: translateX(-50%) rotate(var(--arrival-bearing, 0deg));
-  transform-origin: 50% 22px;
+  text-shadow: 0 1px 3px #123d2d, 0 0 2px #123d2d;
+  transform: rotate(var(--route-bearing, 0deg));
   pointer-events: none;
+}
+.tour-leaflet-route-end-icon { border: 0 !important; background: transparent !important; }
+@media (min-width: 901px) {
+  .tour-screen .tour-explorer-grid--destination-picking .tour-map-destination-tools { top: 4rem; left: 1rem; }
 }
 
 /* Match the search control and header buttons so their rows line up. */

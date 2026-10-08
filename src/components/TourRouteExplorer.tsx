@@ -10,7 +10,7 @@ import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
-import { routeArrivalBearing } from '../utils/routeArrival'
+import { routeArrivalMarker } from '../utils/routeArrival'
 import { fetchBikePath, fetchBikePaths, fetchWalkingPath, type BikeRouteInstruction, type BikeRouteResult, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
@@ -1184,8 +1184,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   }), [locale])
-  const arrivalBearing = routeArrivalBearing(displayRoutePath)
-  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination" style="--arrival-bearing:${arrivalBearing}deg"><i class="tour-arrival-direction-arrow" aria-hidden="true">↑</i><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [arrivalBearing, locale])
+  const arrivalMarker = routeArrivalMarker(displayRoutePath)
+  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} hasDestination={hasDestination} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
@@ -1206,6 +1206,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
       <Tooltip direction="top">{text('You are here', '내 위치')}{userLocation.accuracy !== undefined ? ` · ±${Math.round(userLocation.accuracy)} m` : ''}</Tooltip>
     </Marker>}
+    {hasDestination && arrivalMarker && <Marker position={[arrivalMarker.point[1], arrivalMarker.point[0]]}
+      icon={divIcon({ className: 'tour-leaflet-route-end-icon', html: `<span class="tour-route-end-arrow" style="--route-bearing:${arrivalMarker.bearing}deg" aria-hidden="true">↑</span>`, iconSize: [24, 24], iconAnchor: [12, 12] })}
+      zIndexOffset={1090} interactive={false} />}
     {(customDestination || selectedStop !== null) && <Marker position={customDestination ? [customDestination.lat, customDestination.lng] : points[selectedStop!]} icon={destinationIcon} zIndexOffset={1100} />}
     {pickupStation && <CircleMarker center={[pickupStation.lat, pickupStation.lng]} radius={11}
       pathOptions={{ color: '#fff', weight: 3, fillColor: '#137e72', fillOpacity: 1 }}>
@@ -1434,7 +1437,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </aside>
   )
 
-  return <div className={`tour-explorer-grid${sidebarOpen && !mapMenuOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}${mapMenuOpen ? ' tour-explorer-grid--menu-open' : ''}`}>
+  return <div className={`tour-explorer-grid${sidebarOpen && !mapMenuOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}${mapMenuOpen ? ' tour-explorer-grid--menu-open' : ''}${destinationPicking ? ' tour-explorer-grid--destination-picking' : ''}`}>
     <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
         <div><span className="tour-card-kicker">{text('01 ROUTE · 02 MAP · 03 RIDE', '01 코스 · 02 지도 · 03 출발')}</span>
