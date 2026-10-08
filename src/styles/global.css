@@ -3917,3 +3917,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-map-view-dock { top: 7rem; left: .55rem; width: 118px; padding: .25rem; gap: .22rem; }
   .tour-screen .tour-map-view-dock button { min-height: 35px; padding: .25rem .1rem; font-size: .58rem; }
 }
+
+/* Align the header action buttons with the journey input row on desktop. */
+@media (min-width: 901px) {
+  .tour-screen .tour-header-actions { align-self: flex-end; margin-bottom: .32rem; }
+}
