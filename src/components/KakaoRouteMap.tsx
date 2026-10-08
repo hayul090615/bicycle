@@ -26,11 +26,9 @@ function isValidPath(path: LonLat[] | null): path is LonLat[] {
 
 function readMapCenter(map: KakaoMap): MapPoint | null {
   try {
-    const bounds = map.getBounds()
-    const southwest = bounds.getSouthWest()
-    const northeast = bounds.getNorthEast()
-    const lat = (southwest.getLat() + northeast.getLat()) / 2
-    const lng = (southwest.getLng() + northeast.getLng()) / 2
+    const center = map.getCenter()
+    const lat = center.getLat()
+    const lng = center.getLng()
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
   } catch {
     return null
@@ -67,7 +65,7 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   return popup
 }
 
-export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, onMapCenterChange, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, kakaoMapType, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
+export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, amenities, showAmenities, bikeStations, showBikeStations, onMapCenterChange, showRiders, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showCctv, cctvCameras, locationFocusRequest, locale, userLocation, selectedStop, kakaoMapType, roadviewEnabled, roadviewPosition, onSelectRoadview, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -96,6 +94,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
   kakaoMapType: 'roadmap' | 'skyview'
+  roadviewEnabled: boolean
+  roadviewPosition: MapPoint | null
+  onSelectRoadview: (point: MapPoint) => void
   onSelectStop: (index: number) => void
   destinationPicking: boolean
   customDestination: { lat: number; lng: number } | null
@@ -119,6 +120,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const arrivalOverlayRef = useRef<KakaoOverlay | null>(null)
+  const roadviewOverlayRef = useRef<KakaoOverlay | null>(null)
+  const roadviewSelectionRef = useRef({ enabled: roadviewEnabled, position: roadviewPosition, onSelect: onSelectRoadview })
+  roadviewSelectionRef.current = { enabled: roadviewEnabled, position: roadviewPosition, onSelect: onSelectRoadview }
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
@@ -194,7 +198,16 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     timeout = window.setTimeout(() => {
       if (!mapRef.current && !disposed) setStatus('error')
     }, 22000)
-    const resizeObserver = host.current ? new ResizeObserver(() => mapRef.current?.relayout()) : null
+    const resizeObserver = host.current ? new ResizeObserver(() => {
+      const map = mapRef.current
+      const api = apiRef.current
+      if (!map) return
+      map.relayout()
+      const roadview = roadviewSelectionRef.current
+      if (api && roadview.enabled && roadview.position) {
+        map.setCenter(new api.LatLng(roadview.position.lat, roadview.position.lng))
+      }
+    }) : null
     if (host.current && resizeObserver) resizeObserver.observe(host.current)
     return () => {
       disposed = true
@@ -211,6 +224,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cityBoundaryOverlayRef.current?.setMap(null)
       destinationOverlayRef.current?.setMap(null)
       arrivalOverlayRef.current?.setMap(null)
+      roadviewOverlayRef.current?.setMap(null)
       activePopupRef.current?.setMap(null)
       mapRef.current = null
       apiRef.current = null
@@ -225,6 +239,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cityBoundaryOverlayRef.current = null
       destinationOverlayRef.current = null
       arrivalOverlayRef.current = null
+      roadviewOverlayRef.current = null
       activePopupRef.current = null
       activePopupIdRef.current = null
       mapRef.current = null
@@ -275,7 +290,12 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const name = document.createElement('span')
       name.textContent = label
       button.append(number, name)
-      button.addEventListener('click', () => onSelectStop(index))
+      button.addEventListener('click', event => {
+        event.stopPropagation()
+        const roadview = roadviewSelectionRef.current
+        if (roadview.enabled) roadview.onSelect(points[index])
+        else onSelectStop(index)
+      })
       button.addEventListener('mouseenter', () => onHoverStop(index))
       button.addEventListener('mouseleave', () => onHoverStop(null))
       button.addEventListener('focus', () => onHoverStop(index))
@@ -284,12 +304,14 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         map,
         position: new api.LatLng(points[index].lat, points[index].lng),
         content: button,
+        clickable: true,
         xAnchor: .5,
         yAnchor: 1,
         zIndex: selectedStop === index ? 10 : 5,
       }))
     })
 
+    if (roadviewSelectionRef.current.enabled) return
     if (!hasDestination && selectedStop === null) {
       if (locationFocusRequest === 0) {
         map.setLevel(8, { animate: false })
@@ -340,18 +362,59 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
-    if (!map || !api || status !== 'ready' || !destinationPicking) return
+    if (!map || !api || status !== 'ready' || (!destinationPicking && !roadviewEnabled)) return
     const onMapClick = (event?: { latLng?: { getLat(): number; getLng(): number } }) => {
       const position = event?.latLng
-      if (position) onPickDestination({ lat: position.getLat(), lng: position.getLng() })
+      if (!position) return
+      const point = { lat: position.getLat(), lng: position.getLng() }
+      if (roadviewEnabled) onSelectRoadview(point)
+      else onPickDestination(point)
     }
     api.event.addListener(map, 'click', onMapClick)
-    host.current?.classList.add('is-picking-destination')
+    map.setCursor('crosshair')
+    host.current?.classList.add(roadviewEnabled ? 'is-picking-roadview' : 'is-picking-destination')
     return () => {
       api.event.removeListener(map, 'click', onMapClick)
+      map.setCursor('default')
       host.current?.classList.remove('is-picking-destination')
+      host.current?.classList.remove('is-picking-roadview')
     }
-  }, [destinationPicking, onPickDestination, status])
+  }, [destinationPicking, onPickDestination, onSelectRoadview, roadviewEnabled, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready' || !roadviewEnabled) return
+    activePopupRef.current?.setMap(null)
+    activePopupRef.current = null
+    activePopupIdRef.current = null
+    map.addOverlayMapTypeId(api.MapTypeId.ROADVIEW)
+    const position = roadviewSelectionRef.current.position
+    if (position) map.setCenter(new api.LatLng(position.lat, position.lng))
+    if (map.getLevel() > 4) map.setLevel(4, { animate: false })
+    return () => map.removeOverlayMapTypeId(api.MapTypeId.ROADVIEW)
+  }, [roadviewEnabled, status])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const api = apiRef.current
+    if (!map || !api || status !== 'ready') return
+    roadviewOverlayRef.current?.setMap(null)
+    roadviewOverlayRef.current = null
+    if (!roadviewEnabled || !roadviewPosition) return
+    const position = new api.LatLng(roadviewPosition.lat, roadviewPosition.lng)
+    const marker = document.createElement('span')
+    marker.className = 'tour-roadview-map-pin'
+    marker.textContent = '📷'
+    marker.setAttribute('role', 'img')
+    marker.setAttribute('aria-label', locale === 'ko' ? '로드뷰 촬영 위치' : 'Roadview camera location')
+    roadviewOverlayRef.current = new api.CustomOverlay({ map, position, content: marker, clickable: true, xAnchor: .5, yAnchor: 1, zIndex: 40 })
+    map.setCenter(position)
+    return () => {
+      roadviewOverlayRef.current?.setMap(null)
+      roadviewOverlayRef.current = null
+    }
+  }, [locale, roadviewEnabled, roadviewPosition, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -416,7 +479,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
-    if (!map || !api || status !== 'ready' || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || !api || status !== 'ready' || roadviewSelectionRef.current.enabled || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     lastLocationFocusRequestRef.current = locationFocusRequest
     map.setLevel(4, { animate: false })
     map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
@@ -566,7 +629,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
           togglePopup()
         }
       })
-      return new api.CustomOverlay({ map, position: new api.LatLng(station.lat, station.lng), content: marker, xAnchor: .5, yAnchor: 1, zIndex: 9 })
+      return new api.CustomOverlay({ map, position: new api.LatLng(station.lat, station.lng), content: marker, clickable: true, xAnchor: .5, yAnchor: 1, zIndex: 9 })
     })
     return () => overlays.forEach(overlay => overlay.setMap(null))
   }, [bikeStations, locale, showBikeStations, status])
@@ -654,7 +717,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
             map.setLevel(Math.max(1, level - 2), { animate: false })
             map.setCenter(new api.LatLng(lat, lng))
           })
-          cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(lat, lng), content: button, xAnchor: .5, yAnchor: .5, zIndex: 4 }))
+          cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position: new api.LatLng(lat, lng), content: button, clickable: true, xAnchor: .5, yAnchor: .5, zIndex: 4 }))
           return
         }
         const camera = group[0]
@@ -683,6 +746,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
             if (activePopupRef.current === overlay) activePopupRef.current = null
             if (activePopupIdRef.current === camera.id) activePopupIdRef.current = null
           }),
+          clickable: true,
           xAnchor: .5,
           yAnchor: 1.12,
           zIndex: 20,
@@ -690,7 +754,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         activePopupRef.current = overlay
         activePopupIdRef.current = camera.id
       })
-      cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position, content: marker, xAnchor: .5, yAnchor: 1, zIndex: 4 }))
+      cctvOverlaysRef.current.push(new api.CustomOverlay({ map, position, content: marker, clickable: true, xAnchor: .5, yAnchor: 1, zIndex: 4 }))
       })
     }
     activePopupRef.current?.setMap(null)
@@ -738,11 +802,11 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   }, [locale, status, userLocation])
 
   if (status === 'error') return <div className="kakao-route-map kakao-route-map--error">
-    <div className="kakao-route-fallback">{fallback}</div>
+    <div className="kakao-route-fallback" inert={roadviewEnabled}>{fallback}</div>
   </div>
 
   return <div className="kakao-route-map">
-    {status === 'loading' && <div className="kakao-route-underlay">{fallback}</div>}
+    {status === 'loading' && <div className="kakao-route-underlay" inert={roadviewEnabled}>{fallback}</div>}
     <div ref={host} className="kakao-route-host" role="region" aria-label={locale === 'ko' ? `${route.titleKo} 카카오 지도` : `${route.title} Kakao map`}
       style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} />
     {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? '카카오 지도를 불러오는 중…' : 'Loading Kakao map…'}</p>}

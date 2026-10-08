@@ -21,9 +21,13 @@ export interface KakaoVisibleBounds {
 
 export interface KakaoMap {
   setCenter(position: KakaoLatLng): void
+  getCenter(): KakaoLatLng
+  setCursor(cursor: string): void
   setBounds(bounds: KakaoBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void
   setLevel(level: number, options?: { animate?: boolean }): void
   setMapTypeId(mapTypeId: string): void
+  addOverlayMapTypeId(mapTypeId: string): void
+  removeOverlayMapTypeId(mapTypeId: string): void
   getBounds(): KakaoVisibleBounds
   getLevel(): number
   addControl(control: unknown, position: string): void
@@ -32,6 +36,9 @@ export interface KakaoMap {
 
 export interface KakaoRoadview {
   setPanoId(panoId: number, position?: KakaoLatLng): void
+  getPanoId(): number
+  getPosition(): KakaoLatLng
+  relayout(): void
 }
 
 export interface KakaoRoadviewClient {
@@ -89,11 +96,12 @@ export interface KakaoMapsApi {
     xAnchor?: number
     yAnchor?: number
     zIndex?: number
+    clickable?: boolean
   }) => KakaoOverlay
   MapTypeControl: new () => unknown
   ZoomControl: new () => unknown
   ControlPosition: { TOPRIGHT: string; RIGHT: string }
-  MapTypeId: { ROADMAP: string; SKYVIEW: string }
+  MapTypeId: { ROADMAP: string; SKYVIEW: string; ROADVIEW: string }
   services: {
     Status: { OK: string; ZERO_RESULT: string }
     Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number; page?: number }) : void }
