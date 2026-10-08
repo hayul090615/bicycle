@@ -4,7 +4,6 @@ import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { useEffect, useState } from 'react'
 import { SiteDialog, type SiteDialogKind } from './SiteDialog'
 import { siteAuth } from '../services/siteAuth'
-import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 
 interface DistrictSelectorProps {
   selected: SeoulDistrict | null
@@ -12,17 +11,14 @@ interface DistrictSelectorProps {
   onStart: () => void
   onOpenTextPractice: () => void
   onOpenTours: () => void
-  onOpenToursWithStation: (stationId: string) => void
   onOpenAuth: (kind: 'login' | 'signup') => void
   highScore: number
   playedStations: Partial<Record<SeoulDistrict, string[]>>
 }
 
-export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, onOpenToursWithStation, onOpenAuth, highScore, playedStations }: DistrictSelectorProps) {
+export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, onOpenAuth, highScore, playedStations }: DistrictSelectorProps) {
   const [activeTab, setActiveTab] = useState('타자 연습')
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [nearbyStations, setNearbyStations] = useState<NearbyBikeStation[]>([])
-  const [locationStatus, setLocationStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
   const [dialog, setDialog] = useState<SiteDialogKind | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   useEffect(() => {
@@ -33,19 +29,12 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
     return () => { active = false; subscription.unsubscribe() }
   }, [])
   useEffect(() => {
-    if (!navigator.geolocation) { setLocationStatus('unavailable'); return }
-    const controller = new AbortController()
+    if (!navigator.geolocation) return
+    let active = true
     navigator.geolocation.getCurrentPosition(position => {
-      const location = { lat: position.coords.latitude, lng: position.coords.longitude }
-      if (controller.signal.aborted) return
-      setUserLocation(location)
-      setNearbyStations(nearestSnapshotStations(location, 1000, 500))
-      setLocationStatus('ready')
-      void fetchNearbyBikeStations(location, controller.signal, 500).then(result => {
-        if (!controller.signal.aborted) setNearbyStations(result.stations)
-      }).catch(() => { /* Published station locations remain available. */ })
-    }, () => { if (!controller.signal.aborted) setLocationStatus('unavailable') }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
-    return () => controller.abort()
+      if (active) setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
+    }, () => undefined, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
+    return () => { active = false }
   }, [])
   const course = selected ? districtCourses[selected] : undefined
   const stationCount = selected ? allBikeStations.filter((station) => station.district === selected).length : 0
@@ -135,13 +124,6 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
           </div>
         </div>
         <SeoulDistrictMap selected={selected} onSelect={onSelect} playedStationCounts={playedStationCounts} userLocation={userLocation} />
-        <section className="typing-nearby-stations" aria-label="내 주변 따릉이 대여소">
-          <h3>내 주변 따릉이 대여소 <small>500m 이내 {nearbyStations.length}곳</small></h3>
-          {locationStatus === 'loading' && <p>현재 위치를 확인하고 있습니다…</p>}
-          {locationStatus === 'unavailable' && <p>위치 권한을 허용하면 500m 이내 대여소를 볼 수 있습니다.</p>}
-          {locationStatus === 'ready' && nearbyStations.length === 0 && <p>500m 이내에 대여소가 없습니다.</p>}
-          {nearbyStations.length > 0 && <div className="typing-nearby-stations-list">{nearbyStations.map(station => <button type="button" key={station.id} onClick={() => onOpenToursWithStation(station.id)}><strong>{station.name}</strong><span>{Math.round(station.distanceMeters)}m · {station.available === null ? '잔여 수 확인 중' : `대여 가능 ${station.available}대`} →</span></button>)}</div>}
-        </section>
         <div className={`map-selection-bar ${selected ? 'is-visible' : ''}`} aria-live="polite">
           {selected && course ? <>
             <div><span>선택한 지역</span><strong>{selected}</strong><small>전체 {stationCount}곳 · 플레이한 대여소 {playedCount}곳 · 다음 코스 {course.stations.length}개 지점</small></div>

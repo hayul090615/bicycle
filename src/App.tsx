@@ -184,13 +184,6 @@ export default function App() {
     window.history.replaceState(null, '', url)
     setScreen('tour')
   }
-  const openToursWithStation = (stationId: string) => {
-    try { localStorage.setItem('seoul-bike-selected-pickup-station', stationId) } catch { /* Continue to the route planner. */ }
-    openTours()
-    const url = new URL(window.location.href)
-    url.searchParams.set('lang', 'ko')
-    window.history.replaceState(null, '', url)
-  }
   const openAuth = (kind: AuthPageKind) => {
     const url = new URL(window.location.href)
     url.searchParams.delete('lang')
@@ -215,7 +208,6 @@ export default function App() {
   else if (screen === 'login' || screen === 'signup') screenContent = <AuthPage key={screen} kind={screen} onHome={goHome} onNavigate={openAuth} />
   else if (screen === 'text') screenContent = <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
   else screenContent = <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
-    onOpenToursWithStation={openToursWithStation}
     onOpenTextPractice={openTextPractice}
     onOpenAuth={openAuth}
     highScore={highScore} playedStations={playedStations} />

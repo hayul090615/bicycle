@@ -1952,14 +1952,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-nearby-list { display: grid; gap: .4rem; }
 .tour-nearby-list { max-height: 320px; overflow-y: auto; }
 .seoul-current-location-dot { fill: #ed3636; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 2px 3px #541b1b99); pointer-events: none; }
-.typing-nearby-stations { position: absolute; z-index: 4; top: 4.4rem; right: 1rem; width: min(265px, 42%); max-height: min(280px, 38vh); padding: .65rem; overflow-y: auto; border: 1px solid #cfe0d1; border-radius: 12px; background: #ffffffed; box-shadow: 0 8px 20px #1a342933; }
-.typing-nearby-stations h3 { margin: 0 0 .45rem; color: #18533a; font-size: .76rem; }
-.typing-nearby-stations h3 small { display: block; color: #607668; font-size: .61rem; }
-.typing-nearby-stations p { margin: .35rem 0; color: #607668; font-size: .65rem; }
-.typing-nearby-stations-list { display: grid; gap: .3rem; }
-.typing-nearby-stations-list button { display: grid; gap: .12rem; padding: .4rem .5rem; border: 1px solid #d9e7db; border-radius: 7px; color: #214a35; background: #fff; text-align: left; cursor: pointer; }
-.typing-nearby-stations-list button span { color: #66796d; font-size: .61rem; }
-@media (max-width: 700px) { .typing-nearby-stations { top: 4.1rem; right: .5rem; width: min(205px, 54%); max-height: 220px; padding: .48rem; } }
 .tour-nearby-list button { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 58px; padding: .55rem .7rem; border: 1px solid #d7e2d8; border-radius: 7px; background: #fff; text-align: left; cursor: pointer; }
 .tour-nearby-list button[aria-pressed='true'] { border-color: #138b65; background: #e9f6ec; box-shadow: inset 3px 0 #138b65; }
 .tour-nearby-list button:disabled { opacity: .52; cursor: not-allowed; }
