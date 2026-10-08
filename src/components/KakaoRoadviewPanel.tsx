@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { loadKakaoMaps, type KakaoMapsApi, type KakaoRoadview, type KakaoRoadviewClient } from '../services/kakaoMaps'
 import './KakaoRoadviewPanel.css'
 
@@ -10,8 +11,11 @@ export interface KakaoRoadviewPanelProps {
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
+const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
 export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }: KakaoRoadviewPanelProps) {
+  const anchorRef = useRef<HTMLSpanElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const roadviewRef = useRef<KakaoRoadview | null>(null)
   const clientRef = useRef<KakaoRoadviewClient | null>(null)
@@ -20,10 +24,102 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }
   const positionCallbackRef = useRef(onPositionChange)
   const [status, setStatus] = useState<RoadviewStatus>('loading')
   const [retry, setRetry] = useState(0)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(() => window.matchMedia(MOBILE_ROADVIEW_QUERY).matches)
+  const [portalLayer] = useState(() => {
+    const layer = document.createElement('div')
+    layer.className = 'tour-roadview-layer'
+    return layer
+  })
+  const openerRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const titleId = useId()
   const viewerId = useId()
   const ko = locale === 'ko'
+
+  useLayoutEffect(() => {
+    const stage = anchorRef.current?.closest('.tour-map-stage') ?? anchorRef.current?.parentElement
+    if (!stage) return
+    const focused = document.activeElement instanceof HTMLElement && portalLayer.contains(document.activeElement)
+      ? document.activeElement : null
+    portalLayer.classList.toggle('tour-roadview-layer--fullscreen', expanded)
+    // Moving this same container preserves React's portal subtree and the SDK panorama.
+    const parent = expanded ? document.body : stage
+    if (portalLayer.parentElement !== parent) parent.appendChild(portalLayer)
+    if (focused?.isConnected) focused.focus({ preventScroll: true })
+  }, [expanded, portalLayer])
+
+  useLayoutEffect(() => {
+    const screen = anchorRef.current?.closest('.tour-screen')
+    if (!screen) return
+    const syncTheme = () => portalLayer.classList.toggle('tour-screen--dark', screen.classList.contains('tour-screen--dark'))
+    syncTheme()
+    const observer = new MutationObserver(syncTheme)
+    observer.observe(screen, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [portalLayer])
+
+  useLayoutEffect(() => {
+    const media = window.matchMedia(MOBILE_ROADVIEW_QUERY)
+    const change = (event: MediaQueryListEvent) => setExpanded(event.matches)
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!expanded) return
+    const previousOverflow = document.body.style.getPropertyValue('overflow')
+    const previousPriority = document.body.style.getPropertyPriority('overflow')
+    const background = new Map<HTMLElement, boolean>()
+    const lockBackground = () => {
+      for (const child of document.body.children) {
+        if (!(child instanceof HTMLElement) || child === portalLayer || /^(SCRIPT|STYLE|LINK)$/.test(child.tagName)) continue
+        if (!background.has(child)) background.set(child, child.inert)
+        child.inert = true
+      }
+    }
+    document.body.style.setProperty('overflow', 'hidden')
+    lockBackground()
+    const observer = new MutationObserver(lockBackground)
+    observer.observe(document.body, { childList: true })
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        setExpanded(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const controls = [...portalLayer.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter(node => node.getClientRects().length && !node.closest('[inert]') && getComputedStyle(node).visibility !== 'hidden')
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      const active = document.activeElement
+      if (!first || !last) {
+        event.preventDefault()
+        panelRef.current?.focus({ preventScroll: true })
+      } else if (!controls.includes(active as HTMLElement) || (event.shiftKey ? active === first : active === last)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus({ preventScroll: true })
+      }
+    }
+    document.addEventListener('keydown', handleKey, true)
+    if (!portalLayer.contains(document.activeElement)) {
+      portalLayer.querySelector<HTMLButtonElement>('.tour-roadview-panel__controls button')?.focus({ preventScroll: true })
+    }
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('keydown', handleKey, true)
+      for (const [node, inert] of background) node.inert = inert
+      if (previousOverflow) document.body.style.setProperty('overflow', previousOverflow, previousPriority)
+      else document.body.style.removeProperty('overflow')
+    }
+  }, [expanded, portalLayer])
+
+  useLayoutEffect(() => () => {
+    portalLayer.remove()
+    const opener = openerRef.current
+    const candidates = [opener, ...document.querySelectorAll<HTMLElement>('.tour-map-view-dock .tour-roadview-toggle')]
+    candidates.find(node => node?.isConnected && node.getClientRects().length && !node.closest('[inert]'))?.focus({ preventScroll: true })
+  }, [portalLayer])
 
   useEffect(() => { positionCallbackRef.current = onPositionChange }, [onPositionChange])
 
@@ -144,24 +240,26 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }
     return () => {
       observer.disconnect()
       window.cancelAnimationFrame(frame)
-      roadviewRef.current = null
-      clientRef.current = null
-      confirmedPanoRef.current = null
     }
   }, [])
 
-  const expandLabel = expanded ? (ko ? '작은 창으로 보기' : 'Restore inset') : (ko ? '크게 보기' : 'Expand')
+  const expandLabel = expanded ? (ko ? '지도로 돌아가기' : 'Return to map') : (ko ? '전체 화면으로 보기' : 'Full screen')
   const message = status === 'loading'
     ? (ko ? '거리 사진을 불러오는 중…' : 'Loading street imagery…')
     : status === 'empty'
       ? (ko ? '이 위치 주변에 거리 사진이 없습니다.' : 'No street imagery near this location.')
       : (ko ? '거리 사진을 불러오지 못했습니다.' : 'Street imagery could not be loaded.')
 
-  return <section
+  return <>
+    <span className="tour-roadview-anchor" ref={anchorRef} aria-hidden="true" />
+    {createPortal(<section
     id="tour-roadview-panel"
+    ref={panelRef}
     className={`tour-roadview-panel${expanded ? ' tour-roadview-panel--expanded' : ''}`}
-    role="region"
+    role={expanded ? 'dialog' : 'region'}
+    aria-modal={expanded || undefined}
     aria-labelledby={titleId}
+    tabIndex={-1}
     onClick={event => event.stopPropagation()}
     onDoubleClick={event => event.stopPropagation()}
     onKeyDown={event => {
@@ -204,5 +302,6 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }
         </>}
       </div>}
     </div>
-  </section>
+  </section>, portalLayer)}
+  </>
 }

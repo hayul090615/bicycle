@@ -384,7 +384,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, searchedDestination }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, onRoadviewOpen, searchedDestination }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -400,6 +400,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onViaStopChange: (index: number | null) => void
   rentalWidgetTarget: HTMLDivElement | null
   rentalTimerOpen: boolean
+  onRoadviewOpen: () => void
   searchedDestination: { lat: number; lng: number; serial: number } | null
 }) {
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
@@ -479,6 +480,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setRoadviewTarget(null)
     setRoadviewPosition(null)
   }, [])
+  useLayoutEffect(() => {
+    if (rentalTimerOpen) closeRoadview()
+  }, [closeRoadview, rentalTimerOpen])
   const selectRoadview = useCallback((point: Coordinates) => {
     if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return
     setRoadviewTarget(point)
@@ -855,6 +859,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const toggleRoadview = () => {
     if (roadviewEnabled) { closeRoadview(); return }
     if (!hasKakaoMapsKey) return
+    onRoadviewOpen()
     const target = view === 'kakao' ? mapCenter
       : userLocation ?? customDestination ?? { lat: fallbackOriginStation.lat, lng: fallbackOriginStation.lng }
     setRoadviewTarget(target)

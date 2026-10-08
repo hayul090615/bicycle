@@ -1,3 +1,17 @@
+.tour-roadview-anchor { display: none; }
+.tour-roadview-layer {
+  position: absolute;
+  z-index: 1460;
+  inset: 0;
+  pointer-events: none;
+}
+.tour-roadview-layer--fullscreen {
+  position: fixed;
+  z-index: 100000;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+}
 .tour-roadview-panel {
   position: absolute;
   z-index: 1460;
@@ -14,6 +28,7 @@
   color: #173d2a;
   background: #f6f8f4;
   box-shadow: 0 8px 32px #10281a45;
+  pointer-events: auto;
 }
 
 .tour-roadview-panel__header {
@@ -94,13 +109,6 @@
   border-radius: 50%;
   animation: tour-roadview-panel-spin .8s linear infinite;
 }
-.tour-roadview-panel--expanded {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-}
-
 .tour-screen--dark .tour-roadview-panel { border-color: #4b6755; }
 .tour-screen--dark .tour-roadview-panel__header { border-color: #4b6755; color: #e9f5ec; background: #1a3326; }
 .tour-screen--dark .tour-roadview-panel__controls > button { color: #e9f5ec; }
@@ -108,7 +116,6 @@
 
 @media (max-width: 900px) {
   .tour-roadview-panel { top: .65rem; right: .65rem; width: min(420px, calc(100% - 9rem)); height: min(290px, 46%); }
-  .tour-roadview-panel--expanded { inset: 0; width: 100%; height: 100%; }
 }
 @media (max-width: 600px) {
   .tour-roadview-panel { width: min(310px, calc(100% - 8.8rem)); height: min(235px, 43%); border-radius: 9px; }
@@ -119,15 +126,58 @@
   .tour-roadview-panel__status { gap: .4rem; padding: .65rem; }
   .tour-roadview-panel__status > p { font-size: .72rem; }
   .tour-roadview-panel__status > small { font-size: .63rem; }
-  .tour-roadview-panel--expanded { inset: 0; width: 100%; height: 100%; border-radius: 0; }
 }
 @media (max-width: 700px) {
   .tour-roadview-panel { top: 12rem; height: min(235px, 43%, calc(100% - 12.65rem)); }
-  .tour-roadview-panel--expanded { inset: 0; height: 100%; }
 }
 @media (max-width: 900px) and (max-height: 550px) {
   .tour-roadview-panel { top: .55rem; right: .55rem; width: min(480px, calc(100% - 9rem)); height: calc(100% - 1.1rem); }
-  .tour-roadview-panel--expanded { inset: 0; width: 100%; height: 100%; }
 }
+.tour-roadview-panel--expanded {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: #21352b;
+  box-shadow: none;
+}
+.tour-roadview-panel--expanded .tour-roadview-panel__body { position: absolute; inset: 0; }
+.tour-roadview-panel--expanded .tour-roadview-panel__header {
+  position: absolute;
+  z-index: 2;
+  top: max(.75rem, env(safe-area-inset-top));
+  right: max(.75rem, env(safe-area-inset-right));
+  left: max(.75rem, env(safe-area-inset-left));
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  color: #fff;
+  background: transparent;
+  pointer-events: none;
+}
+.tour-roadview-panel--expanded .tour-roadview-panel__header > strong {
+  padding: .5rem .8rem;
+  border-radius: 999px;
+  color: #fff;
+  background: #15261dd1;
+  font-size: .78rem;
+  backdrop-filter: blur(8px);
+}
+.tour-roadview-panel--expanded .tour-roadview-panel__controls { gap: .5rem; pointer-events: auto; }
+.tour-roadview-panel--expanded .tour-roadview-panel__controls > button {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 1px solid #ffffff45;
+  border-radius: 50%;
+  color: #fff;
+  background: #15261dd1;
+  box-shadow: 0 2px 10px #0004;
+  backdrop-filter: blur(8px);
+}
+.tour-roadview-panel--expanded .tour-roadview-panel__controls > button:hover { background: #173821f2; }
+.tour-roadview-panel--expanded .tour-roadview-panel__controls > button > svg { width: 22px; height: 22px; }
 @keyframes tour-roadview-panel-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tour-roadview-panel__spinner { animation: none; } }

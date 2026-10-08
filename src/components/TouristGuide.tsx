@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { getTouristStation, touristRoutes, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { nowInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
@@ -27,6 +27,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const [searchedDestination, setSearchedDestination] = useState<{ lat: number; lng: number; serial: number } | null>(null)
   const [rentalWidgetTarget, setRentalWidgetTarget] = useState<HTMLDivElement | null>(null)
   const [rentalTimerOpen, setRentalTimerOpen] = useState(false)
+  const closeRentalTimer = useCallback(() => setRentalTimerOpen(false), [])
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
   useEffect(() => {
@@ -147,7 +148,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
           originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
           onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
-          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} searchedDestination={searchedDestination} />
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} onRoadviewOpen={closeRentalTimer} searchedDestination={searchedDestination} />
       </section>
       <details className="tour-more-details" id="tour-routes">
         <summary><span><small>{textFor(locale, 'MORE TO EXPLORE', '서울을 더 둘러보기')}</small><strong>{textFor(locale, 'Browse ride themes and seasonal routes', '계절별 풍경과 테마 코스 보기')}</strong></span><i aria-hidden="true">＋</i></summary>
