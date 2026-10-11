@@ -2,13 +2,33 @@ import type { LonLat } from '../services/bikeRoute'
 
 export type RouteArrivalMarker = { point: LonLat; bearing: number }
 
-/** Route endpoint and bearing of its final non-zero segment. */
-export function routeArrivalMarker(points: LonLat[] | null | undefined): RouteArrivalMarker | null {
-  if (!points || points.length < 2) return null
-  const [toLng, toLat] = points.at(-1)!
+function distanceMeters(first: LonLat, second: LonLat) {
   const radians = Math.PI / 180
-  for (let index = points.length - 2; index >= 0; index--) {
-    const [fromLng, fromLat] = points[index]
+  const latitudeDelta = (second[1] - first[1]) * radians
+  const longitudeDelta = (second[0] - first[0]) * radians
+  const latitude1 = first[1] * radians
+  const latitude2 = second[1] * radians
+  const angle = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(latitude1) * Math.cos(latitude2) * Math.sin(longitudeDelta / 2) ** 2
+  return 12_742_000 * Math.asin(Math.min(1, Math.sqrt(angle)))
+}
+
+/** Connect a snapped bicycle-route endpoint to the exact selected destination. */
+export function routeArrivalConnector(points: LonLat[] | null | undefined, destination: LonLat | null | undefined): [LonLat, LonLat] | null {
+  const endpoint = points?.at(-1)
+  if (!endpoint || !destination || distanceMeters(endpoint, destination) < 8) return null
+  return [endpoint, destination]
+}
+
+/** Exact destination point and bearing of the final route segment or endpoint connector. */
+export function routeArrivalMarker(points: LonLat[] | null | undefined, destination?: LonLat | null): RouteArrivalMarker | null {
+  if (!points || points.length < 2) return null
+  const endpoint = points.at(-1)!
+  const [toLng, toLat] = destination ?? endpoint
+  const hasEndpointConnector = distanceMeters(endpoint, [toLng, toLat]) >= 8
+  const radians = Math.PI / 180
+  const candidatePoints = hasEndpointConnector ? [endpoint] : points.slice(0, -1).reverse()
+  for (const [fromLng, fromLat] of candidatePoints) {
     const latitudeDelta = toLat - fromLat
     const longitudeDelta = toLng - fromLng
     if (Math.abs(latitudeDelta) + Math.abs(longitudeDelta) < 1e-10) continue

@@ -5,7 +5,7 @@ import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
 import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
-import { routeArrivalMarker } from '../utils/routeArrival'
+import { routeArrivalConnector, routeArrivalMarker } from '../utils/routeArrival'
 import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
@@ -120,12 +120,15 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const arrivalOverlayRef = useRef<KakaoOverlay | null>(null)
+  const arrivalConnectorOverlaysRef = useRef<KakaoOverlay[]>([])
   const roadviewOverlayRef = useRef<KakaoOverlay | null>(null)
   const roadviewSelectionRef = useRef({ enabled: roadviewEnabled, position: roadviewPosition, onSelect: onSelectRoadview })
   roadviewSelectionRef.current = { enabled: roadviewEnabled, position: roadviewPosition, onSelect: onSelectRoadview }
   const activePopupRef = useRef<KakaoOverlay | null>(null)
   const activePopupIdRef = useRef<string | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
+  const initialSeoulViewAtRef = useRef<number | null>(null)
+  const locationFocusTimerRef = useRef<number | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
@@ -214,6 +217,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       window.clearTimeout(timeout)
       resizeObserver?.disconnect()
       routeOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      arrivalConnectorOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       accessOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       conditionOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       restaurantOverlaysRef.current.forEach(overlay => overlay.setMap(null))
@@ -229,6 +233,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       mapRef.current = null
       apiRef.current = null
       routeOverlaysRef.current = []
+      arrivalConnectorOverlaysRef.current = []
       accessOverlaysRef.current = []
       conditionOverlaysRef.current = []
       restaurantOverlaysRef.current = []
@@ -312,11 +317,16 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     })
 
     if (roadviewSelectionRef.current.enabled) return
-    if (!hasDestination && selectedStop === null) {
-      if (locationFocusRequest === 0) {
-        map.setLevel(8, { animate: false })
-        map.setCenter(new api.LatLng(37.5665, 126.978))
-      }
+    if (!hasDestination && selectedStop === null && initialSeoulViewAtRef.current === null) {
+      const seoulBounds = new api.LatLngBounds()
+      SEOUL_BOUNDARY.forEach(([lng, lat]) => seoulBounds.extend(new api.LatLng(lat, lng)))
+      const mobileBottomPadding = window.matchMedia('(max-width: 700px)').matches ? 132 : 56
+      map.setBounds(seoulBounds, 56, 56, mobileBottomPadding, 56)
+      initialSeoulViewAtRef.current = Date.now()
+      window.requestAnimationFrame(() => map.relayout())
+      return
+    }
+    if (!hasDestination && selectedStop === null && initialSeoulViewAtRef.current !== null) {
       return
     }
     if (hasDestination && safeRoutePath && safeRoutePath.length > 1) {
@@ -440,7 +450,28 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         zIndex: 20,
       })
     }
-    const arrival = hasDestination ? routeArrivalMarker(safeRoutePath) : null
+    const arrivalTarget = destinationPoint ? [destinationPoint.lng, destinationPoint.lat] as LonLat : null
+    const arrival = hasDestination ? routeArrivalMarker(safeRoutePath, arrivalTarget) : null
+    const arrivalConnector = hasDestination ? routeArrivalConnector(safeRoutePath, arrivalTarget) : null
+    if (arrivalConnector) {
+      const path = arrivalConnector.map(([lng, lat]) => new api.LatLng(lat, lng))
+      arrivalConnectorOverlaysRef.current.push(new api.Polyline({
+        map,
+        path,
+        strokeWeight: 7,
+        strokeColor: '#ffffff',
+        strokeOpacity: 1,
+        strokeStyle: 'shortdash',
+      }))
+      arrivalConnectorOverlaysRef.current.push(new api.Polyline({
+        map,
+        path,
+        strokeWeight: 3,
+        strokeColor: '#e33d3d',
+        strokeOpacity: 1,
+        strokeStyle: 'shortdash',
+      }))
+    }
     if (arrival) {
       const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
       arrow.setAttribute('class', 'tour-route-end-arrow')
@@ -465,6 +496,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     return () => {
       destinationOverlayRef.current?.setMap(null)
       arrivalOverlayRef.current?.setMap(null)
+      arrivalConnectorOverlaysRef.current.forEach(overlay => overlay.setMap(null))
+      arrivalConnectorOverlaysRef.current = []
       destinationOverlayRef.current = null
       arrivalOverlayRef.current = null
     }
@@ -480,11 +513,26 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const map = mapRef.current
     const api = apiRef.current
     if (!map || !api || status !== 'ready' || roadviewSelectionRef.current.enabled || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
-    lastLocationFocusRequestRef.current = locationFocusRequest
-    map.setLevel(4, { animate: false })
-    map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
-    window.requestAnimationFrame(() => map.relayout())
+    if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
+    const focusLocation = () => {
+      lastLocationFocusRequestRef.current = locationFocusRequest
+      map.setLevel(4, { animate: true })
+      map.setCenter(new api.LatLng(userLocation.lat, userLocation.lng))
+      window.requestAnimationFrame(() => map.relayout())
+      locationFocusTimerRef.current = null
+    }
+    const overviewAt = initialSeoulViewAtRef.current
+    const delay = overviewAt === null ? 0 : Math.max(0, 1_000 - (Date.now() - overviewAt))
+    if (delay) locationFocusTimerRef.current = window.setTimeout(focusLocation, delay)
+    else focusLocation()
+    return () => {
+      if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
+    }
   }, [locationFocusRequest, status, userLocation])
+
+  useEffect(() => () => {
+    if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
+  }, [])
 
   useEffect(() => {
     const map = mapRef.current, api = apiRef.current

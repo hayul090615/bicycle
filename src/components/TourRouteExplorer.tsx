@@ -11,7 +11,7 @@ import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
 import { getSolarPosition, todayInSeoul } from '../utils/solarPosition'
-import { routeArrivalMarker } from '../utils/routeArrival'
+import { routeArrivalConnector, routeArrivalMarker } from '../utils/routeArrival'
 import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { fetchBikePath, fetchBikePaths, fetchWalkingPath, type BikeRouteInstruction, type BikeRouteResult, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
@@ -259,27 +259,41 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
 function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedStop, hasDestination, userLocation, locationFocusRequest }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; approachPoints: LatLngExpression[]; walkingPoints: LatLngExpression[]; selectedStop: number | null; hasDestination: boolean; userLocation: Coordinates | null; locationFocusRequest: number }) {
   const map = useMap()
   const lastFocusRequest = useRef(0)
+  const initialSeoulViewAt = useRef<number | null>(null)
+  const focusTimer = useRef<number | null>(null)
   const userLocationRef = useRef(userLocation)
   userLocationRef.current = userLocation
+  useEffect(() => () => {
+    if (focusTimer.current !== null) window.clearTimeout(focusTimer.current)
+  }, [])
   useEffect(() => {
     const currentLocation = userLocationRef.current
+    if (!hasDestination && selectedStop === null && initialSeoulViewAt.current === null) {
+      map.fitBounds(latLngBounds(SEOUL_BOUNDS), { padding: [28, 28], maxZoom: 10, animate: false })
+      initialSeoulViewAt.current = Date.now()
+    }
     if (locationFocusRequest > lastFocusRequest.current && currentLocation) {
-      lastFocusRequest.current = locationFocusRequest
-      map.setView([currentLocation.lat, currentLocation.lng], 16, { animate: false })
+      if (focusTimer.current !== null) window.clearTimeout(focusTimer.current)
+      const focus = () => {
+        lastFocusRequest.current = locationFocusRequest
+        const latestLocation = userLocationRef.current ?? currentLocation
+        map.setView([latestLocation.lat, latestLocation.lng], 16, { animate: true, duration: 0.8 })
+        focusTimer.current = null
+      }
+      const overviewAt = initialSeoulViewAt.current
+      const delay = overviewAt === null ? 0 : Math.max(0, 1_000 - (Date.now() - overviewAt))
+      if (delay) focusTimer.current = window.setTimeout(focus, delay)
+      else focus()
       return
     }
+    if (!hasDestination && locationFocusRequest > 0 && selectedStop === null && currentLocation) return
     if (hasDestination) {
       const routeBounds = [...linePoints, ...approachPoints, ...walkingPoints]
       if (routeBounds.length > 1) map.fitBounds(latLngBounds(routeBounds), { padding: [64, 64], maxZoom: 15, animate: false })
       lastFocusRequest.current = Math.max(lastFocusRequest.current, locationFocusRequest)
       return
     }
-    if (locationFocusRequest === 0 && selectedStop === null) {
-      map.setView([37.5665, 126.978], 11, { animate: false })
-      return
-    }
-    if (locationFocusRequest > 0 && selectedStop === null && currentLocation) {
-      map.setView([currentLocation.lat, currentLocation.lng], 16, { animate: false })
+    if (!hasDestination && selectedStop === null && initialSeoulViewAt.current !== null) {
       return
     }
     if (approachPoints.length) map.fitBounds(latLngBounds(selectedStop === null ? [...linePoints, ...approachPoints, ...walkingPoints] : [...approachPoints, ...walkingPoints]), { padding: [42, 42], maxZoom: 15, animate: false })
@@ -1243,7 +1257,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   }), [locale])
-  const arrivalMarker = routeArrivalMarker(displayRoutePath)
+  const exactDestination: LonLat | null = hasDestination ? [destinationStation.lng, destinationStation.lat] : null
+  const arrivalMarker = routeArrivalMarker(displayRoutePath, exactDestination)
+  const arrivalConnector = routeArrivalConnector(displayRoutePath, exactDestination)
   const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
@@ -1255,6 +1271,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {showRidingRoute && linePoints.length > 1 && <Polyline positions={linePoints} pathOptions={{ color: '#294c3a', weight: 2.5, opacity: .92, dashArray: '2 8', lineCap: 'round', interactive: false }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#294c3a', weight: 9, opacity: .95 }} />}
     {showRidingRoute && !routedPath && approachPoints.length > 1 && <Polyline positions={approachPoints} pathOptions={{ color: '#fff', weight: 5, opacity: 1 }} />}
+    {arrivalConnector && <Polyline positions={arrivalConnector.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: '#fff', weight: 7, opacity: .98, lineCap: 'round', interactive: false }} />}
+    {arrivalConnector && <Polyline positions={arrivalConnector.map(([lng, lat]) => [lat, lng] as LatLngExpression)} pathOptions={{ color: '#e33d3d', weight: 3, opacity: 1, dashArray: '4 5', lineCap: 'round', interactive: false }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#fff', weight: 8, opacity: .95 }} />}
     {walkingPoints.length > 1 && <Polyline positions={walkingPoints} pathOptions={{ color: '#546a78', weight: 4, opacity: 1, dashArray: '6 6' }} />}
     {showBikeStations && <BikeStationMarkers stations={mapBikeStations} locale={locale} />}

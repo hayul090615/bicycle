@@ -199,6 +199,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   const pickupMarkerRef = useRef<MapLibreMarker | null>(null)
   const destinationMarkerRef = useRef<MapLibreMarker | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
+  const initialSeoulViewAtRef = useRef<number | null>(null)
+  const locationFocusTimerRef = useRef<number | null>(null)
   const shadowAzimuthRef = useRef(shadowAzimuth)
   const sunElevationRef = useRef(sunElevation)
   const nightSkyRef = useRef(nightSky)
@@ -425,6 +427,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       disposed = true
       window.clearTimeout(timeout)
       window.clearTimeout(shadowUpdateTimeout)
+      if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
       map.off('idle', updateBuildingShadows)
       map.off('moveend', updateBuildingShadows)
       updateBuildingShadowsRef.current = () => {}
@@ -813,6 +816,15 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     markersRef.current.forEach((marker, index) => {
       marker.getElement().classList.toggle('is-selected', selectedStop === index)
     })
+    if (!hasDestination && selectedStop === null && initialSeoulViewAtRef.current === null) {
+      const bounds = new maplibregl.LngLatBounds()
+      SEOUL_BOUNDARY.forEach(([lng, lat]) => bounds.extend([lng, lat]))
+      map.setPitch(0)
+      map.fitBounds(bounds, { padding: { top: 48, right: 48, bottom: 48, left: 48 }, maxZoom: 9.5, pitch: 0, duration: 0 })
+      initialSeoulViewAtRef.current = Date.now()
+      return
+    }
+    if (!hasDestination && selectedStop === null && initialSeoulViewAtRef.current !== null) return
     if (!hasDestination && locationFocusRequest > 0 && selectedStop === null && userLocation) return
     if (!hasDestination && locationFocusRequest === 0 && selectedStop === null) return
     if (hasDestination) {
@@ -840,22 +852,34 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready' || locationFocusRequest === 0 || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
-    lastLocationFocusRequestRef.current = locationFocusRequest
-    if (selectedStop === null) {
-      map.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 16, pitch: is3DView ? 66 : 0, bearing: is3DView ? userLocation.heading ?? 0 : 0, duration: 700, essential: false })
-      return
+    if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
+    const focusLocation = () => {
+      lastLocationFocusRequestRef.current = locationFocusRequest
+      if (selectedStop === null) {
+        map.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 16, pitch: is3DView ? 66 : 0, bearing: is3DView ? userLocation.heading ?? 0 : 0, duration: 700, essential: false })
+        locationFocusTimerRef.current = null
+        return
+      }
+      const destination = points[selectedStop ?? points.length - 1]
+      const bounds = new maplibregl.LngLatBounds([userLocation.lng, userLocation.lat], [destination.lng, destination.lat])
+      ;[...(walkPath ?? []), ...(accessPath ?? [])].forEach(point => bounds.extend(point))
+      map.fitBounds(bounds, {
+        padding: { top: 88, right: 88, bottom: 88, left: 88 },
+        maxZoom: 16,
+        pitch: is3DView ? 66 : 0,
+        bearing: is3DView ? bearingToDestination(userLocation, destination) : 0,
+        duration: 720,
+        essential: false,
+      })
+      locationFocusTimerRef.current = null
     }
-    const destination = points[selectedStop ?? points.length - 1]
-    const bounds = new maplibregl.LngLatBounds([userLocation.lng, userLocation.lat], [destination.lng, destination.lat])
-    ;[...(walkPath ?? []), ...(accessPath ?? [])].forEach(point => bounds.extend(point))
-    map.fitBounds(bounds, {
-      padding: { top: 88, right: 88, bottom: 88, left: 88 },
-      maxZoom: 16,
-      pitch: is3DView ? 66 : 0,
-      bearing: is3DView ? bearingToDestination(userLocation, destination) : 0,
-      duration: 720,
-      essential: false,
-    })
+    const overviewAt = initialSeoulViewAtRef.current
+    const delay = selectedStop === null && overviewAt !== null ? Math.max(0, 1_000 - (Date.now() - overviewAt)) : 0
+    if (delay) locationFocusTimerRef.current = window.setTimeout(focusLocation, delay)
+    else focusLocation()
+    return () => {
+      if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
+    }
   }, [accessPath, is3DView, locationFocusRequest, points, selectedStop, status, userLocation, walkPath])
 
   useEffect(() => {
