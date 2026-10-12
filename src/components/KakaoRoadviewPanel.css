@@ -217,6 +217,11 @@
 .tour-roadview-panel--expanded .tour-roadview-phone-direction { width: 48px; height: 48px; }
 .tour-roadview-panel--expanded .tour-roadview-compass-message { top: 78px; left: 62px; width: min(235px, calc(100vw - 110px)); }
 .tour-roadview-panel--expanded.tour-roadview-panel--ready .tour-roadview-panel__header > strong { margin-left: 64px; }
+.tour-roadview-panel--expanded .tour-roadview-panel__header > strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-roadview-panel--expanded .tour-roadview-panel__controls { flex: 0 0 auto; }
+@media (max-width: 360px) {
+  .tour-roadview-panel--expanded.tour-roadview-panel--ready .tour-roadview-panel__header > strong { visibility: hidden; padding: 0; width: 0; }
+}
 @media (hover: hover) and (pointer: fine) and (min-width: 701px) { .tour-roadview-phone-direction { display: none; } }
 @keyframes tour-roadview-panel-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tour-roadview-panel__spinner { animation: none; } }

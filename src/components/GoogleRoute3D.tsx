@@ -328,11 +328,12 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
         label: place.kind === 'cafe' ? '☕' : '식', title: `${place.name} · ${kindLabel}`,
         altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
       })
+      marker.addEventListener('gmp-click', () => onFoodGuideOpen([place.lng, place.lat]))
       map.append(marker)
       return marker
     })
     return () => { restaurantMarkersRef.current.forEach(marker => marker.remove()); restaurantMarkersRef.current = [] }
-  }, [locale, restaurants, showRestaurants, status])
+  }, [locale, onFoodGuideOpen, restaurants, showRestaurants, status])
 
   useEffect(() => {
     const map = mapRef.current, library = libraryRef.current

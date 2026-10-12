@@ -4163,10 +4163,31 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-header-actions .tour-language-button,
 .tour-screen--dark .tour-header-actions .tour-timer-toggle { border-color: #46545c; color: #eaf0f1; background: #202c33; }
 .tour-screen--dark .tour-header-actions .tour-back { border-color: #31444d; background: #31444d; }
+/* 장소 표시는 누를 수 있는 버튼이며, 상세 내용은 지도 위 가로 줄에서 보여 준다. */
+.tour-screen button.tour-amenity-icon { cursor: pointer; font: inherit; }
+.tour-screen button.tour-amenity-icon:focus-visible { outline: 3px solid #2d9d70; outline-offset: 3px; }
+/* 설정이나 라이딩 계획을 열면 한 패널만 표시해 지도 조작 버튼과 겹치지 않게 한다. */
+.tour-screen .tour-map-stage--tool-open > .tour-map-view-dock { display: none; }
+.tour-screen .tour-map-stage > .tour-map-side-panel { top: 4.1rem; left: .65rem; right: auto; bottom: .65rem; width: min(400px, calc(100% - 1.3rem)); max-height: none; }
+@media (max-width: 900px) {
+  .tour-screen .tour-map-destination-tools { top: .55rem; }
+  .tour-screen .tour-map-view-dock { top: 4.1rem; }
+  .tour-screen .tour-map-destination-tools > .tour-map-clear-destination { grid-column: 3; height: 38px; min-height: 38px; }
+  .tour-screen .tour-map-stage--tool-open > .tour-mobile-route-sheet { display: none; }
+  .tour-screen .tour-map-stage > .tour-map-side-panel,
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-stage > .tour-map-side-panel {
+    position: fixed; top: auto; left: .55rem; right: .55rem; bottom: max(.55rem, env(safe-area-inset-bottom));
+    width: auto; max-height: min(64dvh, 600px); border-radius: 16px; z-index: 1460;
+  }
+}
+@media (max-width: 900px) and (max-height: 550px) {
+  .tour-screen .tour-map-stage--tool-open > .tour-map-destination-tools { visibility: hidden; }
+}
 /* 메뉴 안에는 두 버튼만 있으므로 내용 높이만 사용하고, 하단 길 안내보다 위에 둔다. */
 .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 4.1rem; bottom: auto; left: .65rem; right: auto; width: min(360px, calc(100% - 1.3rem)); height: auto; max-height: calc(100% - 5rem); transform: none; }
 @media (max-width: 900px) {
-  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 6.6rem; bottom: auto; left: .65rem; max-height: calc(100% - 18rem); }
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 4.1rem; bottom: auto; left: .65rem; max-height: calc(100% - 5rem); }
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-stage--custom-destination .tour-map-control-rail { top: 6.8rem; }
 }
 @media (max-width: 700px) {
   .typing-main-nav > button { min-height: 32px; padding: .32rem .62rem; font-size: .68rem; }

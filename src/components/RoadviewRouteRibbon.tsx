@@ -42,6 +42,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
     let frame = 0
     let moveTimeout = 0
     let moveRequest = 0
+    let moveInFlight = false
     let anchors: AnchorPair[] = []
     let overlays: KakaoOverlay[] = []
     let sections: RibbonSection[] = []
@@ -58,7 +59,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
     let horizon: { element: HTMLElement; overlay: KakaoOverlay } | null = null
     let camera = { lat: 0, lng: 0 }
     const client = new api.RoadviewClient()
-    const stopMoving = () => { window.clearTimeout(moveTimeout); if (!disposed) setMoving(false) }
+    const stopMoving = () => { window.clearTimeout(moveTimeout); moveInFlight = false; if (!disposed) setMoving(false) }
 
     const readScreen = (anchor: HTMLElement, rect: DOMRect): ScreenPoint | null => {
       if (!anchor.isConnected || !anchor.getClientRects().length) return null
@@ -120,6 +121,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
     // 전환 중에는 이전 선을 숨기고 좌표와 시점을 다시 맞춘 뒤 도착을 확인한다.
     const settle = () => {
       settling = true
+      setMoving(true)
       ribbon.current?.setAttribute('d', '')
       centerline.current?.setAttribute('d', '')
       window.clearTimeout(settleTimeout)
@@ -137,6 +139,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
           alignOnce.current = true
           pendingAlignment = null
         }
+        stopMoving()
         scheduleDraw()
         window.clearTimeout(arrivalTimeout)
         const panoId = roadview.getPanoId()
@@ -199,7 +202,8 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
     }
     // 경로 앞쪽의 촬영 후보를 차례로 조회하며 같은 사진은 건너뛴다.
     advanceRef.current = () => {
-      if (disposed) return
+      if (disposed || settling || moveInFlight) return
+      moveInFlight = true
       const request = ++moveRequest
       const currentPano = roadview.getPanoId()
       const candidates = !routeIsNearby && nearestPoint
@@ -210,7 +214,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
         })
       setMoving(true)
       setMoveFailed(false)
-      moveTimeout = window.setTimeout(() => { if (request === moveRequest) { ++moveRequest; setMoveFailed(true); stopMoving() } }, 7000)
+      moveTimeout = window.setTimeout(() => { if (!disposed && request === moveRequest) { ++moveRequest; setMoveFailed(true); stopMoving() } }, 7000)
       const tryCandidate = (index: number) => {
         const candidate = candidates[index]
         if (!candidate) { setMoveFailed(true); stopMoving(); return }
@@ -221,7 +225,8 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
           if (panoId === null || panoId === currentPano) { tryCandidate(index + 1); return }
           progressFloor = Math.max(progressFloor, candidate.progress - 15)
           alignAfterMove = true
-          roadview.setPanoId(panoId, new api.LatLng(point[1], point[0]))
+          try { roadview.setPanoId(panoId, new api.LatLng(point[1], point[0])) }
+          catch { setMoveFailed(true); stopMoving() }
         })
       }
       tryCandidate(0)

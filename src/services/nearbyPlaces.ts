@@ -70,11 +70,16 @@ export async function fetchNearbyPlaces(category: NearbyPlaceCategory, center: {
   const area = region.status === 'fulfilled' ? region.value : '서울'
   let naver: { available?: boolean; places?: Array<{ name: string; lat: number; lng: number; address: string }>; blogs?: NaverBlogPost[] } = {}
   if (['food', 'cafe', 'visit'].includes(category)) {
+    const blogController = new AbortController()
+    const cancelBlog = () => blogController.abort()
+    signal.addEventListener('abort', cancelBlog, { once: true })
+    const blogTimeout = window.setTimeout(cancelBlog, 4500)
     try {
       const params = new URLSearchParams({ kind: category, region: area })
-      const response = await fetch(`/api/place-discovery?${params}`, { signal })
+      const response = await fetch(`/api/place-discovery?${params}`, { signal: blogController.signal })
       if (response.ok && response.headers.get('content-type')?.includes('application/json')) naver = await response.json()
     } catch (error) { if (signal.aborted) throw error }
+    finally { window.clearTimeout(blogTimeout); signal.removeEventListener('abort', cancelBlog) }
   }
   const candidates = [
     ...(local.status === 'fulfilled' ? local.value.map(place => ({ id: `kakao-${place.id}`, name: place.place_name, address: place.road_address_name || place.address_name, lat: Number(place.y), lng: Number(place.x) })) : []),

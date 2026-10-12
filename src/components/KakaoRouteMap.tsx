@@ -700,16 +700,17 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'}
       : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}
     const overlays = amenities.map(amenity => {
-      const marker = document.createElement('span')
+      const marker = document.createElement('button')
+      marker.type = 'button'
       marker.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
       marker.innerHTML = `<span>${glyphs[amenity.kind]}</span><b>${shortLabels[amenity.kind]}</b>`
       marker.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
-      marker.setAttribute('role', 'img')
       marker.setAttribute('aria-label', marker.title)
-      return new api.CustomOverlay({ map, position: new api.LatLng(amenity.lat, amenity.lng), content: marker, xAnchor: .5, yAnchor: .5, zIndex: 8 })
+      marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([amenity.lng, amenity.lat]) })
+      return new api.CustomOverlay({ map, position: new api.LatLng(amenity.lat, amenity.lng), content: marker, clickable: true, xAnchor: .5, yAnchor: .5, zIndex: 8 })
     })
     return () => overlays.forEach(overlay => overlay.setMap(null))
-  }, [amenities, locale, showAmenities, status])
+  }, [amenities, locale, onFoodGuideOpen, showAmenities, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -726,9 +727,10 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const kind = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
       marker.setAttribute('aria-label', `${place.name} · ${kind}`)
       marker.title = `${place.name} · ${kind}${place.cuisine ? ` · ${place.cuisine}` : ''}`
-      return new api.CustomOverlay({ map, position: new api.LatLng(place.lat, place.lng), content: marker, xAnchor: .5, yAnchor: 1, zIndex: 7 })
+      marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat]) })
+      return new api.CustomOverlay({ map, position: new api.LatLng(place.lat, place.lng), content: marker, clickable: true, xAnchor: .5, yAnchor: 1, zIndex: 7 })
     })
-  }, [locale, restaurants, showRestaurants, status])
+  }, [locale, onFoodGuideOpen, restaurants, showRestaurants, status])
 
   useEffect(() => {
     const map = mapRef.current

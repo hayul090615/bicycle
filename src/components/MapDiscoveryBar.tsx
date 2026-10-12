@@ -30,8 +30,14 @@ export function MapDiscoveryBar({ locale, selected, onSelect, status, count, pla
       <span>{cctvLocationStatus === 'locating' ? (ko ? '내 위치를 확인하는 중…' : 'Finding your location…')
         : cctvLocationStatus === 'unavailable' ? (ko ? '위치를 허용하면 내 주변 20m CCTV를 표시해요.' : 'Allow location access to see CCTV within 20 m of you.')
           : status === 'loading' ? (ko ? '내 주변 20m CCTV를 찾는 중…' : 'Finding CCTV within 20 m of you…')
+            : status === 'error' ? (ko ? 'CCTV 위치 자료를 불러오지 못했어요.' : 'CCTV locations could not be loaded.')
             : ko ? `내 주변 20m · CCTV ${count}곳` : `Within 20 m of you · ${count} CCTV locations`}</span>
     </div>}
+    {selected === 'signals' && <div className="tour-discovery-note" role="status"><span>
+      {status === 'loading' ? (ko ? '주변 500m 신호등을 찾는 중…' : 'Finding signals within 500 m…')
+        : status === 'error' ? (ko ? '신호등 자료를 불러오지 못했어요. 다시 눌러 주세요.' : 'Signals could not be loaded. Please try again.')
+          : ko ? `주변 500m · 신호등 ${count}곳` : `Within 500 m · ${count} signals`}
+    </span></div>}
     {selected && selected !== 'signals' && selected !== 'cctv' && <div className="tour-discovery-note" role="status">
       <span>{status === 'loading' ? (ko ? '주변 500m 장소를 찾는 중…' : 'Finding places within 500 m…')
         : status === 'error' ? (ko ? '장소 검색을 잠시 사용할 수 없어요.' : 'Places are temporarily unavailable.')
@@ -39,7 +45,9 @@ export function MapDiscoveryBar({ locale, selected, onSelect, status, count, pla
       {['food', 'cafe', 'visit'].includes(selected) && <a href={`https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(`${region} ${selected === 'visit' ? '가볼만한곳' : selected === 'cafe' ? '카페' : '맛집'}`)}`} target="_blank" rel="noopener noreferrer">{ko ? '네이버 블로그 ↗' : 'Naver blogs ↗'}</a>}
     </div>}
     {focused && <div className="tour-discovery-detail"><div><strong>{focused.name}</strong><small>{Math.round(focused.distanceMeters)}m · {focused.address}</small></div>
-      <a href={focused.blogUrl} target="_blank" rel="noopener noreferrer">{ko ? '블로그 ↗' : 'Blogs ↗'}</a>
+      {['food', 'cafe', 'visit'].includes(focused.category) && <a href={focused.blogUrl} target="_blank" rel="noopener noreferrer">
+        {focused.blog ? (ko ? '블로그 글 ↗' : 'Blog post ↗') : (ko ? '블로그 검색 ↗' : 'Blog search ↗')}
+      </a>}
       <button type="button" aria-label={ko ? '장소 안내 닫기' : 'Close place details'} onClick={() => onFocus(null)}>×</button>
     </div>}
   </div>

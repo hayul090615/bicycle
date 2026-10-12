@@ -9,15 +9,20 @@ export function useNearbySignals(enabled: boolean, center: { lat: number; lng: n
   useEffect(() => {
     if (!enabled) { setData(null); return }
     const controller = new AbortController()
+    let timeout = 0
     setData({ key, places: [], status: 'loading' })
     const delay = window.setTimeout(() => {
+      timeout = window.setTimeout(() => {
+        setData({ key, places: [], status: 'error' })
+        controller.abort()
+      }, 14000)
       void fetchNearbySignals(center, controller.signal).then(places => {
         if (!controller.signal.aborted) setData({ key, places, status: 'ready' })
       }).catch(() => {
         if (!controller.signal.aborted) setData({ key, places: [], status: 'error' })
-      })
+      }).finally(() => window.clearTimeout(timeout))
     }, 350)
-    return () => { window.clearTimeout(delay); controller.abort() }
+    return () => { window.clearTimeout(delay); window.clearTimeout(timeout); controller.abort() }
   }, [enabled, key])
   return data?.key === key && enabled ? data : { key, places: [], status: enabled ? 'loading' : 'idle' }
 }

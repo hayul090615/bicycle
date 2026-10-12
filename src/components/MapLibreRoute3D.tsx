@@ -524,16 +524,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     const shortLabels = locale === 'ko' ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'}
       : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}
     const markers = amenities.map(amenity => {
-      const element = document.createElement('span')
+      const element = document.createElement('button')
+      element.type = 'button'
       element.className = `tour-amenity-icon tour-amenity-icon--${amenity.kind}`
       element.innerHTML = `<span>${glyphs[amenity.kind]}</span><b>${shortLabels[amenity.kind]}</b>`
       element.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
-      element.setAttribute('role', 'img')
       element.setAttribute('aria-label', element.title)
+      element.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([amenity.lng, amenity.lat]) })
       return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([amenity.lng, amenity.lat]).addTo(map)
     })
     return () => markers.forEach(marker => marker.remove())
-  }, [amenities, locale, showAmenities, status])
+  }, [amenities, locale, onFoodGuideOpen, showAmenities, status])
 
   useEffect(() => {
     const map = mapRef.current
@@ -1026,22 +1027,12 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       element.setAttribute('aria-label', `${place.name} · ${kindLabel}`)
       element.title = place.name
       element.textContent = place.kind === 'cafe' ? '☕' : '식'
-      const popupContent = document.createElement('div')
-      popupContent.className = 'tour-restaurant-popup'
-      const name = document.createElement('strong')
-      name.textContent = place.name
-      const category = document.createElement('small')
-      category.textContent = `${kindLabel}${place.cuisine ? ` · ${place.cuisine}` : ''}`
-      const source = document.createElement('small')
-      source.textContent = locale === 'ko' ? 'OpenStreetMap 지도 등록 정보' : 'OpenStreetMap map listing'
-      popupContent.append(name, category, source)
-      const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '260px' }).setDOMContent(popupContent)
+      element.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat]) })
       restaurantMarkersRef.current.push(new maplibregl.Marker({ element, anchor: 'bottom' })
         .setLngLat([place.lng, place.lat])
-        .setPopup(popup)
         .addTo(map))
     })
-  }, [locale, restaurants, showRestaurants, status])
+  }, [locale, onFoodGuideOpen, restaurants, showRestaurants, status])
 
   useEffect(() => {
     const map = mapRef.current
