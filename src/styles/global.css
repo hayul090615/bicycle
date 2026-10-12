@@ -25,8 +25,8 @@
 .tour-screen--dark .tour-discovery-note a, .tour-screen--dark .tour-discovery-detail a { color: #b4efcb; }
 /* 마우스나 키보드 초점을 올리면 테마 버튼의 색이 바뀐다. */
 .tour-header-actions .tour-theme-button { transition: background-color .15s, border-color .15s, color .15s; }
-.tour-screen .tour-header-actions .tour-theme-button:hover, .tour-screen .tour-header-actions .tour-theme-button:focus-visible { border-color: #d4b449; color: #244434; background: #fff0b8; }
-.tour-screen--dark .tour-header-actions .tour-theme-button:hover, .tour-screen--dark .tour-header-actions .tour-theme-button:focus-visible { border-color: #93b59a; color: #fff; background: #3b5b47; }
+.tour-screen .tour-header-actions .tour-theme-button:hover, .tour-screen .tour-header-actions .tour-theme-button:focus-visible { border-color: #000; color: #fff; background: #000; }
+.tour-screen--dark .tour-header-actions .tour-theme-button:hover, .tour-screen--dark .tour-header-actions .tour-theme-button:focus-visible { border-color: #000; color: #fff; background: #000; }
 /* 1시간 또는 2시간을 누르면 별도의 시작 버튼 없이 이용시간 계산을 시작한다. */
 .tour-rental-pass-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
 .tour-rental-pass-options > button { min-height: 44px; border: 1px solid #bcd2c1; border-radius: 12px; color: #174b34; background: #f0f7ee; font: 800 14px/1.2 system-ui, 'Malgun Gothic', sans-serif; cursor: pointer; }

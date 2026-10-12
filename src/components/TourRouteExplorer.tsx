@@ -33,6 +33,7 @@ import { coloredRouteSegments } from '../services/routeGradient'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
+const CCTV_NEARBY_RADIUS_METERS = 20
 const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
 const EMPTY_STOP_INDEXES: number[] = []
 const EMPTY_ROUTE_AMENITIES: RouteAmenity[] = []
@@ -41,10 +42,10 @@ const EMPTY_ROUTE_RESTAURANTS: RouteRestaurant[] = []
 type Coordinates = { lat: number; lng: number; heading?: number; accuracy?: number; timestamp?: number }
 type BikeUseMode = 'ttareungi' | 'personal'
 type RotationRequest = { direction: 'left' | 'right' | 'up' | 'down'; serial: number }
-type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | 'amenities' | 'bikeStations'
+type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | 'amenities'
 type MapTool = 'routes' | 'ridePlan' | 'course' | 'food' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | 'facilities'
 type MapLayers = Record<MapLayerKey, boolean>
-const DEFAULT_MAP_LAYERS: MapLayers = { course: false, restaurants: false, cctv: false, roadInfo: true, riders: false, amenities: true, bikeStations: false }
+const DEFAULT_MAP_LAYERS: MapLayers = { course: false, restaurants: false, cctv: false, roadInfo: true, riders: false, amenities: true }
 /** 사용자가 저장한 지도 레이어 표시 설정을 읽는다. */
 function readMapLayers(): MapLayers {
   try {
@@ -53,7 +54,7 @@ function readMapLayers(): MapLayers {
       const previous = localStorage.getItem('seoul-bike-map-layers-v2') ?? localStorage.getItem('seoul-bike-map-layers-v1')
       if (!previous) return DEFAULT_MAP_LAYERS
       const migrated = JSON.parse(previous) as Partial<MapLayers>
-      return { ...DEFAULT_MAP_LAYERS, ...migrated, cctv: false, course: false, riders: false, bikeStations: false }
+      return { ...DEFAULT_MAP_LAYERS, ...migrated, cctv: false, course: false, riders: false }
     }
     const parsed = JSON.parse(saved) as Partial<MapLayers>
     return Object.fromEntries(Object.keys(DEFAULT_MAP_LAYERS).map(key => [
@@ -502,7 +503,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
 
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
-  const [discoveryCategory, setDiscoveryCategory] = useState<DiscoveryCategory | null>('bikes')
+  const [discoveryCategory, setDiscoveryCategory] = useState<DiscoveryCategory | null>(null)
   const [focusedPlacePoint, setFocusedPlacePoint] = useState<LonLat | null>(null)
   const [rentalLimitMinutes, setRentalLimitMinutes] = useState(() => {
     try { return localStorage.getItem('seoul-bike-rental-minutes') === '120' ? 120 : 60 }
@@ -744,7 +745,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const routeGrades = activeRoadConditions?.grades ?? []
 
   // 대여소·신호등·CCTV는 별도 자료를 사용한다. 음식점 같은 장소만 장소 검색으로 보낸다.
-  const placeCategory = discoveryCategory && !['bikes', 'signals', 'cctv'].includes(discoveryCategory) ? discoveryCategory as NearbyPlaceCategory : null
+  const placeCategory = discoveryCategory && !['signals', 'cctv'].includes(discoveryCategory) ? discoveryCategory as NearbyPlaceCategory : null
   const nearbyPlaces = useNearbyPlaces(placeCategory, mapCenter)
   // 선택한 맛집 또는 카페를 지도 표시 형식으로 바꾼다. 다른 버튼이 선택되면 빈 목록을 보낸다.
   const routeRestaurants = useMemo<RouteRestaurant[]>(() => placeCategory === 'food' || placeCategory === 'cafe'
@@ -761,10 +762,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const showRoadInfo = discoveryCategory === 'signals'
   const showRiders = mapLayers.riders
   const showAmenities = discoveryCategory !== null && ['convenience', 'toilet', 'visit'].includes(discoveryCategory)
-  const showBikeStations = discoveryCategory === 'bikes'
+  // 대여소는 지도 기본 정보다. 맛집이나 CCTV를 선택해도 항상 함께 표시한다.
+  const showBikeStations = true
   // 기본 대여소 자료와 실시간 잔여 수를 합친다. 같은 대여소는 한 번만 표시한다.
   const mapBikeStations = useMemo(() => {
-    const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
+    const byId = new Map(courseBikeStations.map(station => [station.id, station]))
     const liveStations = activeViewportBikes?.stations ?? activeNearbyBikes?.stations ?? []
     for (const station of mapNearbySnapshot) {
       const liveStation = liveStations.find(candidate => candidate.id === station.id)
@@ -776,7 +778,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     return [...byId.values()]
       .filter(station => distanceMeters(mapCenter, station) <= MAP_NEARBY_RADIUS_METERS)
       .sort((first, second) => distanceMeters(mapCenter, first) - distanceMeters(mapCenter, second))
-  }, [activeNearbyBikes, activeViewportBikes, courseBikeStations, mapCenter, mapLayers.bikeStations, mapNearbySnapshot])
+  }, [activeNearbyBikes, activeViewportBikes, courseBikeStations, mapCenter, mapNearbySnapshot])
   const routeConditions = routeSignals
   const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
     : activeRoadConditions?.signalsStatus === 'ready' ? String(routeSignals.length) : '—'
@@ -836,10 +838,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const approachPoints = useMemo<LatLngExpression[]>(() => approachPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [approachPath])
   const walkingPoints = useMemo<LatLngExpression[]>(() => walkingPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [walkingPath])
   const cctvData = usePublicCctvData()
-  // CCTV가 선택됐을 때만 현재 지도 중심 500m 안의 카메라를 남긴다.
-  const cctvCameras = useMemo(() => showCctv
-    ? cctvData.cameras.filter(camera => distanceMeters(mapCenter, camera) <= MAP_NEARBY_RADIUS_METERS)
-    : [], [cctvData.cameras, mapCenter, showCctv])
+  // CCTV는 실제 내 위치에서 20m 안만 표시한다. GPS가 없으면 다른 위치로 대신 검색하지 않는다.
+  const cctvCameras = useMemo(() => showCctv && userLocation
+    ? cctvData.cameras.filter(camera => distanceMeters(userLocation, camera) <= CCTV_NEARBY_RADIUS_METERS)
+    : [], [cctvData.cameras, userLocation, showCctv])
   const fallbackCctvClusters = useMemo(() => showCctv
     ? clusterPublicCameras(cctvCameras, getTouristStation(route.stops[0].stationId), 48_000, 2_000)
     : [], [cctvCameras, route.stops, showCctv])
@@ -990,7 +992,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapMenuOpen(false)
     setMobileSheetExpanded(false)
   }
-  // 하나의 선택값을 새 종류로 바꾼다. 같은 버튼을 다시 누르면 모든 주변 표시를 끈다.
+  // 하나의 추가 표시를 선택한다. 같은 버튼을 다시 누르면 추가 표시만 끈다.
   const selectDiscoveryCategory = (category: DiscoveryCategory) => {
     // 종류별 true/false를 따로 두지 않고 하나만 기억하면 여러 종류가 동시에 켜지지 않는다.
     setDiscoveryCategory(current => current === category ? null : category)
@@ -998,9 +1000,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setFocusedPlacePoint(null)
     setActiveMapTool(null)
     setMapMenuOpen(false)
+    if (category === 'cctv' && discoveryCategory !== 'cctv' && !userLocation && !locating) locateNearestRoute(false, true)
   }
   const toggleMapLayer = (layer: MapLayerKey) => {
-    const category = layer === 'restaurants' ? 'food' : layer === 'cctv' ? 'cctv' : layer === 'roadInfo' ? 'signals' : layer === 'bikeStations' ? 'bikes' : null
+    const category = layer === 'restaurants' ? 'food' : layer === 'cctv' ? 'cctv' : layer === 'roadInfo' ? 'signals' : null
     if (category) selectDiscoveryCategory(category)
     else setMapLayers(current => ({ ...current, [layer]: !current[layer] }))
   }
@@ -1622,8 +1625,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
       <MapDiscoveryBar locale={locale} selected={discoveryCategory} onSelect={selectDiscoveryCategory}
-        status={discoveryCategory === 'signals' ? nearbySignals.status : discoveryCategory === 'cctv' ? (cctvData.loading ? 'loading' : 'ready') : discoveryCategory === 'bikes' ? 'ready' : nearbyPlaces.status}
-        count={discoveryCategory === 'bikes' ? mapBikeStations.length : discoveryCategory === 'cctv' ? cctvCameras.length : discoveryCategory === 'signals' ? routeSignals.length : nearbyPlaces.places.length}
+        cctvLocationStatus={userLocation ? 'ready' : locating ? 'locating' : 'unavailable'}
+        status={discoveryCategory === 'signals' ? nearbySignals.status : discoveryCategory === 'cctv' ? (cctvData.loading ? 'loading' : 'ready') : nearbyPlaces.status}
+        count={discoveryCategory === 'cctv' ? cctvCameras.length : discoveryCategory === 'signals' ? routeSignals.length : nearbyPlaces.places.length}
         places={nearbyPlaces.places} focusedPoint={focusedPlacePoint} onFocus={setFocusedPlacePoint} region={nearbyPlaces.region} />
       <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}${roadviewEnabled ? ' tour-map-stage--roadview' : ''}`} onMouseLeave={() => hoverStop(null)}>
         {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack">{rentalTimerOpen && <section id="tour-rental-timer-panel" className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
@@ -1792,7 +1796,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               </section>
               <section className="tour-map-panel-section tour-map-panel-section--actions"><h3>{text('On the map', '지도에 표시')}</h3>
                 <label className="tour-map-panel-check"><input type="checkbox" checked={discoveryCategory === 'convenience'} onChange={() => selectDiscoveryCategory('convenience')} /><span>{text('Convenience stores', '편의점')}</span><small>{nearbyPlaces.status === 'loading' ? '…' : routeAmenities.length}</small></label>
-                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => selectDiscoveryCategory('bikes')} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{nearbyStations.length}</small></label>
                 <button type="button" className="tour-map-panel-action" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>{text('Building shadows', '건물 그림자')} · {showShadows ? text('On', '켜짐') : text('Off', '꺼짐')}</button>
               </section>
             </>}
