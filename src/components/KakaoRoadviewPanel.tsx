@@ -7,6 +7,7 @@ import { loadKakaoMaps, type KakaoMapsApi, type KakaoRoadview, type KakaoRoadvie
 import type { LonLat } from '../services/bikeRoute'
 import { RoadviewRouteRibbon } from './RoadviewRouteRibbon'
 import { RoadviewCompass } from './RoadviewCompass'
+import { RoadviewDestinationControl } from './RoadviewDestinationControl'
 import type { RouteElevationPoint } from '../services/routeConditions'
 import './KakaoRoadviewPanel.css'
 
@@ -19,7 +20,7 @@ export interface KakaoRoadviewPanelProps {
   destination: { lat: number; lng: number } | null
   terrainPath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
-  onDestinationArrival: () => void
+  onDestinationArrival: (explicit?: boolean) => void
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
@@ -287,6 +288,9 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     <header className="tour-roadview-panel__header">
       <strong id={titleId}>{ko ? '로드뷰' : 'Street view'}</strong>
       <div className="tour-roadview-panel__controls">
+        {status === 'ready' && destination && apiRef.current && roadviewRef.current && <RoadviewDestinationControl
+          api={apiRef.current} roadview={roadviewRef.current} destination={destination} locale={locale}
+          onArrival={() => onDestinationArrival(true)} />}
         <button
           type="button"
           aria-label={expandLabel}

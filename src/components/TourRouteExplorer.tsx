@@ -620,8 +620,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   useEffect(() => {
     if (!roadviewTripKey) { roadviewArrivedRef.current = null; setRoadviewCelebrationKey(null) }
   }, [roadviewTripKey])
-  const celebrateRoadviewArrival = useCallback(() => {
-    if (!roadviewTripKey || roadviewArrivedRef.current === roadviewTripKey) return
+  const celebrateRoadviewArrival = useCallback((explicit = false) => {
+    // 자동 도착은 한 번만 안내하고, 사용자가 도착 버튼을 누른 경우 다시 보여 준다.
+    if (!roadviewTripKey || (!explicit && roadviewArrivedRef.current === roadviewTripKey)) return
     roadviewArrivedRef.current = roadviewTripKey
     setRoadviewCelebrationKey(roadviewTripKey)
   }, [roadviewTripKey])
@@ -1702,7 +1703,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>
               <button type="button" aria-current={activeMapTool === "food" ? "true" : undefined} onClick={() => { toggleMapLayer("restaurants"); setActiveMapTool("food") }}><span aria-hidden="true">&#x2668;</span>{text("Food", "\uB9DB\uC9D1")}</button>
               <button type="button" aria-current={activeMapTool === "facilities" ? "true" : undefined} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x2316;</span>{text("Facilities", "\uC2DC\uC124")}</button>
-              <button type="button" aria-current={activeMapTool === "cctv" ? "true" : undefined} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool("cctv") }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
+              <button type="button" aria-pressed={showCctv} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool(null) }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
               <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
             </nav>
             <div className="tour-map-menu-actions">
@@ -1778,10 +1779,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <p>{!routedPath ? text('Choose a destination to find food along the route.', '도착지를 고르면 길 주변 맛집을 찾습니다.') : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? text('Finding food along your route…', '길 주변 맛집을 찾는 중…') : text(`${routeRestaurants.length} food places recommended along the route.`, `길 주변 맛집 ${routeRestaurants.length}곳을 추천합니다.`)}</p>
               <button type="button" className="tour-map-panel-action" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}>{showRestaurants ? text('Hide food markers', '맛집 표시 끄기') : text('Show food markers', '맛집 표시 켜기')}</button>
               <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setFoodGuideOpen(true); setMapLayers(current => ({ ...current, restaurants: true })); setActiveMapTool(null) }}>{text('Show nearby food places', '내 주변 맛집 보기')}</button>
-            </>}
-            {activeMapTool === 'cctv' && <>
-              <p>{text(`${cctvCameras.length.toLocaleString()} public CCTV locations are available.`, `공공 CCTV ${cctvCameras.length.toLocaleString()}곳 정보를 사용할 수 있습니다.`)}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>{showCctv ? text('Hide CCTV', 'CCTV 숨기기') : text('Show CCTV', 'CCTV 표시')}</button>
             </>}
             {activeMapTool === 'facilities' && <>
               <p>{amenitiesState?.status === 'loading' ? text('Searching near the selected route…', '선택한 코스 주변 시설을 찾고 있습니다…')

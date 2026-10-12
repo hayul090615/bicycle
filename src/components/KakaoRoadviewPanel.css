@@ -54,7 +54,7 @@
   text-overflow: ellipsis;
 }
 
-.tour-roadview-panel__controls { display: flex; flex-shrink: 0; gap: .2rem; }
+.tour-roadview-panel__controls { display: flex; align-items: center; flex-shrink: 0; gap: .2rem; }
 .tour-roadview-panel__controls > button {
   display: grid;
   place-items: center;
@@ -69,6 +69,13 @@
 }
 .tour-roadview-panel__controls > button:hover { background: #eaf1e9; }
 .tour-roadview-panel__controls > button > svg { width: 20px; height: 20px; }
+/* 사진 위의 도착 표시와 상단 버튼이 같은 목적지 이동 동작을 수행한다. */
+.tour-roadview-route-destination { display: block; min-width: 56px; min-height: 44px; padding: 8px 12px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #098bcd; box-shadow: 0 2px 8px #0005; font: 800 12px/1.2 system-ui, sans-serif; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.tour-roadview-route-destination:disabled { cursor: wait; opacity: .7; }
+.tour-roadview-panel .tour-roadview-panel__controls > .tour-roadview-jump-destination { width: auto; min-width: 56px; height: 44px; border-radius: 999px; color: #fff; background: #098bcd; font: 800 12px/1.2 system-ui, sans-serif; }
+.tour-roadview-panel__controls > .tour-roadview-jump-destination:hover { background: #087ab7; }
+.tour-roadview-panel__controls > .tour-roadview-jump-destination:disabled { cursor: wait; opacity: .7; }
+.tour-roadview-jump-error { position: absolute; z-index: 4; top: 76px; right: 12px; left: 80px; padding: 10px 12px; border-radius: 12px; color: #fff; background: #173d36ee; font: 700 12px/1.5 system-ui, sans-serif; }
 .tour-roadview-panel button:focus-visible { outline: 3px solid #32855d; outline-offset: -3px; }
 
 .tour-roadview-panel__body { position: relative; flex: 1 1 auto; min-height: 0; background: #21352b; }
