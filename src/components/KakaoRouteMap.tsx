@@ -12,6 +12,8 @@ import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
+const MAX_KAKAO_MAP_LEVEL = 9
+
 type MapPoint = { lat: number; lng: number }
 
 function isValidLonLat(point: LonLat): boolean {
@@ -157,6 +159,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       apiRef.current = api
       mapRef.current = map
       mapCreated = true
+      api.event.addListener(map, 'zoom_changed', () => {
+        if (map.getLevel() > MAX_KAKAO_MAP_LEVEL) map.setLevel(MAX_KAKAO_MAP_LEVEL, { animate: false })
+      })
       const maskPaths = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => new api.LatLng(lat, lng)))
       cityMaskOverlayRef.current = new api.Polygon({
         map,

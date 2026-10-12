@@ -9,6 +9,8 @@ import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
 import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
+const MAX_GOOGLE_3D_CAMERA_RANGE = 180_000
+
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
   const latitude2 = end.lat * Math.PI / 180
@@ -119,6 +121,19 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       map.style.height = '100%'
       map.style.display = 'block'
       map.addEventListener('gmp-error', fail)
+      map.addEventListener('gmp-rangechange', () => {
+        if (map && map.range > MAX_GOOGLE_3D_CAMERA_RANGE) {
+          map.flyCameraTo({
+            endCamera: {
+              center: { lat: map.center.lat, lng: map.center.lng, altitude: map.center.altitude },
+              range: MAX_GOOGLE_3D_CAMERA_RANGE,
+              tilt: map.tilt,
+              heading: map.heading,
+            },
+            durationMillis: 0,
+          })
+        }
+      })
       const cityMask = new library.Polygon3DElement({
         fillColor: '#F1F2ECBF',
         strokeColor: '#00000000',

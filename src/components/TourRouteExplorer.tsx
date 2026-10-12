@@ -1284,7 +1284,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const arrivalMarker = routeArrivalMarker(displayRoutePath, exactDestination)
   const arrivalConnector = routeArrivalConnector(displayRoutePath, exactDestination)
   const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
-  const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BIKE_MAP_BOUNDS_LATLNG)} maxBoundsViscosity={1}>
+  const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} minZoom={9.5} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BIKE_MAP_BOUNDS_LATLNG)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} hasDestination={hasDestination} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     <MapCenterReporter onChange={reportMapCenter} />
