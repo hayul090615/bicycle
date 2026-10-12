@@ -13,6 +13,8 @@ import { useTypingGame } from './hooks/useTypingGame'
 import { useBikeStations } from './hooks/useBikeStations'
 import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/game'
 import { SEOUL_BOUNDARY } from './data/seoulBoundary'
+import { savedSiteLocale } from './services/siteLocale'
+import { registerSiteVisit } from './services/siteVisits'
 
 type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour' | AuthPageKind
 function screenFromUrl(): AppScreen {
@@ -108,6 +110,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>(screenFromUrl)
+  useEffect(() => { void registerSiteVisit() }, [])
   const [showSiteSplash, setShowSiteSplash] = useState(true)
   const [lightMode, setLightMode] = useState(() => localStorage.getItem(GAME_THEME_KEY) !== 'false')
   const toggleTheme = useCallback(() => setLightMode(current => {
@@ -180,7 +183,7 @@ export default function App() {
   const openTours = () => {
     const url = new URL(window.location.href)
     url.searchParams.delete('page')
-    url.searchParams.set('lang', 'en')
+    url.searchParams.set('lang', savedSiteLocale())
     window.history.replaceState(null, '', url)
     setScreen('tour')
   }

@@ -6,6 +6,7 @@ import { TourRouteExplorer } from './TourRouteExplorer'
 import { TourOnboarding } from './TourOnboarding'
 import { isInsideSeoul } from '../data/seoulBoundary'
 import { searchSeoulPlaces } from '../services/kakaoMaps'
+import { initialSiteLocale, saveSiteLocale } from '../services/siteLocale'
 
 type Locale = 'en' | 'ko'
 const textFor = <T,>(locale: Locale, english: T, korean: T): T => locale === 'en' ? english : korean
@@ -14,7 +15,7 @@ const seasonNames: Record<TourSeason, [string, string]> = {
 }
 
 export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () => void; darkMode: boolean; onToggleTheme: () => void }) {
-  const [locale, setLocale] = useState<Locale>(() => new URLSearchParams(window.location.search).get('lang') === 'en' ? 'en' : 'ko')
+  const [locale, setLocale] = useState<Locale>(initialSiteLocale)
   const [seoulClock, setSeoulClock] = useState(nowInSeoul)
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
   const [category, setCategory] = useState<TourCategory>(initialRoute.category)
@@ -85,6 +86,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   }
 
   useEffect(() => {
+    saveSiteLocale(locale)
     document.documentElement.lang = locale
     document.title = locale === 'en' ? 'Ttareungi Seoul Journey' : '따릉이 서울 여행'
     return () => { document.documentElement.lang = 'ko'; document.title = '따릉이 서울 여행' }

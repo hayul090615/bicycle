@@ -6,8 +6,10 @@ export interface KakaoLatLng {
 }
 
 export interface KakaoOverlay {
-  setMap(map: KakaoMap | null): void
+  setMap(map: KakaoMap | KakaoRoadview | null): void
   setPosition?(position: KakaoLatLng): void
+  setAltitude?(altitude: number): void
+  setRange?(range: number): void
 }
 
 export interface KakaoBounds {
@@ -38,6 +40,8 @@ export interface KakaoRoadview {
   setPanoId(panoId: number, position?: KakaoLatLng): void
   getPanoId(): number
   getPosition(): KakaoLatLng
+  getViewpoint(): { pan: number; tilt: number; zoom: number }
+  setViewpoint(viewpoint: { pan: number; tilt: number; zoom: number }): void
   relayout(): void
 }
 
@@ -90,7 +94,7 @@ export interface KakaoMapsApi {
     fillOpacity: number
   }) => KakaoOverlay
   CustomOverlay: new (options: {
-    map: KakaoMap | null
+    map: KakaoMap | KakaoRoadview | null
     position: KakaoLatLng
     content: HTMLElement
     xAnchor?: number

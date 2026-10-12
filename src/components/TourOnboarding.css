@@ -25,7 +25,8 @@
 }
 
 .tour-onboarding-card { padding: 22px 26px 20px; }
-.tour-onboarding-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tour-onboarding-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.tour-onboarding-header .tour-onboarding-close { justify-self: end; }
 .tour-onboarding-header > span,
 .tour-ad-label,
 .tour-ad-eyebrow {
@@ -81,7 +82,7 @@
   line-height: 1.6;
 }
 .tour-onboarding-tip > span { color: #ca9d32; }
-.tour-onboarding-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; border-top: 1px solid #e3eae3; }
+.tour-onboarding-footer { display: flex; align-items: center; justify-content: center; gap: 16px; padding-top: 14px; border-top: 1px solid #e3eae3; }
 .tour-onboarding-progress { display: flex; align-items: center; gap: 7px; }
 .tour-onboarding-progress > span { width: 8px; height: 8px; border-radius: 20px; background: #cbd8cd; transition: width .2s, background .2s; }
 .tour-onboarding-progress > span.is-active { width: 24px; background: #176044; }
@@ -128,8 +129,6 @@
 .tour-ad-footer input { width: 17px; height: 17px; accent-color: #176044; }
 .tour-ad-footer > div { display: flex; flex: 0 0 auto; gap: 8px; }
 .tour-ad-footer button { min-height: 42px; padding: 0 15px; border: 1px solid #d4e2d6; border-radius: 10px; font: inherit; font-size: .79rem; font-weight: 800; cursor: pointer; }
-.tour-ad-explore { color: #fff; background: #175b3d; }
-.tour-ad-explore:hover { background: #10492f; }
 .tour-ad-close { color: #385645; background: #f4f7f2; }
 .tour-ad-close:hover { background: #eaf1e8; }
 
@@ -158,6 +157,10 @@
 @keyframes tour-onboarding-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tour-onboarding-rise-in { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 520px) {
+  .tour-onboarding-header { gap: 6px; }
+  .tour-onboarding-header > span { font-size: .6rem; letter-spacing: 0; }
+  .tour-onboarding-navigation { gap: 6px; }
+  .tour-onboarding-navigation button { width: 36px; height: 36px; }
   .tour-onboarding-card { padding: 17px 18px 16px; border-radius: 17px; }
   .tour-onboarding-content { padding: 11px 2px 16px; }
   .tour-onboarding-icon { width: 54px; height: 54px; margin-bottom: 13px; border-radius: 16px; font-size: 1.65rem; }
@@ -165,7 +168,7 @@
   .tour-onboarding-tip { font-size: .76rem; }
   .tour-ad-art { min-height: 160px; }
   .tour-ad-copy { padding: 18px 18px 13px; }
-  .tour-ad-footer { align-items: stretch; flex-direction: column; padding: 11px 16px 16px; }
+  .tour-ad-footer { padding: 11px 16px 16px; }
   .tour-ad-footer > div { justify-content: flex-end; }
   .tour-ad-footer label { min-height: 34px; }
 }

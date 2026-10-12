@@ -101,7 +101,7 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
           {!userEmail && <button type="button" onClick={() => onOpenAuth('signup')}>회원가입</button>}
           {userEmail && <button type="button" onClick={() => setDialog('logout')}>로그아웃</button>}
         </div>
-        <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>English city rides ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
+        <div className="start-record"><button type="button" className="start-tour-button" onClick={onOpenTours}>서울 지도 보기 ↗</button><span>나의 최고 점수</span><strong>{highScore.toLocaleString()}</strong></div>
       </div>
     </header>
 

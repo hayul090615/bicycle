@@ -1,6 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadKakaoMaps, type KakaoMapsApi, type KakaoRoadview, type KakaoRoadviewClient } from '../services/kakaoMaps'
+import type { LonLat } from '../services/bikeRoute'
+import { RoadviewRouteRibbon } from './RoadviewRouteRibbon'
 import './KakaoRoadviewPanel.css'
 
 export interface KakaoRoadviewPanelProps {
@@ -8,17 +10,20 @@ export interface KakaoRoadviewPanelProps {
   locale: 'en' | 'ko'
   onClose: () => void
   onPositionChange: (position: { lat: number; lng: number }) => void
+  routePath: LonLat[] | null
+  destination: { lat: number; lng: number } | null
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
 const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
-export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }: KakaoRoadviewPanelProps) {
+export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination }: KakaoRoadviewPanelProps) {
   const anchorRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const roadviewRef = useRef<KakaoRoadview | null>(null)
   const clientRef = useRef<KakaoRoadviewClient | null>(null)
+  const apiRef = useRef<KakaoMapsApi | null>(null)
   const confirmedPanoRef = useRef<number | null>(null)
   const requestRef = useRef(0)
   const positionCallbackRef = useRef(onPositionChange)
@@ -175,6 +180,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }
     void loadKakaoMaps().then(loadedApi => {
       if (!isCurrent() || !hostRef.current) return
       api = loadedApi
+      apiRef.current = loadedApi
       if (!roadviewRef.current) {
         roadviewRef.current = new api.Roadview(hostRef.current)
       }
@@ -291,6 +297,8 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }
     </header>
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
       <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
+      {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} destination={destination} locale={locale} />}
+      {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
       {status !== 'ready' && <div className="tour-roadview-panel__status" role="status" aria-live="polite">
         {status === 'loading' && <span className="tour-roadview-panel__spinner" aria-hidden="true" />}
         <p>{message}</p>

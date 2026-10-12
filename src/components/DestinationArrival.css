@@ -1,0 +1,40 @@
+.tour-arrival-overlay {
+  position: fixed;
+  z-index: 210000;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, rgba(4, 18, 12, .28) 0%, rgba(3, 13, 9, .72) 100%);
+  animation: tour-arrival-fade .4s ease-out both;
+}
+.tour-arrival-dismiss {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  border: 0;
+  color: #fff;
+  background: transparent;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.tour-arrival-dismiss:focus { outline: none; }
+.tour-arrival-dismiss:focus-visible .tour-arrival-hint { text-decoration: underline; text-underline-offset: 4px; }
+.tour-arrival-message { display: grid; gap: 16px; text-shadow: 0 3px 22px #001909b3; animation: tour-arrival-message .65s cubic-bezier(.2,.7,.3,1) both; }
+.tour-arrival-eyebrow { color: #c2f5de; font-size: clamp(.8rem, 2vw, 1rem); font-weight: 700; letter-spacing: .1em; }
+.tour-arrival-message strong { font-size: clamp(1.8rem, 5vw, 3.8rem); font-weight: 850; line-height: 1.35; letter-spacing: -.045em; }
+.tour-arrival-message strong > span { display: block; }
+.tour-arrival-hint { margin-top: 10px; color: #ffffffb3; font-size: .75rem; }
+.tour-arrival-fireworks { position: absolute; top: 50%; left: 50%; width: min(1050px, 110vw); height: auto; transform: translate(-50%, -50%); pointer-events: none; }
+.tour-arrival-burst { opacity: 0; stroke: var(--burst-color); stroke-width: 3.5; stroke-linecap: round; transform-origin: 0 0; animation: tour-arrival-burst 2.3s var(--burst-delay) 3 ease-out both; }
+@keyframes tour-arrival-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tour-arrival-message { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes tour-arrival-burst { 0% { opacity: 0; transform: scale(.06); } 12% { opacity: 1; } 50% { opacity: .95; } 100% { opacity: 0; transform: scale(1.1); stroke-width: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .tour-arrival-overlay, .tour-arrival-message { animation: none; }
+  .tour-arrival-burst { animation: none; opacity: .75; transform: scale(.7); }
+}

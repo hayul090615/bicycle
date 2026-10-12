@@ -70,7 +70,17 @@
 .tour-roadview-panel button:focus-visible { outline: 3px solid #32855d; outline-offset: -3px; }
 
 .tour-roadview-panel__body { position: relative; flex: 1 1 auto; min-height: 0; background: #21352b; }
-.tour-roadview-panel__host { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tour-roadview-panel__host { position: absolute; inset: 0; width: 100%; height: 100%; isolation: isolate; }
+.tour-roadview-route-anchor { display: block; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tour-roadview-route-ribbon { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.tour-roadview-route-band { fill: #20c6ff; fill-opacity: .58; stroke: none; }
+.tour-roadview-route-centerline { fill: none; stroke: #e5fbff; stroke-opacity: .8; stroke-width: 1.5; stroke-dasharray: 9 12; }
+.tour-roadview-route-destination { display: block; padding: 6px 10px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #098bcd; box-shadow: 0 2px 8px #0005; font-size: 12px; font-weight: 800; pointer-events: none; }
+.tour-roadview-route-guide { position: absolute; z-index: 2; right: 80px; bottom: 12px; left: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px 7px 12px; border: 1px solid #ffffff38; border-radius: 13px; color: #fff; background: #102830db; box-shadow: 0 3px 15px #0003; backdrop-filter: blur(8px); }
+.tour-roadview-route-guide > span { min-width: 0; font-size: .7rem; font-weight: 700; line-height: 1.5; }
+.tour-roadview-route-guide > button { flex: 0 0 auto; min-width: 48px; min-height: 36px; padding: 6px 10px; border: 0; border-radius: 9px; color: #fff; background: #087ab7; font: inherit; font-size: .7rem; font-weight: 800; cursor: pointer; }
+.tour-roadview-route-guide > button:disabled { opacity: .6; cursor: wait; }
+.tour-roadview-panel--expanded .tour-roadview-route-guide { bottom: max(24px, env(safe-area-inset-bottom)); }
 .tour-roadview-panel__status {
   position: absolute;
   z-index: 1;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { claimTutorialPresentation, isReturningVisitor } from '../services/siteVisits'
 import './TourOnboarding.css'
 
 type Locale = 'en' | 'ko'
@@ -68,12 +69,15 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
 
   useEffect(() => {
     if (!mapSequenceReady || sequenceHandledRef.current) return
-    sequenceHandledRef.current = true
-    if (hasCookie(TUTORIAL_COOKIE)) {
-      if (!hasCookie(AD_HIDDEN_COOKIE)) setAdOpen(true)
-      return
-    }
-    setTutorialStep(0)
+    let cancelled = false
+    void isReturningVisitor().then(returning => {
+      if (cancelled || sequenceHandledRef.current) return
+      sequenceHandledRef.current = true
+      if (returning || hasCookie(TUTORIAL_COOKIE) || !claimTutorialPresentation()) {
+        if (!hasCookie(AD_HIDDEN_COOKIE)) setAdOpen(true)
+      } else setTutorialStep(0)
+    })
+    return () => { cancelled = true }
   }, [mapSequenceReady])
 
   const finishTutorial = () => {
@@ -85,13 +89,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   const closeAd = () => {
     if (hideAdForDay) writeCookie(AD_HIDDEN_COOKIE, DAY_SECONDS)
     setAdOpen(false)
-  }
-
-  const showRoutes = () => {
-    setAdOpen(false)
-    const details = document.getElementById('tour-routes') as HTMLDetailsElement | null
-    if (details) details.open = true
-    details?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
   }
 
   useEffect(() => {
@@ -117,6 +114,13 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
     <section className="tour-onboarding-card" role="dialog" aria-modal="true" aria-labelledby="tour-onboarding-title">
       <header className="tour-onboarding-header">
         <span>{ko ? '처음 오셨나요?' : 'NEW HERE?'}</span>
+        <div className="tour-onboarding-navigation">
+          <button type="button" className="tour-onboarding-prev" onClick={() => setTutorialStep(current => current === null ? null : Math.max(0, current - 1))} disabled={tutorialStep === 0} aria-label={ko ? '이전 안내' : 'Previous tip'}>‹</button>
+          <span>{tutorialStep + 1}<i> / </i>{TUTORIAL_STEPS.length}</span>
+          <button type="button" className="tour-onboarding-next" onClick={() => tutorialStep === TUTORIAL_STEPS.length - 1 ? finishTutorial() : setTutorialStep(tutorialStep + 1)} aria-label={ko ? tutorialStep === TUTORIAL_STEPS.length - 1 ? '튜토리얼 완료' : '다음 안내' : tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Finish tutorial' : 'Next tip'}>
+            {tutorialStep === TUTORIAL_STEPS.length - 1 ? '✓' : '›'}
+          </button>
+        </div>
         <button type="button" className="tour-onboarding-close" onClick={finishTutorial} aria-label={ko ? '튜토리얼 닫기' : 'Close tutorial'} title={ko ? '튜토리얼 닫기' : 'Close tutorial'}>×</button>
       </header>
       <div className="tour-onboarding-content" aria-live="polite">
@@ -129,13 +133,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
       <footer className="tour-onboarding-footer">
         <div className="tour-onboarding-progress" aria-label={ko ? `${tutorialStep + 1}단계 중 ${TUTORIAL_STEPS.length}단계` : `Step ${tutorialStep + 1} of ${TUTORIAL_STEPS.length}`}>
           {TUTORIAL_STEPS.map((item, index) => <span key={item.title[0]} className={index === tutorialStep ? 'is-active' : ''} />)}
-        </div>
-        <div className="tour-onboarding-navigation">
-          <button type="button" className="tour-onboarding-prev" onClick={() => setTutorialStep(current => current === null ? null : Math.max(0, current - 1))} disabled={tutorialStep === 0} aria-label={ko ? '이전 안내' : 'Previous tip'}>‹</button>
-          <span>{tutorialStep + 1}<i> / </i>{TUTORIAL_STEPS.length}</span>
-          <button type="button" className="tour-onboarding-next" onClick={() => tutorialStep === TUTORIAL_STEPS.length - 1 ? finishTutorial() : setTutorialStep(tutorialStep + 1)} aria-label={ko ? tutorialStep === TUTORIAL_STEPS.length - 1 ? '튜토리얼 완료' : '다음 안내' : tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Finish tutorial' : 'Next tip'}>
-            {tutorialStep === TUTORIAL_STEPS.length - 1 ? '✓' : '›'}
-          </button>
         </div>
       </footer>
     </section>
@@ -168,7 +165,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
       <footer className="tour-ad-footer">
         <label><input type="checkbox" checked={hideAdForDay} onChange={event => setHideAdForDay(event.target.checked)} /><span>{ko ? '24시간 동안 보지 않기' : "Don't show for 24 hours"}</span></label>
         <div>
-          <button type="button" className="tour-ad-explore" onClick={showRoutes}>{ko ? '코스 둘러보기' : 'Explore routes'}</button>
           <button type="button" className="tour-ad-close" onClick={closeAd}>{ko ? '닫기' : 'Close'}</button>
         </div>
       </footer>
