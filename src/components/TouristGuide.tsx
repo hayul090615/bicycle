@@ -3,6 +3,7 @@ import { getTouristStation, touristRoutes, type TourCategory, type TourSeason, t
 import { nowInSeoul } from '../utils/solarPosition'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { TourRouteExplorer } from './TourRouteExplorer'
+import { TourOnboarding } from './TourOnboarding'
 import { isInsideSeoul } from '../data/seoulBoundary'
 import { searchSeoulPlaces } from '../services/kakaoMaps'
 
@@ -27,6 +28,8 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const [searchedDestination, setSearchedDestination] = useState<{ lat: number; lng: number; serial: number } | null>(null)
   const [rentalWidgetTarget, setRentalWidgetTarget] = useState<HTMLDivElement | null>(null)
   const [rentalTimerOpen, setRentalTimerOpen] = useState(false)
+  const [mapSequenceReady, setMapSequenceReady] = useState(false)
+  const finishInitialMapSequence = useCallback(() => setMapSequenceReady(true), [])
   const closeRentalTimer = useCallback(() => setRentalTimerOpen(false), [])
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
@@ -148,7 +151,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
           originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
           onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
-          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} onRoadviewOpen={closeRentalTimer} searchedDestination={searchedDestination} />
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} onRoadviewOpen={closeRentalTimer} searchedDestination={searchedDestination} onInitialMapSequenceComplete={finishInitialMapSequence} />
       </section>
       <details className="tour-more-details" id="tour-routes">
         <summary><span><small>{textFor(locale, 'MORE TO EXPLORE', '서울을 더 둘러보기')}</small><strong>{textFor(locale, 'Browse ride themes and seasonal routes', '계절별 풍경과 테마 코스 보기')}</strong></span><i aria-hidden="true">＋</i></summary>
@@ -198,5 +201,6 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
       <footer className="tour-footer">{textFor(locale, 'Before every ride, confirm station availability and return rules in the ', '출발 전에 대여 가능 여부와 반납 규칙을 확인하세요: ')}
         <a href="https://www.bikeseoul.com/" target="_blank" rel="noopener noreferrer">{textFor(locale, 'official Ttareungi service ↗', '따릉이 공식 서비스 ↗')}</a>.</footer>
     </div>
+    <TourOnboarding locale={locale} darkMode={darkMode} mapSequenceReady={mapSequenceReady} />
   </main>
 }

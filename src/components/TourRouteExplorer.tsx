@@ -397,7 +397,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, onRoadviewOpen, searchedDestination }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, onRoadviewOpen, searchedDestination, onInitialMapSequenceComplete }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -415,6 +415,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   rentalTimerOpen: boolean
   onRoadviewOpen: () => void
   searchedDestination: { lat: number; lng: number; serial: number } | null
+  onInitialMapSequenceComplete?: () => void
 }) {
   const [selection, setSelection] = useState<{ routeId: string; index: number } | null>(null)
   const [customDestination, setCustomDestination] = useState<Coordinates | null>(null)
@@ -482,12 +483,26 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const promptedStopsRef = useRef(new Set<string>())
   const rentalNoticeRef = useRef({ fiveMinutes: false, expired: false })
   const initialLocationRequestedRef = useRef(false)
+  const initialMapSequenceTimerRef = useRef<number | null>(null)
+  const initialMapSequenceCompletedRef = useRef(false)
   const lastSyncedDestinationIndexRef = useRef<number | null>(null)
   const handledSearchSerialRef = useRef<number | null>(null)
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
   const text = (en: string, ko: string) => locale === 'en' ? en : ko
+  const finishInitialMapSequence = (delayMs: number) => {
+    if (!onInitialMapSequenceComplete || initialMapSequenceCompletedRef.current || initialMapSequenceTimerRef.current !== null) return
+    initialMapSequenceTimerRef.current = window.setTimeout(() => {
+      initialMapSequenceTimerRef.current = null
+      if (initialMapSequenceCompletedRef.current) return
+      initialMapSequenceCompletedRef.current = true
+      onInitialMapSequenceComplete()
+    }, delayMs)
+  }
+  useEffect(() => () => {
+    if (initialMapSequenceTimerRef.current !== null) window.clearTimeout(initialMapSequenceTimerRef.current)
+  }, [])
   const closeRoadview = useCallback(() => {
     setRoadviewEnabled(false)
     setRoadviewTarget(null)
@@ -765,12 +780,17 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const locateNearestRoute = (chooseNearest = true, focusOnSuccess = false) => {
     if (!navigator.geolocation) {
       setLocationError('unavailable')
+      if (focusOnSuccess) finishInitialMapSequence(1_800)
       return
     }
     setLocating(true)
     setLocationError(null)
     navigator.geolocation.getCurrentPosition(position => {
-      if (!publishLocation(position)) { setLocating(false); return }
+      if (!publishLocation(position)) {
+        setLocating(false)
+        if (focusOnSuccess) finishInitialMapSequence(1_800)
+        return
+      }
       const location = previousLocationRef.current ?? { lat: position.coords.latitude, lng: position.coords.longitude }
       let closest: { route: TouristRoute; distance: number } | null = null
       for (const candidate of routes) {
@@ -782,7 +802,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       }
       setLocating(false)
       setTrackingLocation(true)
-      if (focusOnSuccess) setLocationFocusRequest(request => request + 1)
+      if (focusOnSuccess) {
+        setLocationFocusRequest(request => request + 1)
+        finishInitialMapSequence(2_300)
+      }
       if (closest === null) return
       const nearest: { route: TouristRoute; distance: number } = closest
       setNearestResult({ routeId: nearest.route.id, distance: nearest.distance })
@@ -793,6 +816,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     }, error => {
       setLocating(false)
       setLocationError(error.code === 1 ? 'denied' : error.code === 3 ? 'timeout' : 'unavailable')
+      if (focusOnSuccess) finishInitialMapSequence(1_800)
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 })
   }
   useEffect(() => {

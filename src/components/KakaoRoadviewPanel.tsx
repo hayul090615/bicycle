@@ -260,8 +260,6 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange }
     aria-modal={expanded || undefined}
     aria-labelledby={titleId}
     tabIndex={-1}
-    onClick={event => event.stopPropagation()}
-    onDoubleClick={event => event.stopPropagation()}
     onKeyDown={event => {
       if (event.key !== 'Escape') return
       event.stopPropagation()
