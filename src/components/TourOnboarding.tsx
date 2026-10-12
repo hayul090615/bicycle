@@ -1,5 +1,5 @@
 /**
- * 첫 방문 튜토리얼과 임시 광고를 순서대로 표시한다. 재방문 기록으로 튜토리얼을 건너뛰고 광고 숨김 선택은 24시간 동안 저장한다.
+ * 첫 방문에는 튜토리얼 뒤 광고를 띄우고, 재방문에는 광고만 띄운다. 광고의 24시간 숨김 선택만 따로 확인한다.
  */
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -30,7 +30,7 @@ const TUTORIAL_STEPS = [
   {
     icon: '🚲',
     title: ['See nearby services', '주변 편의 정보'],
-    description: ['Open the map menu to show Ttareungi stations, toilets, convenience stores, and other map details.', '지도 메뉴에서 따릉이 대여소와 화장실, 편의점 등 주변 정보를 켜고 끌 수 있어요.'],
+    description: ['Bike stations are always shown. Use the category buttons above the map to show nearby food, toilets, or convenience stores.', '대여소는 기본으로 보여요. 지도 위 가로 버튼에서 맛집, 화장실, 편의점 등 주변 정보를 선택할 수 있어요.'],
     tip: ['Tap a station marker to check its available-bike information.', '대여소 표시를 누르면 이용 가능한 자전거 정보를 확인할 수 있어요.'],
   },
   {
@@ -68,10 +68,12 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   const ko = locale === 'ko'
   // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
+  const [tutorialFinished, setTutorialFinished] = useState(false)
   const [adOpen, setAdOpen] = useState(false)
   const [hideAdForDay, setHideAdForDay] = useState(false)
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const sequenceHandledRef = useRef(false)
+  const adHandledRef = useRef(false)
   const step = tutorialStep === null ? null : TUTORIAL_STEPS[tutorialStep]
 
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
@@ -81,17 +83,27 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
     void isReturningVisitor().then(returning => {
       if (cancelled || sequenceHandledRef.current) return
       sequenceHandledRef.current = true
-      if (returning || hasCookie(TUTORIAL_COOKIE) || !claimTutorialPresentation()) {
-        if (!hasCookie(AD_HIDDEN_COOKIE)) setAdOpen(true)
-      } else setTutorialStep(0)
+      if (returning || hasCookie(TUTORIAL_COOKIE) || !claimTutorialPresentation()) setTutorialFinished(true)
+      else setTutorialStep(0)
+    }).catch(() => {
+      if (cancelled || sequenceHandledRef.current) return
+      sequenceHandledRef.current = true
+      setTutorialFinished(true)
     })
     return () => { cancelled = true }
   }, [mapSequenceReady])
 
+  // 방문 기록은 튜토리얼에만 사용한다. 광고는 지도를 열 때마다 별도로 판단한다.
+  useEffect(() => {
+    if (!mapSequenceReady || !tutorialFinished || adHandledRef.current) return
+    adHandledRef.current = true
+    setAdOpen(!hasCookie(AD_HIDDEN_COOKIE))
+  }, [mapSequenceReady, tutorialFinished])
+
   const finishTutorial = () => {
     writeCookie(TUTORIAL_COOKIE, YEAR_SECONDS)
     setTutorialStep(null)
-    if (!hasCookie(AD_HIDDEN_COOKIE)) setAdOpen(true)
+    setTutorialFinished(true)
   }
 
   const closeAd = () => {
