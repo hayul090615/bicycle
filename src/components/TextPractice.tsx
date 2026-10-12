@@ -1,3 +1,6 @@
+/**
+ * 자치구별 글쓰기 연습 화면이다. 기본 연습 문구를 제공하고 입력한 내용을 해당 구의 localStorage 항목으로 저장한다.
+ */
 import { useEffect, useMemo, useState } from 'react'
 import { SEOUL_DISTRICTS, type SeoulDistrict } from '../data/districtCourses'
 import { romanizeHangul, toCharacters } from '../utils/hangul'
@@ -32,10 +35,12 @@ const districtPoems: Record<string, string> = {
   중랑구: '천을 따라 바람이 흘러가고\n산책길에는 초록이 이어진다\n물소리에 맞춰 마음을 적는다.',
 }
 
+/** 선택 자치구에 맞는 기본 연습 문구를 고른다. */
 function starterText(district: string) {
   return districtPoems[district] ?? `바람이 머무는 ${district}\n오늘의 길 위에 나만의 이야기를 씁니다.\n천천히 두드린 글자마다 새로운 풍경이 열립니다.`
 }
 
+/** 저장한 연습 글을 읽고 기록이 없으면 기본 문구를 사용한다. */
 function readText(district: string) {
   try { return localStorage.getItem(`${TEXT_KEY_PREFIX}${district}`) ?? starterText(district) }
   catch { return starterText(district) }

@@ -1,3 +1,6 @@
+/**
+ * 대여소 이름을 선택 언어에 맞춰 표시한다. 한국어는 원래 이름을 유지하고 영어는 알려진 지명 번역과 한글 로마자 변환을 조합한다.
+ */
 const ENGLISH_NAME_PARTS: Array<[string, string]> = [
   ['서울숲', 'Seoul Forest'],
   ['한강공원', 'Hangang Park'],
@@ -30,6 +33,7 @@ const INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '',
 const VOWELS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i']
 const FINALS = ['', 'k', 'k', 'ks', 'n', 'nj', 'nh', 't', 'l', 'lk', 'lm', 'lb', 'ls', 'lt', 'lp', 'lh', 'm', 'p', 'ps', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't']
 
+/** 한글 음절을 초성·중성·종성으로 분해해 표시용 로마자로 바꾼다. */
 function romanizeHangul(value: string) {
   return [...value].map(character => {
     const code = character.charCodeAt(0) - 0xac00
@@ -41,10 +45,12 @@ function romanizeHangul(value: string) {
   }).join('')
 }
 
+/** 표시용 영문 단어의 첫 글자를 대문자로 정리한다. */
 function titleCase(value: string) {
   return value.replace(/\b[a-z]/g, character => character.toUpperCase())
 }
 
+/** 선택 언어에 맞춰 대여소 원래 이름 또는 영어 표시 이름을 반환한다. */
 export function localizeBikeStationName(name: string, locale: string) {
   if (locale !== 'en' || !/[가-힣]/.test(name)) return name
   let english = name

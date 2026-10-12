@@ -1,3 +1,6 @@
+/**
+ * 촬영 좌표를 경로의 가장 가까운 구간에 투영하고 앞쪽 경로를 샘플링한다. 파란 선의 좌우 앵커, 진행 거리와 목적지까지 남은 경로 거리를 계산한다.
+ */
 import type { LonLat } from '../services/bikeRoute'
 
 type Point = { lat: number; lng: number }
@@ -5,10 +8,11 @@ export type RibbonSection = { center: LonLat; left: LonLat; right: LonLat; progr
 
 const LATITUDE_METERS = 111_320
 
+/** 촬영 위치의 가장 가까운 경로 투영점부터 앞쪽 파란 선 앵커를 구성한다. */
 export function roadviewRouteSections(path: LonLat[], camera: Point, minimumProgress = 0) {
   if (path.length < 2 || !Number.isFinite(camera.lat) || !Number.isFinite(camera.lng)
     || path.some(point => !Number.isFinite(point[0]) || !Number.isFinite(point[1]))) {
-    return { sections: [] as RibbonSection[], closestDistance: Infinity, nearestPoint: null as LonLat | null }
+    return { sections: [] as RibbonSection[], closestDistance: Infinity, nearestPoint: null as LonLat | null, remainingMeters: Infinity }
   }
   const xScale = LATITUDE_METERS * Math.cos(camera.lat * Math.PI / 180)
   let closestDistance = Infinity
@@ -28,7 +32,7 @@ export function roadviewRouteSections(path: LonLat[], camera: Point, minimumProg
     if (gap < closestDistance) { closestDistance = gap; closestIndex = index; fraction = projected; closestProgress = cumulative + length * projected }
     cumulative += length
   }
-  if (closestIndex === 0) return { sections: [] as RibbonSection[], closestDistance, nearestPoint: null as LonLat | null }
+  if (closestIndex === 0) return { sections: [] as RibbonSection[], closestDistance, nearestPoint: null as LonLat | null, remainingMeters: Infinity }
   const start = path[closestIndex - 1], end = path[closestIndex]
   const nearestPoint: LonLat = [start[0] + (end[0] - start[0]) * fraction, start[1] + (end[1] - start[1]) * fraction]
   const centers: LonLat[] = [nearestPoint]
@@ -65,9 +69,10 @@ export function roadviewRouteSections(path: LonLat[], camera: Point, minimumProg
     const perpendicularLat = dx / length * .4 / LATITUDE_METERS
     return { center, left: [center[0] + perpendicularLng, center[1] + perpendicularLat], right: [center[0] - perpendicularLng, center[1] - perpendicularLat], progressMeters: centerProgress[centerIndex] }
   })
-  return { sections, closestDistance, nearestPoint }
+  return { sections, closestDistance, nearestPoint, remainingMeters: Math.max(0, cumulative - closestProgress) }
 }
 
+/** 촬영 좌표에서 다음 경로 지점을 향하는 로드뷰 방위를 구한다. */
 export function bearingToRoadviewPoint(camera: Point, target: LonLat) {
   const dx = (target[0] - camera.lng) * Math.cos(camera.lat * Math.PI / 180)
   const dy = target[1] - camera.lat

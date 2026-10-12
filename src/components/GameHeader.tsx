@@ -1,3 +1,6 @@
+/**
+ * 타자 게임의 점수·콤보·시간·정확도와 일시정지 제어를 표시한다. 계산된 게임 상태는 상위 컴포넌트에서 전달받는다.
+ */
 interface GameHeaderProps {
   district: string
   elapsedSeconds: number

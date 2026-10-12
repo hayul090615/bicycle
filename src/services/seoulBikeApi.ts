@@ -1,3 +1,6 @@
+/**
+ * 서울시 대여소 응답을 게임 공통 BikeStation 형식으로 변환한다. 자치구별 API 조회와 사이트에 포함된 기본 대여소 스냅샷을 제공한다.
+ */
 import type { BikeStation } from '../types/game'
 import { allBikeStations, stationSnapshotMeta, type SeoulDistrict } from '../data/districtCourses'
 
@@ -41,6 +44,7 @@ async function fetchPage(apiKey: string, start: number, end: number) {
   return data.stationInfo
 }
 
+/** 서울시 대여소 페이지를 조회해 선택한 구의 대여소만 반환한다. */
 export async function fetchDistrictStations(apiKey: string, district: SeoulDistrict): Promise<BikeStation[]> {
   const first = await fetchPage(apiKey, 1, 1000)
   const pages = [first]

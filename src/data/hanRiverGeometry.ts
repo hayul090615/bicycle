@@ -1,3 +1,6 @@
+/**
+ * 서울 SVG 지도에 그릴 한강 수면 다각형 좌표다. scripts/fetchHanRiver.mjs가 생성하며 좌표는 [경도, 위도] 순서로 저장한다.
+ */
 import type { Coordinate } from './districtGeoData'
 
 /** OpenStreetMap 한강 수면 폴리곤 스냅샷 (ODbL, 2026-09-21). */

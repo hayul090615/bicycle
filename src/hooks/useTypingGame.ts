@@ -1,3 +1,6 @@
+/**
+ * 타자 게임의 카운트다운·입력 판정·대여소 이동·점수를 관리한다. 한글 조합 입력을 고려하고 종료 결과는 한 번만 상위 화면에 전달한다.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DistrictCourse, GameResultData, GameStatus } from '../types/game'
 import { analyzeInput, toCharacters } from '../utils/hangul'
@@ -35,6 +38,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const nextStation = course.stations[stationIndex + 1]
   const targetText = nextStation?.typingName ?? nextStation?.name ?? ''
   const rawAnalysis = useMemo(() => analyzeInput(input, targetText), [input, targetText])
+  // 한글 조합 중에는 이미 확인한 진행률이 임시 자모 때문에 뒤로 가지 않게 한다.
   const analysis = useMemo(() => {
     const stableAnalysis = !compositionActive || rawAnalysis.validPrefixLength >= visualPrefixRef.current
       ? rawAnalysis
@@ -75,6 +79,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     }
   }, [bestCombo, combo, correctUnits, elapsedSeconds, score, stationIndex, wrongAttempts])
 
+  // 마지막 입력과 종료 이벤트가 겹쳐도 결과와 최고 점수는 한 번만 저장한다.
   const finish = useCallback((completed: boolean, finalPassed?: number, finalScore?: number, finalCorrectUnits?: number, finalCombo?: number, finalBestCombo?: number) => {
     if (resultSentRef.current) return
     resultSentRef.current = true
@@ -86,6 +91,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     onFinish(result)
   }, [buildResult, highScore, onFinish])
 
+  // 대여소 이름 완성 시 보너스·콤보를 계산하고 다음 정류 지점으로 이동한다.
   const arrive = useCallback((finalCorrectUnits = correctUnitsRef.current) => {
     if (!nextStation || arrivingRef.current) return
     arrivingRef.current = true

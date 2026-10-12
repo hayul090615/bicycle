@@ -1,3 +1,6 @@
+/**
+ * 타자 게임용 Leaflet 지도다. 선택한 구와 대여소, 이동 경로를 표시하고 진행 중인 자전거를 따라 지도 중심을 조절한다.
+ */
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import { divIcon, latLngBounds, type FitBoundsOptions, type LatLngExpression } from 'leaflet'
 import { CircleMarker, GeoJSON, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
@@ -33,6 +36,7 @@ const geoPoints = (course: DistrictCourse, index: number): GeoPoint[] => {
 
 const toLatLngs = (points: GeoPoint[]): LatLngExpression[] => points.map(({ lat, lng }) => [lat, lng])
 
+/** 게임 지도 표시용 구 경계를 중심 기준으로 확장한 새 객체를 만든다. */
 function expandDistrictFeature(feature: DistrictGeoFeature, scale = 1.1): DistrictGeoFeature {
   const coordinates = getFeatureCoordinates(feature)
   const centerLng = coordinates.reduce((sum, point) => sum + point[0], 0) / coordinates.length
@@ -54,6 +58,7 @@ function expandDistrictFeature(feature: DistrictGeoFeature, scale = 1.1): Distri
   }
 }
 
+/** 게임의 현재 대여소 구간이 보이도록 지도 위치를 조정한다. */
 function FollowCourse({ course, stationIndex }: { course: DistrictCourse; stationIndex: number }) {
   const map = useMap()
   const courseZoomRef = useRef<number | null>(null)
@@ -77,6 +82,7 @@ function FollowCourse({ course, stationIndex }: { course: DistrictCourse; statio
   return null
 }
 
+/** Leaflet 확대 수준이 변할 때 상위 화면에 알린다. */
 function ZoomObserver({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
   const zoomBand = useRef<number | null>(null)
   const map = useMapEvents({

@@ -1,3 +1,6 @@
+/**
+ * 지도 여행의 중심 화면이다. 목적지·실제 GPS·자전거 경로·대여소·시설 조회를 조율하고 지도 SDK, 길 안내, 로드뷰, 반납 타이머를 연결한다.
+ */
 ﻿import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
@@ -40,6 +43,7 @@ type MapLayerKey = 'course' | 'restaurants' | 'cctv' | 'roadInfo' | 'riders' | '
 type MapTool = 'routes' | 'ridePlan' | 'course' | 'food' | 'cctv' | 'settings' | 'location' | '3d' | 'map' | 'facilities'
 type MapLayers = Record<MapLayerKey, boolean>
 const DEFAULT_MAP_LAYERS: MapLayers = { course: false, restaurants: false, cctv: false, roadInfo: true, riders: false, amenities: true, bikeStations: false }
+/** 사용자가 저장한 지도 레이어 표시 설정을 읽는다. */
 function readMapLayers(): MapLayers {
   try {
     const saved = localStorage.getItem('seoul-bike-map-layers-v3')
@@ -65,6 +69,7 @@ const categoryNames: Record<TourCategory, [string, string]> = {
   seasonal: ['Seasons', '계절'],
 }
 
+/** 두 지리 좌표의 거리를 미터 단위로 구한다. */
 function distanceMeters(from: Coordinates, to: Coordinates) {
   const radians = Math.PI / 180
   const latitude = (to.lat - from.lat) * radians
@@ -73,6 +78,7 @@ function distanceMeters(from: Coordinates, to: Coordinates) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc))
 }
 
+/** 현재 좌표에서 목표 좌표를 향하는 방위를 도 단위로 구한다. */
 function bearingDegrees(from: Coordinates, to: Coordinates) {
   const radians = Math.PI / 180
   const latitude1 = from.lat * radians
@@ -83,6 +89,7 @@ function bearingDegrees(from: Coordinates, to: Coordinates) {
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
 }
 
+/** 현재 위치와 코스 정류 지점 사이에서 가장 짧은 거리를 구한다. */
 function nearestStopDistance(route: TouristRoute, location: Coordinates) {
   return Math.min(...route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
@@ -90,13 +97,16 @@ function nearestStopDistance(route: TouristRoute, location: Coordinates) {
   }))
 }
 
+/** 미터 거리를 화면의 m 또는 km 표시 문자열로 변환한다. */
 function distanceLabel(meters: number) {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
 }
+/** 저장한 따릉이·개인 자전거 이용 방식을 읽는다. */
 function readBikeUseMode(): BikeUseMode {
   try { return localStorage.getItem('seoul-bike-use-mode') === 'personal' ? 'personal' : 'ttareungi' }
   catch { return 'ttareungi' }
 }
+/** 저장한 반납 시각을 읽고 유효한 값만 사용한다. */
 function readRentalDeadline(): number | null {
   try {
     const value = Number(localStorage.getItem('seoul-bike-rental-deadline'))
@@ -104,6 +114,7 @@ function readRentalDeadline(): number | null {
   } catch { return null }
 }
 
+/** 선택 언어와 시설 종류에 맞는 지도 표시 이름을 만든다. */
 function amenityTitle(amenity: RouteAmenity, locale: 'en' | 'ko') {
   const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
     ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
@@ -122,10 +133,12 @@ const AMENITY_DISPLAY = {
   visit: { icon: '📍', shortKo: '명소', shortEn: 'Visit' },
 } as const
 
+/** 경도·위도 배열의 두 지점 사이 거리를 미터로 계산한다. */
 function distanceMetersBetween(a: LonLat, b: LonLat) {
   return distanceMeters({ lng: a[0], lat: a[1] }, { lng: b[0], lat: b[1] })
 }
 
+/** 경로 시작부터 지정한 미터 거리만큼 진행한 좌표를 보간한다. */
 function coordinateAtDistance(points: LonLat[], distance: number): LonLat {
   let remaining = Math.max(0, distance)
   for (let index = 1; index < points.length; index++) {
@@ -140,6 +153,7 @@ function coordinateAtDistance(points: LonLat[], distance: number): LonLat {
   return points.at(-1) ?? [126.978, 37.5665]
 }
 
+/** 경로 서비스의 회전 동작을 선택 언어의 안내 문구로 변환한다. */
 function instructionLabel(instruction: BikeRouteInstruction, locale: 'en' | 'ko') {
   const { maneuver, modifier, roadName } = instruction
   const ko: Record<string, string> = { left: '왼쪽', right: '오른쪽', 'slight left': '왼쪽으로 살짝', 'slight right': '오른쪽으로 살짝', 'sharp left': '왼쪽으로 크게', 'sharp right': '오른쪽으로 크게', straight: '직진', uturn: '유턴' }
@@ -160,6 +174,7 @@ function instructionLabel(instruction: BikeRouteInstruction, locale: 'en' | 'ko'
   return roadName ? `${action} onto ${roadName}` : action
 }
 
+/** 다음 회전 동작에 맞는 화면용 화살표를 고른다. */
 function instructionArrow(instruction?: BikeRouteInstruction) {
   const direction = instruction?.modifier ?? ''
   if (direction.includes('left')) return direction.includes('sharp') ? '←' : '↰'
@@ -170,15 +185,18 @@ function instructionArrow(instruction?: BikeRouteInstruction) {
 }
 
 // A relaxed public-bike pace; sightseeing breaks and traffic signals are excluded.
+/** 거리에서 자전거 이동 시간을 분 단위로 추정한다. */
 function bikeMinutes(meters: number) {
   return Math.max(1, Math.ceil(meters / 200)) // 12 km/h = 200 m/min
 }
 
+/** 선택 경로의 각 구간 길이를 합쳐 전체 미터 거리를 구한다. */
 function pathDistance(points: LonLat[]) {
   return points.slice(1).reduce((total, [lng, lat], index) => total + distanceMeters(
     { lng: points[index][0], lat: points[index][1] }, { lng, lat }), 0)
 }
 
+/** 현재 위치를 경로에 투영해 지나온 미터 거리를 구한다. */
 function nearestRouteProgress(location: Coordinates, path: LonLat[]) {
   const latitudeScale = 111_320
   let cumulative = 0
@@ -200,6 +218,7 @@ function nearestRouteProgress(location: Coordinates, path: LonLat[]) {
   return closestGap > 250 ? 0 : closestProgress
 }
 
+/** 코스 지점 사이 거리를 바탕으로 전체 주행 시간을 추정한다. */
 function estimatedRouteMinutes(route: TouristRoute) {
   const stops = route.stops.map(stop => getTouristStation(stop.stationId))
   const straightDistance = stops.slice(1).reduce((total, stop, index) => total + distanceMetersBetween(
@@ -207,6 +226,7 @@ function estimatedRouteMinutes(route: TouristRoute) {
   return bikeMinutes(straightDistance * 1.3)
 }
 
+/** 서울의 현재 날짜를 기준으로 기본 계절을 고른다. */
 function seasonForToday(): TourSeason {
   const month = Number(todayInSeoul().slice(5, 7))
   if (month >= 3 && month <= 5) return 'spring'
@@ -257,6 +277,7 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
   },
 }
 
+/** 목적지·현재 위치·선택 구간이 보이도록 Leaflet 중심과 축척을 맞춘다. */
 function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedStop, hasDestination, userLocation, locationFocusRequest }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; approachPoints: LatLngExpression[]; walkingPoints: LatLngExpression[]; selectedStop: number | null; hasDestination: boolean; userLocation: Coordinates | null; locationFocusRequest: number }) {
   const map = useMap()
   const lastFocusRequest = useRef(0)
@@ -304,6 +325,7 @@ function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedS
   return null
 }
 
+/** 지도 이동 뒤 중심 좌표를 주변 대여소 조회 화면에 전달한다. */
 function MapCenterReporter({ onChange }: { onChange: (center: Coordinates) => void }) {
   const map = useMap()
   useEffect(() => {
@@ -318,6 +340,7 @@ function MapCenterReporter({ onChange }: { onChange: (center: Coordinates) => vo
   return null
 }
 
+/** 선택한 주변 대여소 목록을 자전거 수량이 표시된 마커로 만든다. */
 function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[]; locale: string }) {
   const map = useMap()
   const [viewRevision, setViewRevision] = useState(0)
@@ -369,6 +392,7 @@ function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[
   })}</>
 }
 
+/** 도착지 선택 모드에서 지도 클릭 좌표를 상위 화면에 전달한다. */
 function DestinationPickerMapEvents({ enabled, onPick }: { enabled: boolean; onPick: (point: Coordinates) => void }) {
   useMapEvents({ click: event => { if (enabled) onPick({ lat: event.latlng.lat, lng: event.latlng.lng }) } })
   return null
@@ -379,12 +403,14 @@ const TIMER_DIGIT_SEGMENTS: Record<string, string> = {
   '4': 'fgbc', '5': 'afgcd', '6': 'afgecd', '7': 'abc', '8': 'abcdefg', '9': 'abfgcd',
 }
 
+/** 숫자 문자열을 디지털 시계의 일곱 세그먼트 모양으로 표시한다. */
 function SegmentedDigits({ value }: { value: string }) {
   return <span className="tour-rental-digits" aria-hidden="true">{value.split('').map((digit, digitIndex) => <span className="tour-rental-digit" key={`${digit}-${digitIndex}`}>
     {'abcdefg'.split('').map(segment => <i key={segment} className={`tour-rental-segment tour-rental-segment--${segment}${TIMER_DIGIT_SEGMENTS[digit]?.includes(segment) ? ' is-lit' : ''}`} />)}
   </span>)}</span>
 }
 
+/** 반납까지 남은 초를 시·분·초 디지털 표시로 변환한다. */
 function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   const safeSeconds = Math.max(0, seconds)
   const hours = String(Math.floor(safeSeconds / 3600)).padStart(2, '0')
@@ -513,6 +539,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   useLayoutEffect(() => {
     if (rentalTimerOpen) closeRoadview()
   }, [closeRoadview, rentalTimerOpen])
+  // 로드뷰의 촬영 위치는 실제 GPS와 별개로 유지해 사진 탐색이 내 위치를 바꾸지 않게 한다.
   const selectRoadview = useCallback((point: Coordinates) => {
     if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return
     setRoadviewTarget(point)
@@ -586,12 +613,26 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapCenter(current => `${current.lat.toFixed(5)}:${current.lng.toFixed(5)}` === nextKey ? current : center)
   }, [])
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
+  // 사진에서 경로 끝에 도달한 안내는 현재 목적지마다 한 번만 표시한다.
+  const roadviewTripKey = hasDestination ? `${route.id}:${destinationKey}` : null
+  const [roadviewCelebrationKey, setRoadviewCelebrationKey] = useState<string | null>(null)
+  const roadviewArrivedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!roadviewTripKey) { roadviewArrivedRef.current = null; setRoadviewCelebrationKey(null) }
+  }, [roadviewTripKey])
+  const celebrateRoadviewArrival = useCallback(() => {
+    if (!roadviewTripKey || roadviewArrivedRef.current === roadviewTripKey) return
+    roadviewArrivedRef.current = roadviewTripKey
+    setRoadviewCelebrationKey(roadviewTripKey)
+  }, [roadviewTripKey])
+  // 실제 이동 도착은 정확도와 관측 시각을 가진 GPS 훅으로 따로 판정한다.
   const arrival = useDestinationArrival({
     destinationKey: hasDestination ? `${route.id}:${destinationKey}` : null,
     destination: destinationStation,
     location: userLocation,
     enabled: trackingLocation,
   })
+  const dismissArrival = useCallback(() => { arrival.dismiss(); setRoadviewCelebrationKey(null) }, [arrival.dismiss])
   const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1_000, 1_000), [mapCenter])
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 1_000), [locationLat, locationLng])
@@ -664,6 +705,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const selectedRouteOption = activeRouteOptions[0]
   const routeGeometry = selectedRouteOption ? { key: routeGuidanceKey, points: selectedRouteOption.route.geometry, distanceMeters: selectedRouteOption.route.distanceMeters ?? pathDistance(selectedRouteOption.route.geometry), instructions: selectedRouteOption.route.instructions } : null
   const routedPath = routeGeometry?.points ?? null
+  // 대여소까지 걷는 구간과 자전거 경로 뒤에 정확히 선택한 목적지 좌표를 잇는다.
   const roadviewRoutePath = useMemo(() => {
     if (!hasDestination || !routedPath) return null
     return [...(walkingPath ?? []), ...routedPath, [destinationStation.lng, destinationStation.lat] as LonLat]
@@ -1367,6 +1409,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {routeInstructions.length > 0 && <div className="tour-road-sign-directions"><h3>{text('Full directions', '전체 길 안내')}</h3><ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol></div>}
   </aside> : null
 
+  // 길 안내·경로 고도·코스 선택 내용을 메뉴 또는 모바일 표시 위치에 연결한다.
   const itineraryPanel = (
     <aside id="tour-route-sidebar" className="tour-itinerary" aria-label={text('Routes and nearby bikes', '코스와 가까운 따릉이')} hidden={!sidebarOpen}>
       <div className="tour-sidebar-topline"><strong>{text('Plan your ride', '라이딩 계획')}</strong><button type="button" onClick={() => setSidebarOpen(false)} aria-label={text('Close route panel', '코스 패널 닫기')}>×</button></div>
@@ -1616,7 +1659,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} onMapCenterChange={reportMapCenter} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} kakaoMapType={kakaoMapType} roadviewEnabled={roadviewEnabled} roadviewPosition={roadviewPosition} onSelectRoadview={selectRoadview} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} terrainPath={routedPath} elevationProfile={elevationPoints} destination={hasDestination ? destinationStation : null} />}
+        {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} terrainPath={routedPath} elevationProfile={elevationPoints} destination={hasDestination ? destinationStation : null} onDestinationArrival={celebrateRoadviewArrival} />}
         {roadviewEnabled && <div className="tour-roadview-map-hint" role="status"><span>{text('Click a highlighted road to view the street', '표시된 도로를 누르면 거리 사진을 볼 수 있어요')}</span><button type="button" onClick={closeRoadview}>{text('Exit Roadview', '로드뷰 종료')}</button></div>}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
@@ -1867,7 +1910,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </section>
 
     {mapMenuOpen && menuPlanTarget ? createPortal(itineraryPanel, menuPlanTarget) : itineraryPanel}
-    {arrival.open && <DestinationArrival locale={locale} onClose={arrival.dismiss} />}
+    {(arrival.open || (roadviewTripKey !== null && roadviewCelebrationKey === roadviewTripKey)) && <DestinationArrival locale={locale} onClose={dismissArrival} />}
   </div>
 }
 

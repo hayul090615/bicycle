@@ -1,9 +1,13 @@
+/**
+ * 자전거와 도보 경로 서비스를 호출하고 결과 형식을 통일한다. 경로 좌표는 [경도, 위도], 거리는 미터, 예상 시간은 초 단위를 사용한다.
+ */
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 
 export type LonLat = [number, number]
 export interface BikeRouteInstruction { point: LonLat; maneuver: string; modifier?: string; roadName: string; distanceMeters: number }
 export interface BikeRouteResult { geometry: LonLat[]; waypoints: LonLat[]; distanceMeters?: number; durationSeconds?: number; instructions: BikeRouteInstruction[]; routingScore?: number }
 
+/** 예상 시간이 짧은 경로를 먼저 정렬하고 시간 동률이면 거리·비용을 비교한다. */
 function compareRouteDuration(first: BikeRouteResult, second: BikeRouteResult) {
   const firstDuration = first.durationSeconds ?? Infinity
   const secondDuration = second.durationSeconds ?? Infinity
@@ -17,6 +21,7 @@ function compareRouteDuration(first: BikeRouteResult, second: BikeRouteResult) {
 // BRouter's safety profile assigns a high cost to roads with fast traffic and
 // prefers cycleways and quiet streets. The public OSRM bicycle server remains
 // a fallback when BRouter cannot calculate a route.
+/** BRouter의 지정 자전거 프로필로 경로와 회전 안내를 요청한다. */
 async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal, profile = 'fastbike-lowtraffic', alternative = 0): Promise<BikeRouteResult> {
   const params = new URLSearchParams({
     lonlats: waypoints.map(point => point.join(',')).join('|'),
@@ -77,6 +82,7 @@ async function fetchSaferBikePath(waypoints: LonLat[], signal: AbortSignal, prof
   }
 }
 
+/** 사용 가능한 대안 경로를 조회해 예상 시간 기준으로 정렬한다. */
 export async function fetchBikePaths(waypoints: LonLat[], signal: AbortSignal): Promise<BikeRouteResult[]> {
   const candidateRequests = [
     fetchSaferBikePath(waypoints, signal, 'fastbike-lowtraffic', 0),
@@ -114,12 +120,14 @@ export async function fetchBikePaths(waypoints: LonLat[], signal: AbortSignal): 
   return routes.sort(compareRouteDuration)
 }
 
+/** 추천 여행 코스의 대여소 지점을 자전거 경로 요청 좌표로 변환한다. */
 export async function fetchBikeRoute(route: TouristRoute, signal: AbortSignal): Promise<BikeRouteResult> {
   const stations = route.stops.map(({ stationId }) => getTouristStation(stationId))
   const waypoints = stations.map(({ lng, lat }) => [lng, lat] as LonLat)
   return fetchBikePath(waypoints, signal, true)
 }
 
+/** 자전거 경로를 조회하며 선택적으로 이전 경로 캐시를 재사용한다. */
 export async function fetchBikePath(waypoints: LonLat[], signal: AbortSignal, cache = false): Promise<BikeRouteResult> {
   const cacheKey = `safe-bike-route-v3-${waypoints.map(([lng, lat]) => `${lng.toFixed(5)},${lat.toFixed(5)}`).join(';')}`
   if (cache) {
@@ -152,6 +160,7 @@ export async function fetchBikePath(waypoints: LonLat[], signal: AbortSignal, ca
   return result
 }
 
+/** 현재 위치에서 대여소까지 접근할 도보 경로를 조회한다. */
 export async function fetchWalkingPath(waypoints: LonLat[], signal: AbortSignal): Promise<BikeRouteResult> {
   const path = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
   const url = `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${path}?overview=full&geometries=geojson&steps=false`

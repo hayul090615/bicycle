@@ -1,3 +1,6 @@
+/**
+ * 첫 방문 튜토리얼과 임시 광고를 순서대로 표시한다. 재방문 기록으로 튜토리얼을 건너뛰고 광고 숨김 선택은 24시간 동안 저장한다.
+ */
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { claimTutorialPresentation, isReturningVisitor } from '../services/siteVisits'
@@ -43,11 +46,13 @@ const AD_HIDDEN_COOKIE = 'ttareungi_ad_hidden_until_v1'
 const YEAR_SECONDS = 365 * 24 * 60 * 60
 const DAY_SECONDS = 24 * 60 * 60
 
+/** 이름에 해당하는 안내 표시 기록이 쿠키에 있는지 확인한다. */
 function hasCookie(name: string) {
   try { return document.cookie.split(';').some(cookie => cookie.trim().startsWith(`${name}=`)) }
   catch { return false }
 }
 
+/** 안내 표시 기록을 지정한 만료 시간으로 저장한다. */
 function writeCookie(name: string, maxAgeSeconds: number) {
   try {
     const secure = window.location.protocol === 'https:' ? '; Secure' : ''

@@ -1,3 +1,6 @@
+/**
+ * 전국 CCTV CSV를 CP949로 읽어 서울 자료만 추출하는 데이터 준비 도구다. 정리한 위치와 출처 정보를 압축해 public/datasets에 저장한다.
+ */
 import { createReadStream, mkdirSync, writeFileSync } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { resolve } from 'node:path'
@@ -7,6 +10,7 @@ import iconv from 'iconv-lite'
 const input = process.argv[2]
 if (!input) throw new Error('Usage: node scripts/build-seoul-cctv-data.mjs <nationwide-cctv.csv>')
 
+/** 따옴표 안 쉼표를 구분해 CCTV CSV 한 줄을 필드 배열로 읽는다. */
 function parseCsvLine(line) {
   const fields = []
   let field = ''

@@ -1,3 +1,6 @@
+/**
+ * 브라우저 저장소·쿠키·IndexedDB와 서버·로그인 계정의 방문 기록을 합친다. 같은 문서에서는 등록 요청을 공유하고 튜토리얼 중복 표시를 방지한다.
+ */
 import { siteAuth } from './siteAuth'
 
 const VISITED_KEY = 'ttareungi_site_visited_v1'
@@ -6,12 +9,14 @@ let visitPromise: Promise<boolean> | null = null
 let tutorialPresented = false
 const accountHistory = new Map<string, boolean>()
 
+/** localStorage와 쿠키에서 이 브라우저의 방문 기록을 확인한다. */
 function browserHasVisited() {
   try { if (localStorage.getItem(VISITED_KEY) === '1') return true } catch { /* Check the independent cookie fallback. */ }
   try { return document.cookie.split(';').some(value => [VISITED_KEY, TUTORIAL_KEY].some(key => value.trim().startsWith(`${key}=`))) }
   catch { return false }
 }
 
+/** 브라우저 저장소와 쿠키에 방문 사실을 각각 기록한다. */
 function rememberBrowserVisit() {
   try { localStorage.setItem(VISITED_KEY, '1') } catch { /* IndexedDB and cookies are independent fallbacks. */ }
   try {
@@ -19,6 +24,7 @@ function rememberBrowserVisit() {
   } catch { /* Storage can be disabled by the browser. */ }
 }
 
+/** IndexedDB 방문 횟수를 갱신하고 이전 기록 여부를 반환한다. */
 function recordBrowserDatabaseVisit(previouslyVisited: boolean): Promise<boolean> {
   return new Promise(resolve => {
     let settled = false
@@ -56,6 +62,7 @@ function recordBrowserDatabaseVisit(previouslyVisited: boolean): Promise<boolean
   })
 }
 
+/** 로그인 계정의 튜토리얼 기록을 조회하고 최초 기록을 저장한다. */
 async function accountHasVisited(): Promise<boolean> {
   if (!siteAuth) return false
   let timeout = 0
@@ -75,6 +82,7 @@ async function accountHasVisited(): Promise<boolean> {
   finally { window.clearTimeout(timeout) }
 }
 
+/** 서버 방문 등록 API에서 데이터베이스의 재방문 여부를 조회한다. */
 async function recordServerVisit(): Promise<boolean> {
   try {
     const response = await fetch('/api/site-visit', { method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(2500) })
@@ -95,11 +103,13 @@ export function registerSiteVisit(): Promise<boolean> {
   return visitPromise
 }
 
+/** 브라우저·서버·로그인 계정의 기록 중 재방문 기록이 있는지 확인한다. */
 export async function isReturningVisitor() {
   const [returning, returningAccount] = await Promise.all([registerSiteVisit(), accountHasVisited()])
   return returning || returningAccount
 }
 
+/** 같은 문서에서 튜토리얼 표시 권한을 한 번만 획득한다. */
 export function claimTutorialPresentation() {
   if (tutorialPresented) return false
   tutorialPresented = true

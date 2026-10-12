@@ -1,3 +1,6 @@
+/**
+ * 도착 축하 문구와 폭죽을 body 포털에 표시한다. 화면 누르기·Escape·자동 닫기를 처리하고 닫힌 뒤 이전 요소로 키보드 초점을 복원한다.
+ */
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import './DestinationArrival.css'

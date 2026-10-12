@@ -1,3 +1,6 @@
+/**
+ * 계절에 맞는 지도 장식 나무 버튼을 만든다. 나무 이미지·그림자·가지 요소를 구성하고 선택한 나무 구간을 확대하는 콜백을 연결한다.
+ */
 import type { TourSeason } from '../data/touristRoutes'
 import routeTreeSpriteUrl from '../assets/route-tree.png'
 

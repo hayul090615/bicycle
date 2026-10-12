@@ -1,8 +1,12 @@
+/**
+ * 서울시 공중화장실 데이터를 서버 인증 키로 조회하고 캐시한다. 외부 응답을 지도에서 사용하는 화장실 이름·좌표·주소 형태로 변환한다.
+ */
 const SERVICE_URL = 'http://openapi.seoul.go.kr:8088'
 const SERVICE_NAME = 'mgisToiletPoi'
 let toiletCache = null
 let toiletCacheExpiresAt = 0
 
+/** 화장실 원본 데이터를 조회하고 지도용 목록으로 변환해 캐시한다. */
 async function loadToilets(key) {
   if (toiletCache && Date.now() < toiletCacheExpiresAt) return toiletCache
   const pages = await Promise.all(Array.from({ length: 5 }, async (_, index) => {

@@ -1,3 +1,6 @@
+/**
+ * 게임 종료 결과와 순위를 표시한다. 정확도·분당 타수·통과 대여소와 최고 기록을 보여 주고 재시작 또는 홈 이동을 요청한다.
+ */
 import type { GameResultData, LeaderboardEntry } from '../types/game'
 
 interface GameResultProps {

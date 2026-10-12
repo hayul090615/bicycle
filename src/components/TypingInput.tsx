@@ -1,3 +1,6 @@
+/**
+ * 대여소 이름 입력과 글자별 진행 표시를 담당한다. 한글 IME 조합 중의 임시 글자와 확정된 입력을 구분해 마지막 받침이 누락되지 않게 한다.
+ */
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CompositionEvent } from 'react'
 import { romanizeHangul, type InputAnalysis } from '../utils/hangul'
 

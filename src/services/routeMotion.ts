@@ -1,3 +1,6 @@
+/**
+ * 누적 거리 기준으로 경로 위 이동 좌표와 방위를 계산한다. 곡선 구간에서도 가상 자전거의 이동 속도가 일정하도록 경로를 보간한다.
+ */
 import type { LonLat } from './bikeRoute'
 
 export type RouteMotion = {

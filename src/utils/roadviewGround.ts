@@ -1,3 +1,6 @@
+/**
+ * 로드뷰 사진의 지면 표시 높이를 경로 고도 차이로 근사한다. 깊이 자료가 없는 오버레이이므로 경사 보정과 가시 거리·모퉁이 표시 범위를 제한한다.
+ */
 import type { LonLat } from '../services/bikeRoute'
 import type { RouteElevationPoint } from '../services/routeConditions'
 import { bearingToRoadviewPoint, type RibbonSection } from './roadviewRoute'
@@ -9,6 +12,7 @@ const METERS_PER_LATITUDE = 111_320
 // https://apis.map.kakao.com/web/documentation/#CustomOverlay_setAltitude
 const SURFACE_ALTITUDE = 1.7 - 3
 
+/** 현재 촬영 위치의 고도를 기준으로 각 경로 지점의 표시 높이를 보정한다. */
 export function roadviewGroundAltitude(path: LonLat[] | null, profile: RouteElevationPoint[], camera: { lat: number; lng: number }) {
   const samples = profile.filter(point => Number.isFinite(point.distanceMeters) && Number.isFinite(point.elevationMeters))
     .sort((first, second) => first.distanceMeters - second.distanceMeters)
@@ -50,6 +54,7 @@ export function roadviewGroundAltitude(path: LonLat[] | null, profile: RouteElev
   }
 }
 
+/** 사진에서 표시할 가까운 경로 구간을 고르고 큰 모퉁이 뒤의 선을 제한한다. */
 export function visibleRoadviewGroundSections(sections: RibbonSection[]) {
   const initial = sections.find(section => section.progressMeters >= (sections[0]?.progressMeters ?? 0) + 6) ?? sections.at(-1)
   if (!initial || sections.length < 2) return []

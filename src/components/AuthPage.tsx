@@ -1,3 +1,6 @@
+/**
+ * 로그인과 회원가입 입력 화면이다. Supabase 인증 결과와 오류를 보여 주고 로그인·회원가입 화면 사이의 이동을 처리한다.
+ */
 import { useEffect, useState, type FormEvent } from 'react'
 import { siteAuth } from '../services/siteAuth'
 import { SeoulRideIllustration } from './SeoulRideIllustration'

@@ -1,3 +1,6 @@
+/**
+ * 관광·운동·야경·계절 여행 코스의 정류 지점과 설명을 정의한다. 코스의 stationId로 실제 대여소 스냅샷 정보를 찾는다.
+ */
 import { allBikeStations } from './districtCourses'
 import type { BikeStation } from '../types/game'
 
@@ -263,6 +266,7 @@ export const touristRoutes: TouristRoute[] = [
 
 const stationById = new Map(allBikeStations.map((station) => [station.id, station]))
 
+/** 여행 코스의 대여소 ID를 실제 스냅샷 정보로 조회한다. */
 export function getTouristStation(stationId: string): BikeStation {
   const station = stationById.get(stationId)
   if (!station) throw new Error(`Unknown tourist station: ${stationId}`)

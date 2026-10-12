@@ -1,3 +1,4 @@
+# main 변경 시 Vite를 /bicycle/ 기본 경로로 빌드하고 dist를 GitHub Pages에 게시한다.
 name: Deploy to GitHub Pages
 
 on:

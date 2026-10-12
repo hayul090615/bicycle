@@ -1,3 +1,6 @@
+/**
+ * 지도 위 맛집 안내 버튼용 DOM을 만든다. 선택 언어와 표시 순서를 반영하고 클릭 시 상위 맛집 안내 열기 함수를 호출한다.
+ */
 export function createFoodGuideMarker(locale: 'en' | 'ko', index: number, onClick: () => void) {
   const marker = document.createElement('button')
   marker.type = 'button'

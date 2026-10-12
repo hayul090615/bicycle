@@ -1,3 +1,6 @@
+/**
+ * 카카오 지도·로드뷰의 타입과 SDK 로더, 서울 장소 검색을 제공한다. 카카오 검색과 보조 OSM 검색 결과를 공통 장소 좌표 형식으로 반환한다.
+ */
 export const hasKakaoMapsKey = Boolean(import.meta.env.VITE_KAKAO_MAP_KEY?.trim())
 
 export interface KakaoLatLng {
@@ -119,6 +122,7 @@ type KakaoWindow = Window & {
 
 let loading: Promise<KakaoMapsApi> | undefined
 
+/** 카카오 SDK 로딩 완료를 기다리고 시간 초과·통신 오류를 처리한다. */
 export function loadKakaoMaps(): Promise<KakaoMapsApi> {
   if (!hasKakaoMapsKey) return Promise.reject(new Error('KAKAO_MAPS_NOT_CONFIGURED'))
   const scope = window as KakaoWindow
@@ -160,6 +164,7 @@ export function loadKakaoMaps(): Promise<KakaoMapsApi> {
 
 type SearchPlace = { id: string; name: string; address: string; lat: number; lng: number }
 
+/** 카카오 장소명·주소 검색 결과를 공통 검색 장소 형식으로 정리한다. */
 async function searchKakaoPlaces(query: string): Promise<SearchPlace[]> {
   const api = await loadKakaoMaps()
   const places = new api.services.Places()
@@ -199,6 +204,7 @@ async function searchKakaoPlaces(query: string): Promise<SearchPlace[]> {
   return [...unique.values()].slice(0, 45)
 }
 
+/** 보조 장소 검색 결과에서 유효한 이름과 좌표를 추출한다. */
 async function searchOpenStreetMapPlaces(query: string): Promise<SearchPlace[]> {
   const url = new URL('https://photon.komoot.io/api/')
   url.searchParams.set('q', query)
@@ -215,6 +221,7 @@ async function searchOpenStreetMapPlaces(query: string): Promise<SearchPlace[]> 
   })
 }
 
+/** 서울 장소 검색을 시도하고 가능한 서비스의 결과를 반환한다. */
 export async function searchSeoulPlaces(query: string): Promise<SearchPlace[]> {
   const normalized = query.replace(/\s+/g, '').toLocaleLowerCase()
   if (normalized === '여의도' || normalized === '여의도동' || normalized === 'yeouido') {

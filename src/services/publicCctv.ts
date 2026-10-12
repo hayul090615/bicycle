@@ -1,3 +1,6 @@
+/**
+ * 공개 CCTV 위치 자료를 한 번 불러와 공유한다. 지도 축척에 맞는 위치 묶음과 선택 경로에서 일정 거리 안의 카메라 목록을 계산한다.
+ */
 import type { LonLat } from './bikeRoute'
 
 export interface PublicCamera {
@@ -21,6 +24,7 @@ export interface CameraBundle {
 
 let bundleRequest: Promise<CameraBundle> | null = null
 
+/** 압축 CCTV JSON을 읽고 같은 데이터 요청의 Promise를 공유한다. */
 export function loadPublicCctvBundle() {
   if (!bundleRequest) {
     bundleRequest = fetch(`${import.meta.env.BASE_URL}datasets/seoul-cctv.json.gz`)
@@ -37,6 +41,7 @@ export function loadPublicCctvBundle() {
   return bundleRequest
 }
 
+/** 지도 중심 주변의 카메라를 셀 단위로 묶어 표시량을 제한한다. */
 export function clusterPublicCameras(cameras: PublicCamera[], center: { lat: number; lng: number }, radiusMeters: number, cellMeters: number) {
   const latitudeCell = Math.max(0.0002, cellMeters / 111_320)
   const longitudeCell = Math.max(0.0002, cellMeters / (111_320 * Math.cos(center.lat * Math.PI / 180)))
@@ -57,6 +62,7 @@ export function clusterPublicCameras(cameras: PublicCamera[], center: { lat: num
   }))
 }
 
+/** CCTV 위치에서 경로 선분까지 가장 가까운 미터 거리를 구한다. */
 function distanceToRouteSegmentMeters(camera: PublicCamera, start: LonLat, end: LonLat) {
   const latitudeScale = 111_320
   const longitudeScale = latitudeScale * Math.cos(camera.lat * Math.PI / 180)
@@ -70,6 +76,7 @@ function distanceToRouteSegmentMeters(camera: PublicCamera, start: LonLat, end: 
   return Math.hypot(ax + ratio * dx, ay + ratio * dy)
 }
 
+/** 전체 CCTV 목록에서 선택 경로의 지정 반경 안에 있는 위치를 고른다. */
 export function publicCamerasAlongRoute(cameras: PublicCamera[], path: LonLat[], radiusMeters = 500) {
   if (path.length < 2) return []
   const paddingLat = radiusMeters / 111_320

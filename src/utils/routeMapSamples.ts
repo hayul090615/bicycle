@@ -1,3 +1,6 @@
+/**
+ * 경로를 미터 단위 간격으로 샘플링해 위치·방위·누적 거리를 만든다. 나무 같은 지도 표시를 경로 좌우로 배치하는 좌표 보정도 제공한다.
+ */
 import type { LonLat } from '../services/bikeRoute'
 
 export type RouteMapSample = { point: LonLat; bearing: number; distance: number }
@@ -34,6 +37,7 @@ export function sampleRouteAtIntervals(path: LonLat[], intervalMeters: number): 
   })
 }
 
+/** 경로 샘플을 방위 기준 왼쪽 또는 오른쪽으로 미터 간격만큼 이동한다. */
 export function offsetRouteSample([lng, lat]: LonLat, bearing: number, meters: number, side: 1 | -1): LonLat {
   const angle = (bearing + 90 * side) * Math.PI / 180
   return [lng + Math.sin(angle) * meters / (111_000 * Math.max(.2, Math.cos(lat * Math.PI / 180))), lat + Math.cos(angle) * meters / 111_000]

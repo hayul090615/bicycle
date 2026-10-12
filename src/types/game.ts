@@ -1,8 +1,13 @@
+/**
+ * 게임과 대여소 데이터에서 공통으로 사용하는 타입 정의다. 화면 좌표 RoutePoint와 실제 위도·경도 GeoPoint를 구분하며 점수·결과·순위 구조를 명시한다.
+ */
+/** 게임 화면의 평면 좌표. 지도용 경도·위도 배열과 섞어 사용하지 않는다. */
 export interface RoutePoint {
   x: number
   y: number
 }
 
+/** 실제 지도 좌표. lat은 위도, lng는 경도이며 단위는 도다. */
 export interface GeoPoint {
   lat: number
   lng: number
@@ -50,6 +55,7 @@ export interface GameStats {
   wrongAttempts: number
 }
 
+/** 종료 시점의 통계와 완주 여부를 결과 화면에 전달하는 구조다. */
 export interface GameResultData extends GameStats {
   completed: boolean
   elapsedSeconds: number

@@ -1,3 +1,6 @@
+/**
+ * HttpOnly 방문자 쿠키를 발급하고 Supabase RPC로 재방문 여부를 조회한다. 서버 데이터베이스가 설정되지 않았거나 요청이 실패하면 브라우저 저장 방식을 안내한다.
+ */
 import { randomUUID } from 'node:crypto'
 
 const VISITOR_COOKIE = 'ttareungi_visitor_id_v1'

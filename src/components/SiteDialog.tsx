@@ -1,3 +1,6 @@
+/**
+ * 로그아웃 요청 또는 타자 학습 설명 대화상자다. 선택된 종류에 맞는 내용과 닫기 버튼을 표시하고 인증 요청 상태를 안내한다.
+ */
 import { useState } from 'react'
 import { siteAuth } from '../services/siteAuth'
 

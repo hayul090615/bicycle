@@ -1,3 +1,6 @@
+/**
+ * 카카오 지도에서 경로·대여소·현재 위치·주변 시설을 표시한다. 지도 좌표 선택과 로드뷰 이동을 상위 화면에 알리고 SDK 오버레이를 갱신한다.
+ */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { hasKakaoMapsKey, loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoOverlay } from '../services/kakaoMaps'
@@ -16,16 +19,19 @@ const MAX_KAKAO_MAP_LEVEL = 9
 
 type MapPoint = { lat: number; lng: number }
 
+/** 경도·위도 값이 유효한 좌표 범위인지 확인한다. */
 function isValidLonLat(point: LonLat): boolean {
   const [lng, lat] = point
   return Number.isFinite(lat) && Number.isFinite(lng)
     && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 }
 
+/** 지도에 그릴 경로의 길이와 각 좌표의 유효성을 확인한다. */
 function isValidPath(path: LonLat[] | null): path is LonLat[] {
   return Boolean(path && path.length >= 2 && path.every(isValidLonLat))
 }
 
+/** 지도 SDK의 중심 좌표를 읽고 유효하지 않으면 null을 반환한다. */
 function readMapCenter(map: KakaoMap): MapPoint | null {
   try {
     const center = map.getCenter()
@@ -37,6 +43,7 @@ function readMapCenter(map: KakaoMap): MapPoint | null {
   }
 }
 
+/** 선택 CCTV의 안내와 닫기 동작을 가진 팝업 DOM을 만든다. */
 function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
   const popup = document.createElement('div')
   popup.className = 'tour-cctv-popup tour-cctv-popup--kakao'

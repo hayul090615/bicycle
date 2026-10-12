@@ -1,3 +1,6 @@
+/**
+ * 날짜·서울 시각·좌표로 태양 고도와 방위, 그림자 방향을 근사한다. 하늘·그림자 표시에서 사용할 서울 시간대의 날짜와 현재 시각도 제공한다.
+ */
 /** Approximate solar position using NOAA's published equations. Angles are degrees clockwise from north. */
 export function getSolarPosition(date: string, minutes: number, lat: number, lng: number) {
   const [year, month, day] = date.split('-').map(Number)
@@ -25,6 +28,7 @@ export function getSolarPosition(date: string, minutes: number, lat: number, lng
   }
 }
 
+/** 서울 시간대의 오늘 날짜를 YYYY-MM-DD 문자열로 반환한다. */
 export function todayInSeoul() {
   const parts = new Intl.DateTimeFormat('en', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' })
     .formatToParts(new Date())
@@ -32,6 +36,7 @@ export function todayInSeoul() {
   return `${value('year')}-${value('month')}-${value('day')}`
 }
 
+/** 서울 시간대의 현재 날짜와 하루 중 경과 분을 구한다. */
 export function nowInSeoul() {
   const parts = new Intl.DateTimeFormat('en', {
     timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',

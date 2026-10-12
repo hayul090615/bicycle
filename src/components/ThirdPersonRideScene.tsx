@@ -1,3 +1,6 @@
+/**
+ * Three.js로 자전거를 따라가는 경로 재생 장면을 만든다. 주변 OSM 지형·건물을 구성하고 재생 진행률에 맞춰 자전거와 카메라를 이동한다.
+ */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { TouristRoute } from '../data/touristRoutes'
@@ -49,6 +52,7 @@ class PolylineCurve extends THREE.Curve<THREE.Vector3> {
   }
 }
 
+/** 경로 주변의 도로·건물·지형을 OSM에서 비동기로 조회한다. */
 async function fetchOsmStreetContext(coords: LonLat[], signal: AbortSignal): Promise<OsmResult> {
   const sampleCount = Math.min(55, Math.max(12, Math.ceil(coords.length / 8)))
   const line = Array.from({ length: sampleCount }, (_, index) => coords[Math.round(index * (coords.length - 1) / (sampleCount - 1))])
@@ -67,6 +71,7 @@ async function fetchOsmStreetContext(coords: LonLat[], signal: AbortSignal): Pro
   return data
 }
 
+/** 3D 장면에 사용할 자전거 모델의 부품과 재질을 조합한다. */
 function makeBike() {
   const rider = new THREE.Group()
   const frame = new THREE.MeshStandardMaterial({ color: '#a9874e', roughness: .62, metalness: .12 })
@@ -106,10 +111,12 @@ function makeBike() {
   return rider
 }
 
+/** 위도·경도 위치를 장면 중심 기준의 로컬 3D 좌표로 바꾼다. */
 function localPoint([lng, lat]: LonLat, centerLng: number, centerLat: number, scale: number) {
   return new THREE.Vector3((lng - centerLng) * 88000 * Math.cos(centerLat * Math.PI / 180) * scale, 0, -(lat - centerLat) * 111000 * scale)
 }
 
+/** 지리 다각형을 높이와 재질을 가진 Three.js 메시로 만든다. */
 function polygonMesh(rings: LonLat[][], centerLng: number, centerLat: number, scale: number, material: THREE.Material, height = 0) {
   if (!rings[0] || rings[0].length < 4) return null
   const makePath = (ring: LonLat[]) => {
@@ -139,6 +146,7 @@ function polygonMesh(rings: LonLat[][], centerLng: number, centerLat: number, sc
   return mesh
 }
 
+/** 3D 경로를 따라 일정 폭의 지면 리본 메시를 추가한다. */
 function addRibbon(group: THREE.Group, coords: THREE.Vector3[], width: number, material: THREE.Material, y: number) {
   if (coords.length < 2) return
   const vertices: number[] = [], indices: number[] = []
@@ -153,6 +161,7 @@ function addRibbon(group: THREE.Group, coords: THREE.Vector3[], width: number, m
   const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = true; group.add(mesh)
 }
 
+/** 로컬 좌표가 건물 등의 다각형 외곽 안에 있는지 판정한다. */
 function pointInFootprint(point: THREE.Vector3, footprint: THREE.Vector3[]) {
   let inside = false
   for (let current = 0, previous = footprint.length - 1; current < footprint.length; previous = current, current += 1) {
@@ -162,6 +171,7 @@ function pointInFootprint(point: THREE.Vector3, footprint: THREE.Vector3[]) {
   return inside
 }
 
+/** 장면의 점에서 선분까지 가장 가까운 거리를 구한다. */
 function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3) {
   const dx = end.x - start.x, dz = end.z - start.z
   const length2 = dx * dx + dz * dz
@@ -169,6 +179,7 @@ function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THRE
   return Math.hypot(point.x - (start.x + ratio * dx), point.z - (start.z + ratio * dz))
 }
 
+/** 조회한 OSM 자료로 도로·수면·건물 등 주변 장면을 구성한다. */
 function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, centerLat: number, scale: number, ridePoints: THREE.Vector3[]) {
   const buildings = new THREE.Group(), green = new THREE.Group(), water = new THREE.Group(), roads = new THREE.Group()
   const buildingMats = ['#d5c6ad', '#b8c8c4', '#d9d0bf', '#abbeb8'].map((color) => new THREE.MeshStandardMaterial({ color, roughness: .92, side: THREE.DoubleSide }))

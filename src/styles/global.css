@@ -1,3 +1,5 @@
+/* 사이트 공통 스타일. 기본 테마·게임·지도·모바일 배치와 다크 모드 규칙을 정의한다.
+   같은 선택자의 뒤쪽 보완 규칙이 앞쪽 기본값을 덮어쓰므로 선언 순서를 유지한다. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
 :root {
@@ -3587,6 +3589,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-height-legend i { display: block; height: 7px; background: linear-gradient(90deg,#f7b7b0 0%,#f77b76 52%,#f03431 100%); filter: drop-shadow(0 0 1px #294c3a); mask-image: repeating-linear-gradient(90deg,#000 0 11px,transparent 11px 15px); }
 .tour-height-legend > span { color: #40564a; font: 700 .61rem/1.1 system-ui, 'Malgun Gothic', sans-serif; letter-spacing: -.02em; }
 .tour-height-legend > small { color: #53685b; font: 650 .57rem/1 system-ui, 'Malgun Gothic', sans-serif; letter-spacing: -.015em; }
+/* 다크 배경에서는 제목과 낮음·높음 안내를 모두 흰색으로 표시한다. */
+.tour-screen--dark .tour-height-legend > span,
+.tour-screen--dark .tour-height-legend > small { color: #fff; }
 .tour-screen--dark .tour-place-search > div:first-of-type, .tour-screen--dark .tour-place-results { border-color: #405348; background: #26372c; }
 .tour-screen--dark .tour-place-search input, .tour-screen--dark .tour-place-results > button { color: #e5ede4; background: #26372c; }
 .tour-screen--dark .tour-place-search-icon, .tour-screen--dark .tour-place-search button[type='submit'] { color: #ccd8cf; }

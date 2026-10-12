@@ -1,3 +1,6 @@
+/**
+ * 건물 외곽과 태양 방향·고도에서 지도용 그림자 다각형을 근사한다. 미터 길이를 위도·경도 변화로 바꾸고 투영 지점의 볼록 껍질을 계산한다.
+ */
 export type ShadowPosition = [longitude: number, latitude: number]
 
 const METERS_PER_DEGREE = 111_320
@@ -32,6 +35,7 @@ export function castBuildingShadow(
   return ring
 }
 
+/** 좌표들을 둘러싸는 볼록 다각형 외곽을 구한다. */
 function convexHull(points: [number, number][]): [number, number][] {
   const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1])
   const cross = (origin: [number, number], a: [number, number], b: [number, number]) =>

@@ -1,3 +1,6 @@
+/**
+ * 로드뷰 시점의 방향을 표시하고 북쪽 정렬을 제공한다. 사용자가 방향 센서 사용을 선택하면 권한을 확인한 뒤 휴대폰의 절대 방위에 맞춰 시점을 회전한다.
+ */
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { KakaoMapsApi, KakaoRoadview } from '../services/kakaoMaps'
 import { normalizeHeading, phoneCompassHeading } from '../utils/compassHeading'
@@ -7,6 +10,7 @@ type PermissionConstructor = typeof DeviceOrientationEvent & { requestPermission
 const DIRECTIONS = { ko: ['북', '북동', '동', '남동', '남', '남서', '서', '북서'], en: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] }
 
 export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; roadview: KakaoRoadview; locale: 'ko' | 'en' }) {
+  // 화면의 방위 이름은 언어만 바꾸며 SDK의 실제 회전 각도는 그대로 사용한다.
   const ko = locale === 'ko'
   const [heading, setHeading] = useState(0)
   const [following, setFollowing] = useState(false)

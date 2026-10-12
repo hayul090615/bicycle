@@ -1,3 +1,6 @@
+/**
+ * 네이버 블로그 검색을 서버에서 중계한다. 서버 환경 변수의 인증 키로 요청하고, 브라우저에는 검색 결과 또는 언급 수만 반환한다.
+ */
 const NAVER_BLOG_SEARCH_URL = 'https://openapi.naver.com/v1/search/blog.json'
 
 export default async function handler(request, response) {

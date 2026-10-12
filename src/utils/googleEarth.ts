@@ -1,5 +1,9 @@
+/**
+ * 여행 코스를 Google Earth URL 또는 KML 파일로 변환한다. 장소 이름의 XML 특수문자를 처리하고 다운로드 후 임시 객체 URL을 해제한다.
+ */
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 
+/** 선택 코스의 정류 지점을 여는 Google Earth 링크를 만든다. */
 export function googleEarthUrl(route: TouristRoute, stopIndex = 0) {
   const station = getTouristStation(route.stops[stopIndex]?.stationId ?? route.stops[0].stationId)
   return `https://earth.google.com/web/@${station.lat},${station.lng},0a,1600d,35y,0h,60t,0r`
@@ -7,6 +11,7 @@ export function googleEarthUrl(route: TouristRoute, stopIndex = 0) {
 
 const xml = (value: string) => value.replace(/[<>&"']/g, character => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[character]!)
 
+/** 경로와 장소 설명을 Google Earth가 읽을 수 있는 KML 문서로 만든다. */
 export function routeKml(route: TouristRoute, locale: 'en' | 'ko') {
   const name = locale === 'ko' ? route.titleKo : route.title
   const note = locale === 'ko'
@@ -26,6 +31,7 @@ ${placemarks}
 </Document></kml>`
 }
 
+/** 코스 KML을 파일로 내려받고 생성한 임시 다운로드 URL을 해제한다. */
 export function downloadEarthRoute(route: TouristRoute, locale: 'en' | 'ko') {
   const url = URL.createObjectURL(new Blob([routeKml(route, locale)], { type: 'application/vnd.google-earth.kml+xml' }))
   const anchor = document.createElement('a')

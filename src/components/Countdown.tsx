@@ -1,3 +1,6 @@
+/**
+ * 게임 시작 전 남은 카운트와 선택한 코스·출발 대여소를 표시한다. 화면 안의 서울 지도 그림은 시작 안내용 장식이다.
+ */
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 
 interface CountdownProps {

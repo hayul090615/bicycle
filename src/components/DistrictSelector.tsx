@@ -1,3 +1,6 @@
+/**
+ * 타자 게임을 시작할 자치구를 선택하는 화면이다. 구별 진행 기록·최고 점수와 지도 여행·연습·인증 화면으로 가는 버튼을 제공한다.
+ */
 import { allBikeStations, districtCourses, SEOUL_DISTRICTS, type SeoulDistrict } from '../data/districtCourses'
 import { SeoulDistrictMap } from './SeoulDistrictMap'
 import { BIKE_IMAGE_PATH } from './BikeMarker'

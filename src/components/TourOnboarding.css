@@ -1,3 +1,4 @@
+/* 첫 방문 튜토리얼과 광고의 화면 덮개·버튼·모바일 배치 스타일. */
 .tour-onboarding-overlay {
   position: fixed;
   z-index: 200000;

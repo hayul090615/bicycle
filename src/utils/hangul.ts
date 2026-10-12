@@ -1,3 +1,6 @@
+/**
+ * 한글을 정규화하고 입력한 문자열과 목표 문자열의 일치 구간을 분석한다. 조합 중인 자모·완성 글자를 구분하고 화면 안내용 로마자도 생성한다.
+ */
 const HANGUL_SYLLABLE = /^[\uAC00-\uD7A3]$/u
 const HANGUL_JAMO = /^[\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uD7B0-\uD7FF]$/u
 
@@ -10,6 +13,7 @@ const ROMAN_INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss
 const ROMAN_VOWELS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i']
 const ROMAN_FINALS = ['', 'k', 'k', 'ks', 'n', 'nj', 'nh', 't', 'l', 'lk', 'lm', 'lp', 'ls', 'lt', 'lp', 'lh', 'm', 'p', 'ps', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 'h']
 
+/** 한글 음절을 초성·중성·종성으로 분해해 표시용 로마자로 바꾼다. */
 export function romanizeHangul(text: string) {
   const romanized = toCharacters(text).map((character) => {
     const code = character.charCodeAt(0)
@@ -33,6 +37,7 @@ export interface InputAnalysis {
   progress: number
 }
 
+/** 목표 문자열과 입력 문자열의 일치·오타·조합·완료 상태를 계산한다. */
 export function analyzeInput(input: string, target: string): InputAnalysis {
   const inputCharacters = toCharacters(input)
   const targetCharacters = toCharacters(target)

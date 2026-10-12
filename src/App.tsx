@@ -1,3 +1,6 @@
+/**
+ * 사이트 전체 화면 전환과 시작 애니메이션을 관리한다. 지도·타자 게임·로그인 화면을 연결하고 게임 기록, 테마, 방문 기록을 유지한다.
+ */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { CourseMap } from './components/CourseMap'
 import { Countdown } from './components/Countdown'
@@ -17,6 +20,7 @@ import { savedSiteLocale } from './services/siteLocale'
 import { registerSiteVisit } from './services/siteVisits'
 
 type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour' | AuthPageKind
+/** URL에 지정된 화면을 읽어 최초 진입 화면을 결정한다. */
 function screenFromUrl(): AppScreen {
   const params = new URLSearchParams(window.location.search)
   const page = params.get('page')
@@ -50,6 +54,7 @@ const SEOUL_SPLASH_PATH = SEOUL_BOUNDARY.map(([lng, lat], index) => {
   return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
 }).join(' ') + ' Z'
 
+/** 게임 상태 훅과 입력창·지도·점수 표시를 연결한다. */
 function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onToggleTheme }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void; lightMode: boolean; onToggleTheme: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const game = useTypingGame(course, onResult)

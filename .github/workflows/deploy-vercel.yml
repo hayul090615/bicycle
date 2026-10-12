@@ -1,3 +1,5 @@
+# main 변경 시 서버 API와 프런트엔드를 Vercel 운영 사이트에 배포한다.
+# 인증 키는 저장소의 Actions secrets에서 주입하고 실제 값을 파일에 기록하지 않는다.
 name: Deploy to Vercel
 
 on:

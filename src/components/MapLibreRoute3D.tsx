@@ -1,3 +1,6 @@
+/**
+ * MapLibre의 일반·위성·3D 도시 지도를 구성한다. 경로, 건물, 그림자와 계절별 하늘을 GeoJSON 레이어로 표시하고 이벤트·애니메이션을 정리한다.
+ */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
@@ -39,6 +42,7 @@ const SEASON_NIGHT_SKIES: Record<TourSeason, SkySpecification> = {
   winter: { 'sky-color': '#07172c', 'horizon-color': '#637e9c', 'sky-horizon-blend': .82, 'horizon-fog-blend': .24, 'atmosphere-blend': .5 },
 }
 type MapWeather = 'sunny' | 'cloudy' | 'rainy'
+/** 계절·날씨·밤 여부에 맞는 MapLibre 하늘 설정을 선택한다. */
 function mapSky(season: TourSeason, weather: MapWeather, night: boolean): SkySpecification {
   const seasonal = night ? SEASON_NIGHT_SKIES[season] : SEASON_SKIES[season]
   if (night && weather === 'rainy') return { ...seasonal, 'sky-color': '#101821', 'horizon-color': '#394956', 'horizon-fog-blend': .42, 'atmosphere-blend': .68 }
@@ -48,6 +52,7 @@ function mapSky(season: TourSeason, weather: MapWeather, night: boolean): SkySpe
   return seasonal
 }
 
+/** 경로의 누적 길이를 기준으로 표시할 지점을 고르게 샘플링한다. */
 function samplePath(path: LonLat[], count: number): LonLat[] {
   if (path.length < 2) return []
   const distances = [0]
@@ -68,6 +73,7 @@ function samplePath(path: LonLat[], count: number): LonLat[] {
   })
 }
 
+/** 경로 샘플 좌표마다 이동 방향을 함께 계산한다. */
 function samplePathWithBearing(path: LonLat[], count: number): Array<{ point: LonLat; bearing: number }> {
   if (path.length < 2 || count < 1) return []
   const segmentLengths: number[] = []
@@ -98,6 +104,7 @@ function samplePathWithBearing(path: LonLat[], count: number): Array<{ point: Lo
   })
 }
 
+/** 경로 방향의 옆쪽으로 미터 간격만큼 이동한 좌표를 만든다. */
 function offsetFromRoute([lng, lat]: LonLat, bearing: number, meters: number): LonLat {
   const side = (bearing + 90) * Math.PI / 180
   const latitude = lat + Math.cos(side) * meters / 111_000
@@ -105,6 +112,7 @@ function offsetFromRoute([lng, lat]: LonLat, bearing: number, meters: number): L
   return [longitude, latitude]
 }
 
+/** 목적지 방향을 지도 카메라에서 사용하는 방위로 변환한다. */
 function bearingToDestination(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
   const latitude2 = end.lat * Math.PI / 180
@@ -114,12 +122,14 @@ function bearingToDestination(start: { lat: number; lng: number }, end: { lat: n
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
 }
 
+/** Polygon 또는 MultiPolygon의 링을 같은 배열 형태로 반환한다. */
 function getFeatureRings(feature: MapGeoJSONFeature): number[][][] {
   if (feature.geometry.type === 'Polygon') return [feature.geometry.coordinates[0] as number[][]]
   if (feature.geometry.type === 'MultiPolygon') return feature.geometry.coordinates.map(polygon => polygon[0] as number[][])
   return []
 }
 
+/** 화면의 건물 도형과 태양 위치를 그림자 GeoJSON으로 변환한다. */
 function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number, shadowAzimuth: number): GeoJSON.FeatureCollection<GeoJSON.Polygon> {
   const output: GeoJSON.Feature<GeoJSON.Polygon>[] = []
   const seen = new Set<string>()

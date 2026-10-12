@@ -1,3 +1,6 @@
+/**
+ * Overpass에서 한강 수면 경계를 받아 이어진 다각형으로 정리한다. 단순화한 좌표를 SVG 서울 지도에서 사용하는 TypeScript 데이터 파일로 저장한다.
+ */
 import { mkdir, writeFile } from 'node:fs/promises'
 
 const query = `[out:json][timeout:30];
@@ -7,6 +10,7 @@ out geom;`
 const samePoint = (a, b) => Math.abs(a[0] - b[0]) < 1e-7 && Math.abs(a[1] - b[1]) < 1e-7
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1])
 
+/** OSM 경계 조각의 같은 끝점을 이어 닫힌 다각형 링을 만든다. */
 function stitchRings(members) {
   const remaining = members
     .filter((member) => member.geometry?.length > 1)
@@ -27,6 +31,7 @@ function stitchRings(members) {
   return rings
 }
 
+/** 화면에서 거의 같은 방향으로 이어지는 경계 점을 줄인다. */
 function simplifyRing(ring, tolerance = .000075) {
   const simplified = [ring[0]]
   for (const point of ring.slice(1, -1)) {

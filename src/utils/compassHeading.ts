@@ -1,3 +1,6 @@
+/**
+ * 휴대폰 방향 센서에서 유효한 절대 방위를 추출한다. iOS 방위와 Android 절대 방향을 처리하고 기준이 없는 상대 방향은 사용하지 않는다.
+ */
 type OrientationReading = {
   alpha: number | null
   beta: number | null
@@ -8,6 +11,7 @@ type OrientationReading = {
   webkitCompassAccuracy?: number
 }
 
+/** 방위 각도를 0 이상 360 미만으로 정규화한다. */
 export function normalizeHeading(degrees: number) { return ((degrees % 360) + 360) % 360 }
 
 export function phoneCompassHeading(event: OrientationReading): number | null {

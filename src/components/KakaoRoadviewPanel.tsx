@@ -1,3 +1,6 @@
+/**
+ * 카카오 로드뷰 촬영 지점을 조회하고 사진 뷰어를 유지한다. 모바일 전체화면 포털, 초점 이동, 사진 로딩 상태와 나침반·경로 표시를 연결한다.
+ */
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadKakaoMaps, type KakaoMapsApi, type KakaoRoadview, type KakaoRoadviewClient } from '../services/kakaoMaps'
@@ -16,12 +19,13 @@ export interface KakaoRoadviewPanelProps {
   destination: { lat: number; lng: number } | null
   terrainPath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
+  onDestinationArrival: () => void
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
 const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
-export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, terrainPath, elevationProfile }: KakaoRoadviewPanelProps) {
+export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, terrainPath, elevationProfile, onDestinationArrival }: KakaoRoadviewPanelProps) {
   const anchorRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -34,6 +38,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   const [status, setStatus] = useState<RoadviewStatus>('loading')
   const [retry, setRetry] = useState(0)
   const [expanded, setExpanded] = useState(() => window.matchMedia(MOBILE_ROADVIEW_QUERY).matches)
+  // 동일한 포털 DOM을 지도와 body 사이에서 옮겨 전체화면 전환 때 SDK를 보존한다.
   const [portalLayer] = useState(() => {
     const layer = document.createElement('div')
     layer.className = 'tour-roadview-layer'
@@ -158,6 +163,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
       setStatus('error')
     }
 
+    // 요청한 사진인지 확인한 다음 촬영 좌표만 상위 지도에 전달한다.
     const reportPosition = () => {
       if (!isCurrent() || !roadview || expectedPano === null) return
       try {
@@ -303,7 +309,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
       <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
       {status === 'ready' && apiRef.current && roadviewRef.current && <RoadviewCompass api={apiRef.current} roadview={roadviewRef.current} locale={locale} />}
-      {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} terrainPath={terrainPath} elevationProfile={elevationProfile} destination={destination} locale={locale} />}
+      {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} terrainPath={terrainPath} elevationProfile={elevationProfile} destination={destination} locale={locale} onDestinationArrival={onDestinationArrival} />}
       {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
       {status !== 'ready' && <div className="tour-roadview-panel__status" role="status" aria-live="polite">
         {status === 'loading' && <span className="tour-roadview-panel__spinner" aria-hidden="true" />}

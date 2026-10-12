@@ -1,3 +1,6 @@
+/**
+ * 선택 자치구의 대여소 데이터를 관리한다. 기본 스냅샷을 즉시 제공하고 API가 설정되면 실시간 결과로 바꾸며 실패 시 기본 자료를 유지한다.
+ */
 import { useEffect, useState } from 'react'
 import type { BikeStation } from '../types/game'
 import { bundledBikeStations, fetchDistrictStations } from '../services/seoulBikeApi'

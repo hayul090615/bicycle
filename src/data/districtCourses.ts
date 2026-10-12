@@ -1,3 +1,6 @@
+/**
+ * 대여소 스냅샷을 자치구별 타자 게임 코스로 변환한다. 경계 안의 대여소를 고르고 중복 입력 이름과 경로 교차를 정리한다.
+ */
 import stationData from './seoulBikeStations.json'
 import type { BikeStation, DistrictCourse, Station } from '../types/game'
 import { districtFeatureMap, getFeatureRings } from './districtGeoData'
@@ -17,6 +20,7 @@ export const stationSnapshotMeta = { source: stationData.source, sourceDate: sta
 const distance = (a: BikeStation, b: BikeStation) =>
   Math.hypot(a.lat - b.lat, (a.lng - b.lng) * Math.cos((a.lat * Math.PI) / 180))
 
+/** 대여소 이름에서 게임 입력에 불필요한 띄어쓰기와 부가 설명을 정리한다. */
 function makeTypingName(name: string) {
   const subway = name.match(/^(.+?)역\s*(?:\d+번)?\s*출구/u)
   if (subway) return subway[1].replace(/\s+/gu, '')
@@ -27,6 +31,7 @@ function makeTypingName(name: string) {
     .replace(/[^\p{L}\p{N}]/gu, '')
 }
 
+/** 이름 충돌을 줄이기 위해 상세 명칭을 유지한 입력 문자열을 만든다. */
 function makeDetailedTypingName(name: string) {
   return name
     .replace(/\([^)]*\)/gu, '')
@@ -34,6 +39,7 @@ function makeDetailedTypingName(name: string) {
     .replace(/[^\p{L}\p{N}]/gu, '')
 }
 
+/** 같은 구의 대여소 입력 이름이 중복되지 않도록 구분한다. */
 function makeDistrictTypingNames(stations: BikeStation[]) {
   const shortNames = stations.map((station) => makeTypingName(station.name))
   const shortNameCounts = new Map<string, number>()
@@ -50,6 +56,7 @@ function makeDistrictTypingNames(stations: BikeStation[]) {
   }))
 }
 
+/** 지리 좌표가 다각형 링 내부에 있는지 교차 횟수로 판정한다. */
 function isPointInRing(lng: number, lat: number, ring: [number, number][]) {
   let inside = false
   for (let current = 0, previous = ring.length - 1; current < ring.length; previous = current, current += 1) {
@@ -62,6 +69,7 @@ function isPointInRing(lng: number, lat: number, ring: [number, number][]) {
   return inside
 }
 
+/** 대여소 좌표를 해당 자치구의 경계와 비교한다. */
 function isStationInsideDistrict(station: BikeStation, district: SeoulDistrict) {
   const tolerance = 0.0011
   const longitudeScale = Math.cos((station.lat * Math.PI) / 180)
@@ -82,6 +90,7 @@ function isStationInsideDistrict(station: BikeStation, district: SeoulDistrict) 
   })
 }
 
+/** 고정된 시작 구간을 유지하면서 교차하는 방문 순서를 정리한다. */
 function uncrossRoute(route: BikeStation[], lockedPrefixCount = 1) {
   const optimized = [...route]
   let changed = true
@@ -108,6 +117,7 @@ function uncrossRoute(route: BikeStation[], lockedPrefixCount = 1) {
   return optimized
 }
 
+/** 시작 대여소에서 가까운 순서로 방문 후보를 고른다. */
 function pickNearbyRoute(stations: BikeStation[], count = stations.length, seed: BikeStation[] = []) {
   const selectedIds = new Set(seed.map((station) => station.id))
   const available = stations.filter((station) => !selectedIds.has(station.id))
@@ -126,6 +136,7 @@ function pickNearbyRoute(stations: BikeStation[], count = stations.length, seed:
   return route.length <= 40 ? uncrossRoute(route, seed.length) : route
 }
 
+/** 실제 대여소를 입력 이름과 화면 좌표가 포함된 게임 정류 지점으로 바꾼다. */
 function toCourseStation(station: BikeStation, index: number, typingName: string): Station {
   return {
     ...station,
@@ -136,6 +147,7 @@ function toCourseStation(station: BikeStation, index: number, typingName: string
   }
 }
 
+/** 선택 자치구의 대여소와 이미 방문한 기록으로 게임 코스를 구성한다. */
 export function createDistrictCourse(district: SeoulDistrict, playedStationIds: readonly string[] = []): DistrictCourse {
   const taggedStations = allBikeStations.filter((station) => station.district === district)
   const boundaryStations = taggedStations.filter((station) => isStationInsideDistrict(station, district))

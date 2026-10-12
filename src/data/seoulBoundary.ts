@@ -1,3 +1,6 @@
+/**
+ * 자치구 경계에서 공유 변을 제거해 서울 외곽선을 구한다. 서울 밖 흐림 마스크, 도착지 범위 판정과 대여소를 포함한 지도 표시 한계를 제공한다.
+ */
 import districtData from './seoulDistricts.geojson?raw'
 import { allBikeStations } from './districtCourses'
 
@@ -59,6 +62,7 @@ while (unusedEdges.size) {
   if (ring.length >= 4 && ring[0][0] === ring.at(-1)?.[0] && ring[0][1] === ring.at(-1)?.[1]) boundaryRings.push(ring)
 }
 
+/** 경계 링의 방향과 크기를 비교할 부호 있는 면적을 계산한다. */
 function area(ring: Position[]) {
   return ring.slice(1).reduce((sum, point, index) => sum + ring[index][0] * point[1] - point[0] * ring[index][1], 0)
 }
@@ -90,6 +94,7 @@ export const SEOUL_BIKE_MAP_BOUNDS_LONLAT: [[number, number], [number, number]] 
   [mapEast, mapNorth],
 ]
 
+/** 좌표들을 둘러싸는 볼록 다각형 외곽을 구한다. */
 function convexHull(points: Position[]): Position[] {
   const sorted = [...new Map(points.map(point => [`${point[0]},${point[1]}`, point])).values()]
     .sort(([firstLng, firstLat], [secondLng, secondLat]) => firstLng - secondLng || firstLat - secondLat)
@@ -136,6 +141,7 @@ export const SEOUL_OUTSIDE_MASK: GeoJSON.Feature<GeoJSON.Polygon> = {
   geometry: { type: 'Polygon', coordinates: [maskShell, serviceAreaHole] },
 }
 
+/** 좌표가 실제 서울 행정 경계 안이나 경계선 위에 있는지 판정한다. */
 export function isInsideSeoul(lat: number, lng: number) {
   const x = lng
   const y = lat

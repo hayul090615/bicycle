@@ -1,3 +1,6 @@
+/**
+ * 화면 장식용 서울 자전거 풍경을 SVG로 그린다. 실제 도로·대여소 데이터와 연결되지 않는 일러스트레이션이다.
+ */
 import { useId } from 'react'
 
 /** Decorative Seoul riverside scene, not a geographic route map. */

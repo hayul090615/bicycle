@@ -1,3 +1,6 @@
+/**
+ * 서울 25개 구 경계와 한강을 SVG로 그리는 선택 지도다. 마우스와 키보드 선택을 지원하고 구별 게임 진행 정보와 현재 위치를 표시한다.
+ */
 import { seoulDistrictGeoData } from '../data/districtGeoData'
 import { hanRiverPolygons } from '../data/hanRiverGeometry'
 import { districtDifficultyMap, type SeoulDistrict } from '../data/districtCourses'

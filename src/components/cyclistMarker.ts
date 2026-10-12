@@ -1,3 +1,6 @@
+/**
+ * 지도 위 가상 자전거 이용자 표시용 DOM과 SVG를 만든다. 실제 이용자의 실시간 위치를 나타내는 데이터는 아니다.
+ */
 /** A restrained cyclist pictogram for map scale, without synthetic photo faces. */
 export function createCyclistMarker(index: number, locale: 'en' | 'ko') {
   const element = document.createElement('span')

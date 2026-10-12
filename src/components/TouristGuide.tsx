@@ -1,3 +1,6 @@
+/**
+ * 지도 여행의 상단 검색과 언어·테마·타이머 상태를 관리한다. 선택 코스와 검색 목적지를 지도 탐색 화면에 전달하고 초기 지도 연출 뒤 튜토리얼을 시작한다.
+ */
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { getTouristStation, touristRoutes, type TourCategory, type TourSeason, type TouristRoute } from '../data/touristRoutes'
 import { nowInSeoul } from '../utils/solarPosition'

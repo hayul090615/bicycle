@@ -1,3 +1,6 @@
+/**
+ * Wikimedia Commons에서 좌표 주변의 풍경 사진을 찾는다. 제목 적합도를 비교해 사진·저작자·사용 조건 등 표시 정보를 함께 반환한다.
+ */
 export interface SceneryPhoto {
   title: string
   thumbnail: string
@@ -20,6 +23,7 @@ interface CommonsPage {
 
 const stripHtml = (value: string) => value.replace(/<[^>]*>/gu, ' ').replace(/&nbsp;/gu, ' ').replace(/&amp;/gu, '&').replace(/\s+/gu, ' ').trim()
 
+/** 후보 사진 제목이 선호 풍경 키워드에 얼마나 맞는지 점수를 구한다. */
 function scoreTitle(title: string, preferredTerms: string[]) {
   const lower = title.toLowerCase()
   let score = 0
@@ -30,6 +34,7 @@ function scoreTitle(title: string, preferredTerms: string[]) {
   return score
 }
 
+/** 좌표 주변의 풍경 사진 후보 중 제목 적합도가 높은 사진을 고른다. */
 export async function findSceneryPhoto(lat: number, lng: number, preferredTerms: string[], signal: AbortSignal): Promise<SceneryPhoto | null> {
   const query = new URLSearchParams({
     action: 'query', generator: 'geosearch', ggscoord: `${lat}|${lng}`, ggsradius: '700',

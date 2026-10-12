@@ -1,3 +1,6 @@
+/**
+ * Google 3D 지도 위에 선택 경로와 대여소·주변 정보를 올린다. SDK와 오버레이를 효과 안에서 만들고 지도 변경 또는 종료 시 정리한다.
+ */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePolygon3D, type GooglePosition3D, type Maps3DLibrary } from '../services/googleMaps3d'
@@ -11,6 +14,7 @@ import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 const MAX_GOOGLE_3D_CAMERA_RANGE = 180_000
 
+/** 시작 좌표에서 끝 좌표를 향하는 북쪽 기준 방위를 구한다. */
 function bearingBetween(start: { lat: number; lng: number }, end: { lat: number; lng: number }): number {
   const latitude1 = start.lat * Math.PI / 180
   const latitude2 = end.lat * Math.PI / 180
@@ -20,6 +24,7 @@ function bearingBetween(start: { lat: number; lng: number }, end: { lat: number;
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
 }
 
+/** 경로 길이에 맞춰 가상 자전거 표시 위치를 고르게 나눈다. */
 function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   if (path.length < 2) return []
   const distances = [0]

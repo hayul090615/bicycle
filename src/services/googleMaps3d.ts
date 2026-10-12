@@ -1,3 +1,6 @@
+/**
+ * Google 3D 지도에서 사용하는 최소 타입과 SDK 로더다. 환경 변수 키를 확인하고 같은 SDK를 여러 번 불러오지 않도록 로딩 Promise를 공유한다.
+ */
 export const hasGoogleMapsKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim())
 
 export interface Camera3D {
@@ -35,6 +38,7 @@ type MapsWindow = Window & {
 }
 let loading: Promise<Maps3DLibrary> | undefined
 
+/** 중복 SDK 로딩을 공유하고 성공한 3D 지도 라이브러리를 반환한다. */
 export function loadGoogleMaps3D(): Promise<Maps3DLibrary> {
   if (!hasGoogleMapsKey) return Promise.reject(new Error('GOOGLE_MAPS_NOT_CONFIGURED'))
   if (loading) return loading

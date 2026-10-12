@@ -1,3 +1,6 @@
+/**
+ * 압축 CCTV 자료의 비동기 로딩·오류 상태를 관리한다. 전체 원본 목록을 반환하며 지도에 보낼 경로 주변 자료 선택은 탐색 화면에서 수행한다.
+ */
 import { useEffect, useState } from 'react'
 import { loadPublicCctvBundle, type CameraBundle, type PublicCamera } from '../services/publicCctv'
 

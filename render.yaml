@@ -1,3 +1,4 @@
+# Render 정적 사이트 배포 설정. Vite 빌드 결과를 게시하고 SPA 경로를 index.html로 연결한다.
 services:
   - type: web
     name: seoul-ttareungi-typing
