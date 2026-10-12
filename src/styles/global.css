@@ -4166,6 +4166,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 /* 장소 표시는 누를 수 있는 버튼이며, 상세 내용은 지도 위 가로 줄에서 보여 준다. */
 .tour-screen button.tour-amenity-icon { cursor: pointer; font: inherit; }
 .tour-screen button.tour-amenity-icon:focus-visible { outline: 3px solid #2d9d70; outline-offset: 3px; }
+.tour-directions-list-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.tour-directions-list-heading > h3 { min-width: 0; }
+.tour-directions-list-toggle { flex: 0 0 auto; min-height: 44px; padding: .4rem .65rem; border: 1px solid #ffffff70; border-radius: 8px; color: #fff; background: #ffffff15; font: 750 .7rem/1.2 'Noto Sans KR', sans-serif; cursor: pointer; }
+.tour-directions-list-toggle:hover, .tour-directions-list-toggle:focus-visible { color: #174c33; background: #fff; }
 /* 설정이나 라이딩 계획을 열면 한 패널만 표시해 지도 조작 버튼과 겹치지 않게 한다. */
 .tour-screen .tour-map-stage--tool-open > .tour-map-view-dock { display: none; }
 .tour-screen .tour-map-stage > .tour-map-side-panel { top: 4.1rem; left: .65rem; right: auto; bottom: .65rem; width: min(400px, calc(100% - 1.3rem)); max-height: none; }

@@ -495,6 +495,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [mapMenuOpen, setMapMenuOpen] = useState(false)
   const [menuPlanTarget, setMenuPlanTarget] = useState<HTMLDivElement | null>(null)
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
+  const [directionsListOpen, setDirectionsListOpen] = useState(true)
   const [flatOnly, setFlatOnly] = useState(false)
   const [durationFilter, setDurationFilter] = useState<30 | 60 | null>(null)
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
@@ -1423,7 +1424,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       <span className="tour-road-sign-arrow" aria-hidden="true">{walkingToPickup ? '🚶' : instructionArrow(nextInstruction?.instruction)}</span>
       <span><small>{walkingToPickup ? text('WALK TO BIKE', '먼저 대여소까지 도보') : text('NEXT DIRECTION', '다음 이동 방향')}</small><strong>{walkingToPickup ? localizeBikeStationName(pickupStation.name, locale) : routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 길 안내를 불러오는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{walkingToPickup ? `${distanceLabel(walkingDistance ?? distanceMeters(userLocation, pickupStation))} ${text('to the bike station', '후 대여소 도착')}` : `${distanceLabel(Math.max(0, (nextInstruction?.offsetMeters ?? routeDistance) - routeProgressMeters))} ${text('to next turn', '후 다음 안내')}`}</em></span>
     </div>
-    {routeInstructions.length > 0 && <div className="tour-road-sign-directions"><h3>{text('Full directions', '전체 길 안내')}</h3><ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol></div>}
+    {routeInstructions.length > 0 && <div className="tour-road-sign-directions">
+      <div className="tour-directions-list-heading"><h3>{text('Full directions', '전체 길 안내')}</h3>
+        <button type="button" className="tour-directions-list-toggle" aria-expanded={directionsListOpen} aria-controls="tour-road-sign-list"
+          onClick={() => setDirectionsListOpen(open => !open)}>{directionsListOpen ? text('Close list', '목록 닫기') : text('Show list', '목록 보기')}</button>
+      </div>
+      {directionsListOpen && <ol id="tour-road-sign-list">{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>}
+    </div>}
   </aside> : null
 
   // 길 안내·경로 고도·코스 선택 내용을 메뉴 또는 모바일 표시 위치에 연결한다.
@@ -1692,7 +1699,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <span><small>{walkingToPickup ? text('Walk to the rental station', '먼저 대여소까지 도보') : text('Bicycle directions', '자전거 길 안내')}</small><strong>{walkingToPickup ? localizeBikeStationName(pickupStation.name, locale) : routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Finding a safer bicycle route…', '안전한 자전거 경로를 찾는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{walkingToPickup ? distanceLabel(walkingDistance ?? distanceMeters(userLocation, pickupStation)) : `${distanceLabel(remainingRouteMeters)} ${text('remaining', '남음')}`}</em></span>
             </div>
             <div className="tour-mobile-nav-stats"><strong>{text(`About ${remainingJourneyMinutes} min`, `약 ${remainingJourneyMinutes}분`)}</strong><span>{distanceLabel(remainingRouteMeters)} · {destinationLabel}</span></div>
-            {mobileSheetExpanded && <div className="tour-mobile-nav-details"><h3>{text('Full bicycle directions', '전체 자전거 길 안내')}</h3>{routeInstructions.length ? <ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span aria-hidden="true">{instructionArrow(instruction)}</span><div><strong>{instructionLabel(instruction, locale)}</strong><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></div></li>)}</ol> : <p>{text('Route details will appear when the route loads.', '경로를 불러오면 상세 안내가 표시됩니다.')}</p>}</div>}
+            {mobileSheetExpanded && <div className="tour-mobile-nav-details"><div className="tour-directions-list-heading"><h3>{text('Full bicycle directions', '전체 자전거 길 안내')}</h3>
+              <button type="button" className="tour-directions-list-toggle" onClick={event => {
+                event.currentTarget.closest('section')?.querySelector<HTMLButtonElement>('.tour-mobile-sheet-handle')?.focus({ preventScroll: true })
+                setMobileSheetExpanded(false)
+              }}>{text('Close list', '목록 닫기')}</button>
+            </div>{routeInstructions.length ? <ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span aria-hidden="true">{instructionArrow(instruction)}</span><div><strong>{instructionLabel(instruction, locale)}</strong><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></div></li>)}</ol> : <p>{text('Route details will appear when the route loads.', '경로를 불러오면 상세 안내가 표시됩니다.')}</p>}</div>}
           </> : <>
             <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
             <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
