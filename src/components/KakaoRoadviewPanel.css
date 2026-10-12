@@ -189,5 +189,26 @@
 }
 .tour-roadview-panel--expanded .tour-roadview-panel__controls > button:hover { background: #173821f2; }
 .tour-roadview-panel--expanded .tour-roadview-panel__controls > button > svg { width: 22px; height: 22px; }
+.tour-roadview-compass-dock { position: absolute; z-index: 3; top: 12px; left: 12px; display: flex; align-items: start; gap: 12px; pointer-events: none; }
+.tour-roadview-compass, .tour-roadview-phone-direction { position: relative; display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px; padding: 0; border: 1px solid #ffffff75; color: #fff; background: #15261ddd; box-shadow: 0 2px 10px #0004; font: inherit; cursor: pointer; pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent; backdrop-filter: blur(8px); }
+.tour-roadview-compass { border-radius: 50%; }
+.tour-roadview-compass-dial { position: absolute; inset: 2px; transform: rotate(var(--compass-bearing)); }
+.tour-roadview-compass-dial > svg { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
+.tour-roadview-compass-north { position: absolute; top: 1px; left: 50%; transform: translateX(-50%); color: #ff8279; font-size: 9px; font-weight: 900; line-height: 1; }
+.tour-roadview-compass-needle-north { fill: #ff6b61; }
+.tour-roadview-compass-needle-south { fill: #f6ffff; }
+.tour-roadview-compass-label { position: absolute; right: -8px; bottom: -17px; left: -8px; padding: 2px 4px; border-radius: 999px; color: #fff; background: #15261dc9; font-size: .6rem; font-weight: 800; line-height: 1.2; white-space: nowrap; text-align: center; }
+.tour-roadview-phone-direction { align-content: center; gap: 1px; border-radius: 13px; }
+.tour-roadview-phone-direction > svg { width: 22px; height: 22px; }
+.tour-roadview-phone-direction > span { font-size: .55rem; font-weight: 800; line-height: 1.1; }
+.tour-roadview-phone-direction.is-active { border-color: #9be5ff; color: #e7fcff; background: #0577a9e8; }
+.tour-roadview-phone-direction:disabled { opacity: .6; cursor: wait; }
+.tour-roadview-compass-message { position: absolute; top: 65px; left: 0; width: min(235px, calc(100vw - 36px)); padding: 8px 10px; border: 1px solid #ffffff45; border-radius: 9px; color: #fff; background: #15261dee; font-size: .72rem; line-height: 1.5; }
+.tour-roadview-panel--expanded .tour-roadview-compass-dock { top: max(.75rem, env(safe-area-inset-top)); left: max(.75rem, env(safe-area-inset-left)); display: grid; justify-items: center; gap: 22px; width: 52px; }
+.tour-roadview-panel--expanded .tour-roadview-compass { width: 52px; height: 52px; }
+.tour-roadview-panel--expanded .tour-roadview-phone-direction { width: 48px; height: 48px; }
+.tour-roadview-panel--expanded .tour-roadview-compass-message { top: 78px; left: 62px; width: min(235px, calc(100vw - 110px)); }
+.tour-roadview-panel--expanded.tour-roadview-panel--ready .tour-roadview-panel__header > strong { margin-left: 64px; }
+@media (hover: hover) and (pointer: fine) and (min-width: 701px) { .tour-roadview-phone-direction { display: none; } }
 @keyframes tour-roadview-panel-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tour-roadview-panel__spinner { animation: none; } }

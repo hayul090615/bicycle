@@ -586,12 +586,24 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapCenter(current => `${current.lat.toFixed(5)}:${current.lng.toFixed(5)}` === nextKey ? current : center)
   }, [])
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
+  const roadviewTripKey = hasDestination ? `${route.id}:${destinationKey}` : null
+  const [roadviewCelebrationKey, setRoadviewCelebrationKey] = useState<string | null>(null)
+  const roadviewArrivedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!roadviewTripKey) { roadviewArrivedRef.current = null; setRoadviewCelebrationKey(null) }
+  }, [roadviewTripKey])
+  const celebrateRoadviewArrival = useCallback(() => {
+    if (!roadviewTripKey || roadviewArrivedRef.current === roadviewTripKey) return
+    roadviewArrivedRef.current = roadviewTripKey
+    setRoadviewCelebrationKey(roadviewTripKey)
+  }, [roadviewTripKey])
   const arrival = useDestinationArrival({
     destinationKey: hasDestination ? `${route.id}:${destinationKey}` : null,
     destination: destinationStation,
     location: userLocation,
     enabled: trackingLocation && !roadviewEnabled,
   })
+  const dismissArrival = useCallback(() => { arrival.dismiss(); setRoadviewCelebrationKey(null) }, [arrival.dismiss])
   const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1_000, 1_000), [mapCenter])
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
     : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 1_000), [locationLat, locationLng])
@@ -1616,7 +1628,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} onMapCenterChange={reportMapCenter} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} kakaoMapType={kakaoMapType} roadviewEnabled={roadviewEnabled} roadviewPosition={roadviewPosition} onSelectRoadview={selectRoadview} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} destination={hasDestination ? destinationStation : null} />}
+        {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} destination={hasDestination ? destinationStation : null} onDestinationArrival={celebrateRoadviewArrival} />}
         {roadviewEnabled && <div className="tour-roadview-map-hint" role="status"><span>{text('Click a highlighted road to view the street', '표시된 도로를 누르면 거리 사진을 볼 수 있어요')}</span><button type="button" onClick={closeRoadview}>{text('Exit Roadview', '로드뷰 종료')}</button></div>}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
@@ -1867,7 +1879,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </section>
 
     {mapMenuOpen && menuPlanTarget ? createPortal(itineraryPanel, menuPlanTarget) : itineraryPanel}
-    {arrival.open && <DestinationArrival locale={locale} onClose={arrival.dismiss} />}
+    {(arrival.open || (roadviewTripKey !== null && roadviewCelebrationKey === roadviewTripKey)) && <DestinationArrival locale={locale} onClose={dismissArrival} />}
   </div>
 }
 

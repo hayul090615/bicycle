@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { loadKakaoMaps, type KakaoMapsApi, type KakaoRoadview, type KakaoRoadviewClient } from '../services/kakaoMaps'
 import type { LonLat } from '../services/bikeRoute'
 import { RoadviewRouteRibbon } from './RoadviewRouteRibbon'
+import { RoadviewCompass } from './RoadviewCompass'
+import { isAtRoadviewDestination } from '../utils/routeArrival'
 import './KakaoRoadviewPanel.css'
 
 export interface KakaoRoadviewPanelProps {
@@ -12,12 +14,13 @@ export interface KakaoRoadviewPanelProps {
   onPositionChange: (position: { lat: number; lng: number }) => void
   routePath: LonLat[] | null
   destination: { lat: number; lng: number } | null
+  onDestinationArrival: () => void
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
 const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
-export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination }: KakaoRoadviewPanelProps) {
+export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, onDestinationArrival }: KakaoRoadviewPanelProps) {
   const anchorRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -28,6 +31,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   const requestRef = useRef(0)
   const positionCallbackRef = useRef(onPositionChange)
   const [status, setStatus] = useState<RoadviewStatus>('loading')
+  const [confirmedPosition, setConfirmedPosition] = useState<{ lat: number; lng: number } | null>(null)
   const [retry, setRetry] = useState(0)
   const [expanded, setExpanded] = useState(() => window.matchMedia(MOBILE_ROADVIEW_QUERY).matches)
   const [portalLayer] = useState(() => {
@@ -76,7 +80,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     const background = new Map<HTMLElement, boolean>()
     const lockBackground = () => {
       for (const child of document.body.children) {
-        if (!(child instanceof HTMLElement) || child === portalLayer || /^(SCRIPT|STYLE|LINK)$/.test(child.tagName)) continue
+        if (!(child instanceof HTMLElement) || child === portalLayer || child.classList.contains('tour-arrival-overlay') || /^(SCRIPT|STYLE|LINK)$/.test(child.tagName)) continue
         if (!background.has(child)) background.set(child, child.inert)
         child.inert = true
       }
@@ -86,6 +90,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     const observer = new MutationObserver(lockBackground)
     observer.observe(document.body, { childList: true })
     const handleKey = (event: KeyboardEvent) => {
+      if (document.querySelector('.tour-arrival-overlay')) return
       if (event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
@@ -167,6 +172,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
         confirmedPanoRef.current = panoId
         window.clearTimeout(timeout)
         setStatus('ready')
+        setConfirmedPosition({ lat, lng })
         positionCallbackRef.current({ lat, lng })
       } catch {
         fail()
@@ -234,6 +240,10 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   }, [target.lat, target.lng, retry])
 
   useEffect(() => {
+    if (status === 'ready' && confirmedPosition && destination && isAtRoadviewDestination(confirmedPosition, destination)) onDestinationArrival()
+  }, [confirmedPosition, destination?.lat, destination?.lng, onDestinationArrival, status])
+
+  useEffect(() => {
     const host = hostRef.current
     if (!host) return
     let frame = 0
@@ -261,7 +271,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     {createPortal(<section
     id="tour-roadview-panel"
     ref={panelRef}
-    className={`tour-roadview-panel${expanded ? ' tour-roadview-panel--expanded' : ''}`}
+    className={`tour-roadview-panel${expanded ? ' tour-roadview-panel--expanded' : ''}${status === 'ready' ? ' tour-roadview-panel--ready' : ''}`}
     role={expanded ? 'dialog' : 'region'}
     aria-modal={expanded || undefined}
     aria-labelledby={titleId}
@@ -297,6 +307,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     </header>
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
       <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
+      {status === 'ready' && apiRef.current && roadviewRef.current && <RoadviewCompass api={apiRef.current} roadview={roadviewRef.current} locale={locale} />}
       {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} destination={destination} locale={locale} />}
       {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
       {status !== 'ready' && <div className="tour-roadview-panel__status" role="status" aria-live="polite">
