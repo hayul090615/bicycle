@@ -1,4 +1,5 @@
 import districtData from './seoulDistricts.geojson?raw'
+import { allBikeStations } from './districtCourses'
 
 type Position = [number, number]
 type DistrictFeature = {
@@ -64,14 +65,75 @@ function area(ring: Position[]) {
 
 export const SEOUL_BOUNDARY: Position[] = boundaryRings.sort((first, second) => Math.abs(area(second)) - Math.abs(area(first)))[0] ?? []
 
+const MAP_AREA_PADDING = 0.008
+const bikeMapPositions = [
+  ...SEOUL_BOUNDARY,
+  ...allBikeStations
+    .filter(station => Number.isFinite(station.lat) && Number.isFinite(station.lng))
+    .map(station => [station.lng, station.lat] as Position),
+]
+const bikeMapLongitudes = bikeMapPositions.map(([lng]) => lng)
+const bikeMapLatitudes = bikeMapPositions.map(([, lat]) => lat)
+const mapWest = Math.min(...bikeMapLongitudes) - MAP_AREA_PADDING
+const mapEast = Math.max(...bikeMapLongitudes) + MAP_AREA_PADDING
+const mapSouth = Math.min(...bikeMapLatitudes) - MAP_AREA_PADDING
+const mapNorth = Math.max(...bikeMapLatitudes) + MAP_AREA_PADDING
+
+// Map bounds include every known Ttareungi station, including stations just
+// outside Seoul's administrative boundary. The black boundary remains exact.
+export const SEOUL_BIKE_MAP_BOUNDS_LATLNG: [[number, number], [number, number]] = [
+  [mapSouth, mapWest],
+  [mapNorth, mapEast],
+]
+export const SEOUL_BIKE_MAP_BOUNDS_LONLAT: [[number, number], [number, number]] = [
+  [mapWest, mapSouth],
+  [mapEast, mapNorth],
+]
+
+function convexHull(points: Position[]): Position[] {
+  const sorted = [...new Map(points.map(point => [`${point[0]},${point[1]}`, point])).values()]
+    .sort(([firstLng, firstLat], [secondLng, secondLat]) => firstLng - secondLng || firstLat - secondLat)
+  if (sorted.length <= 2) return sorted
+  const cross = (origin: Position, first: Position, second: Position) =>
+    (first[0] - origin[0]) * (second[1] - origin[1]) - (first[1] - origin[1]) * (second[0] - origin[0])
+  const lower: Position[] = []
+  for (const point of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop()
+    lower.push(point)
+  }
+  const upper: Position[] = []
+  for (const point of [...sorted].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop()
+    upper.push(point)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+const serviceAreaHull = convexHull(bikeMapPositions)
+const serviceAreaCenter: Position = [
+  serviceAreaHull.reduce((sum, [lng]) => sum + lng, 0) / serviceAreaHull.length,
+  serviceAreaHull.reduce((sum, [, lat]) => sum + lat, 0) / serviceAreaHull.length,
+]
+const serviceAreaRing = serviceAreaHull.map(([lng, lat]) => {
+  const deltaLng = lng - serviceAreaCenter[0]
+  const deltaLat = lat - serviceAreaCenter[1]
+  const distance = Math.hypot(deltaLng, deltaLat) || 1
+  return [lng + deltaLng / distance * MAP_AREA_PADDING, lat + deltaLat / distance * MAP_AREA_PADDING] as Position
+})
+
 const maskShell: Position[] = [
   [126, 37], [128, 37], [128, 38], [126, 38], [126, 37],
 ]
 
+// Leave the map clear around the full bike station area while retaining the
+// true administrative outline as a separate overlay.
+const serviceAreaHole = [...serviceAreaRing].reverse()
+serviceAreaHole.push(serviceAreaHole[0])
+
 export const SEOUL_OUTSIDE_MASK: GeoJSON.Feature<GeoJSON.Polygon> = {
   type: 'Feature',
   properties: {},
-  geometry: { type: 'Polygon', coordinates: [maskShell, SEOUL_BOUNDARY] },
+  geometry: { type: 'Polygon', coordinates: [maskShell, serviceAreaHole] },
 }
 
 export function isInsideSeoul(lat: number, lng: number) {

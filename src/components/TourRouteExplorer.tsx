@@ -20,12 +20,11 @@ import { clusterPublicCameras, publicCamerasAlongRoute } from '../services/publi
 import { fetchRouteAmenities, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteRestaurants, fetchRouteSignals, type RouteAmenity, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
 import { countNaverBlogMentions } from '../services/naverBlogs'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
-import { isInsideSeoul, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import { coloredRouteSegments } from '../services/routeGradient'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
-const SEOUL_BOUNDS: [[number, number], [number, number]] = [[37.34, 126.68], [37.79, 127.27]]
 const SEOUL_MASK_LATLNG = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as LatLngExpression))
 const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
 const EMPTY_STOP_INDEXES: number[] = []
@@ -269,7 +268,7 @@ function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedS
   useEffect(() => {
     const currentLocation = userLocationRef.current
     if (!hasDestination && selectedStop === null && initialSeoulViewAt.current === null) {
-      map.fitBounds(latLngBounds(SEOUL_BOUNDS), { padding: [28, 28], maxZoom: 10, animate: false })
+      map.fitBounds(latLngBounds(SEOUL_BIKE_MAP_BOUNDS_LATLNG), { padding: [28, 28], maxZoom: 10, animate: false })
       initialSeoulViewAt.current = Date.now()
     }
     if (locationFocusRequest > lastFocusRequest.current && currentLocation) {
@@ -1261,7 +1260,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const arrivalMarker = routeArrivalMarker(displayRoutePath, exactDestination)
   const arrivalConnector = routeArrivalConnector(displayRoutePath, exactDestination)
   const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
-  const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BOUNDS)} maxBoundsViscosity={1}>
+  const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BIKE_MAP_BOUNDS_LATLNG)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} hasDestination={hasDestination} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     <MapCenterReporter onChange={reportMapCenter} />

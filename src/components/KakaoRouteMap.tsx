@@ -10,7 +10,7 @@ import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 
 type MapPoint = { lat: number; lng: number }
 
@@ -318,8 +318,10 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
 
     if (roadviewSelectionRef.current.enabled) return
     if (!hasDestination && selectedStop === null && initialSeoulViewAtRef.current === null) {
+      const [[south, west], [north, east]] = SEOUL_BIKE_MAP_BOUNDS_LATLNG
       const seoulBounds = new api.LatLngBounds()
-      SEOUL_BOUNDARY.forEach(([lng, lat]) => seoulBounds.extend(new api.LatLng(lat, lng)))
+      seoulBounds.extend(new api.LatLng(south, west))
+      seoulBounds.extend(new api.LatLng(north, east))
       const mobileBottomPadding = window.matchMedia('(max-width: 700px)').matches ? 132 : 56
       map.setBounds(seoulBounds, 56, 56, mobileBottomPadding, 56)
       initialSeoulViewAtRef.current = Date.now()

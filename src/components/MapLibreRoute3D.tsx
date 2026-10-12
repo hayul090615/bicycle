@@ -6,7 +6,7 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BIKE_MAP_BOUNDS_LONLAT, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
@@ -233,7 +233,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       style: STYLE_URL,
       center: initialCenter.current ?? [points[0].lng, points[0].lat],
       zoom: 11.2,
-      maxBounds: [[126.68, 37.34], [127.27, 37.79]],
+      maxBounds: SEOUL_BIKE_MAP_BOUNDS_LONLAT,
       pitch: is3DView ? 68 : 0,
       bearing: is3DView ? -10 : 0,
       maxZoom: 18,
@@ -817,8 +817,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       marker.getElement().classList.toggle('is-selected', selectedStop === index)
     })
     if (!hasDestination && selectedStop === null && initialSeoulViewAtRef.current === null) {
-      const bounds = new maplibregl.LngLatBounds()
-      SEOUL_BOUNDARY.forEach(([lng, lat]) => bounds.extend([lng, lat]))
+      const [[west, south], [east, north]] = SEOUL_BIKE_MAP_BOUNDS_LONLAT
+      const bounds = new maplibregl.LngLatBounds([west, south], [east, north])
       map.setPitch(0)
       map.fitBounds(bounds, { padding: { top: 48, right: 48, bottom: 48, left: 48 }, maxZoom: 9.5, pitch: 0, duration: 0 })
       initialSeoulViewAtRef.current = Date.now()
