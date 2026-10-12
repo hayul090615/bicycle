@@ -4,7 +4,7 @@ import { loadKakaoMaps, type KakaoMapsApi, type KakaoRoadview, type KakaoRoadvie
 import type { LonLat } from '../services/bikeRoute'
 import { RoadviewRouteRibbon } from './RoadviewRouteRibbon'
 import { RoadviewCompass } from './RoadviewCompass'
-import { isAtRoadviewDestination } from '../utils/routeArrival'
+import type { RouteElevationPoint } from '../services/routeConditions'
 import './KakaoRoadviewPanel.css'
 
 export interface KakaoRoadviewPanelProps {
@@ -14,13 +14,14 @@ export interface KakaoRoadviewPanelProps {
   onPositionChange: (position: { lat: number; lng: number }) => void
   routePath: LonLat[] | null
   destination: { lat: number; lng: number } | null
-  onDestinationArrival: () => void
+  terrainPath: LonLat[] | null
+  elevationProfile: RouteElevationPoint[]
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
 const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
-export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, onDestinationArrival }: KakaoRoadviewPanelProps) {
+export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, terrainPath, elevationProfile }: KakaoRoadviewPanelProps) {
   const anchorRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -31,7 +32,6 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   const requestRef = useRef(0)
   const positionCallbackRef = useRef(onPositionChange)
   const [status, setStatus] = useState<RoadviewStatus>('loading')
-  const [confirmedPosition, setConfirmedPosition] = useState<{ lat: number; lng: number } | null>(null)
   const [retry, setRetry] = useState(0)
   const [expanded, setExpanded] = useState(() => window.matchMedia(MOBILE_ROADVIEW_QUERY).matches)
   const [portalLayer] = useState(() => {
@@ -172,7 +172,6 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
         confirmedPanoRef.current = panoId
         window.clearTimeout(timeout)
         setStatus('ready')
-        setConfirmedPosition({ lat, lng })
         positionCallbackRef.current({ lat, lng })
       } catch {
         fail()
@@ -240,10 +239,6 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   }, [target.lat, target.lng, retry])
 
   useEffect(() => {
-    if (status === 'ready' && confirmedPosition && destination && isAtRoadviewDestination(confirmedPosition, destination)) onDestinationArrival()
-  }, [confirmedPosition, destination?.lat, destination?.lng, onDestinationArrival, status])
-
-  useEffect(() => {
     const host = hostRef.current
     if (!host) return
     let frame = 0
@@ -308,7 +303,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
       <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
       {status === 'ready' && apiRef.current && roadviewRef.current && <RoadviewCompass api={apiRef.current} roadview={roadviewRef.current} locale={locale} />}
-      {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} destination={destination} locale={locale} />}
+      {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} terrainPath={terrainPath} elevationProfile={elevationProfile} destination={destination} locale={locale} />}
       {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
       {status !== 'ready' && <div className="tour-roadview-panel__status" role="status" aria-live="polite">
         {status === 'loading' && <span className="tour-roadview-panel__spinner" aria-hidden="true" />}

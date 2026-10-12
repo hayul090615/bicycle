@@ -13,11 +13,6 @@ function distanceMeters(first: LonLat, second: LonLat) {
   return 12_742_000 * Math.asin(Math.min(1, Math.sqrt(angle)))
 }
 
-export function isAtRoadviewDestination(position: { lat: number; lng: number }, destination: { lat: number; lng: number }) {
-  return [position.lat, position.lng, destination.lat, destination.lng].every(Number.isFinite)
-    && distanceMeters([position.lng, position.lat], [destination.lng, destination.lat]) <= 35
-}
-
 /** Connect a snapped bicycle-route endpoint to the exact selected destination. */
 export function routeArrivalConnector(points: LonLat[] | null | undefined, destination: LonLat | null | undefined): [LonLat, LonLat] | null {
   const endpoint = points?.at(-1)

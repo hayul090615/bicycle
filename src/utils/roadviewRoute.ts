@@ -61,8 +61,8 @@ export function roadviewRouteSections(path: LonLat[], camera: Point, minimumProg
     const before = centers[sampleIndexes[Math.max(0, index - 1)]], after = centers[sampleIndexes[Math.min(sampleIndexes.length - 1, index + 1)]]
     const dx = (after[0] - before[0]) * xScale, dy = (after[1] - before[1]) * LATITUDE_METERS
     const length = Math.max(.01, Math.hypot(dx, dy))
-    const perpendicularLng = -dy / length * .75 / xScale
-    const perpendicularLat = dx / length * .75 / LATITUDE_METERS
+    const perpendicularLng = -dy / length * .4 / xScale
+    const perpendicularLat = dx / length * .4 / LATITUDE_METERS
     return { center, left: [center[0] + perpendicularLng, center[1] + perpendicularLat], right: [center[0] - perpendicularLng, center[1] - perpendicularLat], progressMeters: centerProgress[centerIndex] }
   })
   return { sections, closestDistance, nearestPoint }
