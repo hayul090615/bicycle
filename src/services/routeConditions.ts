@@ -1,5 +1,5 @@
 /**
- * 선택 경로 주변의 신호등·경사·편의시설·맛집·고도를 조회한다. 경로를 간격별로 샘플링하고 결과를 경로 거리 기준으로 정렬·캐시한다.
+ * 길의 높이와 주변 시설을 외부 서비스에서 찾는다. 같은 정보를 반복해서 받지 않도록 결과를 잠시 저장한다.
  */
 import type { LonLat } from './bikeRoute'
 
@@ -32,6 +32,7 @@ export type RouteElevationPoint = { distanceMeters: number; elevationMeters: num
 type Sample = { point: LonLat; distance: number }
 type OSMResponse = { elements?: Array<{ id: number; type?: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; geometry?: Array<{ lat: number; lon: number }>; tags?: Record<string, string> }> }
 const METERS_PER_DEGREE_LAT = 111_000
+// 한 번 받은 신호등 결과를 잠시 기억해 같은 곳을 여러 번 요청하지 않는다.
 const signalCache = new Map<string, RouteCondition[]>()
 const gradeCache = new Map<string, RouteCondition[]>()
 const restaurantCache = new Map<string, RouteRestaurant[]>()
@@ -72,7 +73,7 @@ function segmentLength([lng1, lat1]: LonLat, [lng2, lat2]: LonLat) {
   return Math.hypot(dx, dy)
 }
 
-/** 전체 경로를 누적 거리 기준의 일정 간격 샘플로 나눈다. */
+/** 전체 경로를 시작점부터 더한 거리 기준의 일정 간격 샘플로 나눈다. */
 function routeSamples(path: LonLat[], spacingMeters: number, maximum = 64): Sample[] {
   if (path.length < 2) return []
   const cumulative = [0]
@@ -113,7 +114,7 @@ function metersToSegment(point: LonLat, start: LonLat, end: LonLat) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 }
 
-/** 좌표를 가장 가까운 경로 구간에 투영해 경로상의 누적 거리를 구한다. */
+/** 좌표를 가장 가까운 경로 구간에 투영해 경로상의 시작점부터 더한 거리를 구한다. */
 function distanceAlongRoute(point: LonLat, path: LonLat[]) {
   let bestDistance = Infinity
   let cumulative = 0
@@ -154,6 +155,25 @@ export async function fetchRouteSignals(path: LonLat[], signal: AbortSignal): Pr
   return unique
 }
 
+/** 신호등 버튼을 누르면 지도 중심 500m 안의 신호등만 찾는다. 가까운 중복 위치는 합친다. */
+export async function fetchNearbySignals(center: { lat: number; lng: number }, signal: AbortSignal): Promise<RouteCondition[]> {
+  const key = `nearby:${center.lat.toFixed(4)}:${center.lng.toFixed(4)}`
+  const cached = signalCache.get(key)
+  if (cached) return cached
+  const query = `[out:json][timeout:8];node(around:500,${center.lat},${center.lng})["highway"="traffic_signals"];out body;`
+  const data = await queryOverpass(query, signal)
+  const result: RouteCondition[] = []
+  for (const node of data.elements ?? []) {
+    if (!Number.isFinite(node.lat) || !Number.isFinite(node.lon)) continue
+    const lat = node.lat!, lng = node.lon!
+    if (result.some(previous => segmentLength([previous.lng, previous.lat], [lng, lat]) < 25)) continue
+    result.push({ kind: 'signal', id: `nearby-signal-${node.id}`, lat, lng })
+    if (result.length >= 50) break
+  }
+  signalCache.set(key, result)
+  return result
+}
+
 /** 경로 주변 편의시설을 조회하고 거리·종류 기준으로 중복을 정리한다. */
 export async function fetchRouteAmenities(path: LonLat[], signal: AbortSignal): Promise<RouteAmenity[]> {
   const key = cacheKey(path)
@@ -187,7 +207,7 @@ export async function fetchRouteAmenities(path: LonLat[], signal: AbortSignal): 
   return result
 }
 
-/** 경로 샘플의 고도를 조회해 누적 거리와 고도 쌍으로 반환한다. */
+/** 경로 샘플의 고도를 조회해 시작점부터 더한 거리와 고도 쌍으로 반환한다. */
 export async function fetchRouteElevationProfile(path: LonLat[], signal: AbortSignal): Promise<RouteElevationPoint[]> {
   const key = cacheKey(path)
   const cached = elevationCache.get(key)
@@ -242,7 +262,7 @@ export async function fetchRouteRestaurants(path: LonLat[], signal: AbortSignal)
   return results
 }
 
-/** 경로 주변 OSM 경사 정보를 지도 표시용 구간으로 정리한다. */
+/** Open-Meteo에서 길의 높이를 받아 오르막과 내리막 구간을 계산한다. */
 export async function fetchRouteGrades(path: LonLat[], signal: AbortSignal): Promise<RouteCondition[]> {
   const key = cacheKey(path)
   const cached = gradeCache.get(key)

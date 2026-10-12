@@ -1,5 +1,5 @@
 /**
- * 경로의 고도 값에 따라 낮은 곳은 연한 빨강, 높은 곳은 진한 빨강으로 변환한다. 고도 샘플의 누적 거리에 맞춰 지도 선을 색상별 구간으로 나눈다.
+ * 경로의 고도 값에 따라 낮은 곳은 연한 빨강, 높은 곳은 진한 빨강으로 변환한다. 고도 샘플의 시작점부터 더한 거리에 맞춰 지도 선을 색상별 구간으로 나눈다.
  */
 import type { LonLat } from './bikeRoute'
 import type { RouteElevationPoint } from './routeConditions'
@@ -28,7 +28,7 @@ export function routeGradientStops(profile: RouteElevationPoint[]): Array<[numbe
   return profile.map(point => [Math.min(1, point.distanceMeters / total), routeElevationColor(point.elevationMeters, minimum, maximum)])
 }
 
-/** 고도 샘플 간 누적 거리에 맞춰 경로를 색상별 선분으로 나눈다. */
+/** 고도 샘플 간 시작점부터 더한 거리에 맞춰 경로를 색상별 선분으로 나눈다. */
 export function coloredRouteSegments(path: LonLat[], profile: RouteElevationPoint[]): ColoredRouteSegment[] {
   if (path.length < 2) return []
   if (profile.length < 2) return [{ path, color: '#f7b7b0' }]

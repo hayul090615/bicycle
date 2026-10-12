@@ -1,5 +1,5 @@
 /**
- * 도착 축하 문구와 폭죽을 body 포털에 표시한다. 화면 누르기·Escape·자동 닫기를 처리하고 닫힌 뒤 이전 요소로 키보드 초점을 복원한다.
+ * 도착 문구와 폭죽을 화면 전체에 표시한다. 누르거나 Escape를 누르면 닫고, 이전에 선택했던 버튼으로 키보드 초점을 돌려준다.
  */
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,8 +12,10 @@ const BURSTS = [
 ] as const
 
 export function DestinationArrival({ locale, onClose }: { locale: 'ko' | 'en'; onClose: () => void }) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const closeTarget = useRef<HTMLButtonElement>(null)
   const ko = locale === 'ko'
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     closeTarget.current?.focus({ preventScroll: true })
@@ -43,6 +45,7 @@ export function DestinationArrival({ locale, onClose }: { locale: 'ko' | 'en'; o
         <g className="tour-arrival-burst" style={{ '--burst-delay': `${index * .25}s`, '--burst-color': burst.color } as CSSProperties}>
           {Array.from({ length: 14 }, (_, ray) => {
             const angle = ray * Math.PI * 2 / 14
+            // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
             return <line key={ray} x1={Math.cos(angle) * 16} y1={Math.sin(angle) * 16} x2={Math.cos(angle) * (ray % 2 ? 68 : 84)} y2={Math.sin(angle) * (ray % 2 ? 68 : 84)} />
           })}
         </g>

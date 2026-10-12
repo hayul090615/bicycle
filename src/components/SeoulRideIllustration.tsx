@@ -6,6 +6,7 @@ import { useId } from 'react'
 /** Decorative Seoul riverside scene, not a geographic route map. */
 export function SeoulRideIllustration() {
   const id = useId()
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <svg className="seoul-ride-illustration" viewBox="0 0 1000 640" fill="none" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id={`${id}-river`} x1="200" y1="340" x2="760" y2="540" gradientUnits="userSpaceOnUse">

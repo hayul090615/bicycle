@@ -8,7 +8,7 @@ export function getSegmentPoints(start: Station, end: Station): RoutePoint[] {
   return [{ x: start.x, y: start.y }, ...(start.routeToNext ?? []), { x: end.x, y: end.y }]
 }
 
-/** 게임 화면 경로에서 진행률에 해당하는 자전거 좌표를 보간한다. */
+/** 게임 화면 경로에서 진행률에 해당하는 자전거 좌표를 두 점 사이의 위치를 계산한다. */
 export function getPositionOnRoute(points: RoutePoint[], progress: number): RoutePoint {
   if (points.length === 0) return { x: 0, y: 0 }
   if (points.length === 1) return points[0]

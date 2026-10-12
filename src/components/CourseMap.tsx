@@ -61,7 +61,9 @@ function expandDistrictFeature(feature: DistrictGeoFeature, scale = 1.1): Distri
 /** 게임의 현재 대여소 구간이 보이도록 지도 위치를 조정한다. */
 function FollowCourse({ course, stationIndex }: { course: DistrictCourse; stationIndex: number }) {
   const map = useMap()
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const courseZoomRef = useRef<number | null>(null)
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     const visibleStations = course.stations.slice(stationIndex, Math.min(course.stations.length, stationIndex + 2))
     const bounds = latLngBounds(visibleStations.map((station) => [station.lat, station.lng]))
@@ -82,7 +84,7 @@ function FollowCourse({ course, stationIndex }: { course: DistrictCourse; statio
   return null
 }
 
-/** Leaflet 확대 수준이 변할 때 상위 화면에 알린다. */
+/** Leaflet 확대 수준이 변할 때 이 화면을 사용하는 부모 화면에 알린다. */
 function ZoomObserver({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
   const zoomBand = useRef<number | null>(null)
   const map = useMapEvents({
@@ -109,7 +111,9 @@ function ZoomObserver({ onZoomChange }: { onZoomChange: (zoom: number) => void }
 }
 
 const DistrictBaseLayer = memo(function DistrictBaseLayer({ feature, lightMode }: { feature: DistrictGeoFeature; lightMode: boolean }) {
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const expandedFeature = useMemo(() => expandDistrictFeature(feature), [feature])
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>
     <GeoJSON data={expandedFeature as never} interactive={false}
       style={{ color: lightMode ? '#fff4dc' : '#020e12', weight: 8, opacity: .72, fillColor: lightMode ? '#4d63a8' : '#0d5260', fillOpacity: lightMode ? .08 : .22 }} />
@@ -126,6 +130,7 @@ const statusText: Record<StationDataStatus, string> = {
 }
 
 export function CourseMap({ course, stationIndex, segmentProgress, isWrong, errorPulse, arrivalPulse, dataStatus, lightMode, allDistrictStations, playedStationIds }: CourseMapProps) {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [mapZoom, setMapZoom] = useState(13)
   const current = course.stations[stationIndex]
   const districtFeature = districtFeatureMap[course.district as SeoulDistrict]

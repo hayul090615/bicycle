@@ -1,5 +1,5 @@
 /**
- * 지도 여행의 중심 화면이다. 목적지·실제 GPS·자전거 경로·대여소·시설 조회를 조율하고 지도 SDK, 길 안내, 로드뷰, 반납 타이머를 연결한다.
+ * 지도 기능이 만나는 중심 화면이다. 도착지와 내 위치로 길을 찾고, 주변 500m 장소와 로드뷰, 이용시간을 관리한다.
  */
 ﻿import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,6 +12,10 @@ import { KakaoRouteMap } from './KakaoRouteMap'
 import { KakaoRoadviewPanel } from './KakaoRoadviewPanel'
 import { DestinationArrival } from './DestinationArrival'
 import { useDestinationArrival } from '../hooks/useDestinationArrival'
+import { useNearbyPlaces } from '../hooks/useNearbyPlaces'
+import { useNearbySignals } from '../hooks/useNearbySignals'
+import { MapDiscoveryBar, type DiscoveryCategory } from './MapDiscoveryBar'
+import { MAP_NEARBY_RADIUS_METERS, type NearbyPlaceCategory } from '../services/nearbyPlaces'
 import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
 import { findSceneryPhoto, type SceneryPhoto } from '../services/sceneryPhotos'
@@ -21,16 +25,14 @@ import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { fetchBikePath, fetchBikePaths, fetchWalkingPath, type BikeRouteInstruction, type BikeRouteResult, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
-import { clusterPublicCameras, publicCamerasAlongRoute } from '../services/publicCctv'
-import { fetchRouteAmenities, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteRestaurants, fetchRouteSignals, type RouteAmenity, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
-import { countNaverBlogMentions } from '../services/naverBlogs'
+import { clusterPublicCameras } from '../services/publicCctv'
+import { fetchRouteAmenities, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteSignals, type RouteAmenity, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
-import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY } from '../data/seoulBoundary'
 import { coloredRouteSegments } from '../services/routeGradient'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
-const SEOUL_MASK_LATLNG = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as LatLngExpression))
 const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
 const EMPTY_STOP_INDEXES: number[] = []
 const EMPTY_ROUTE_AMENITIES: RouteAmenity[] = []
@@ -138,7 +140,7 @@ function distanceMetersBetween(a: LonLat, b: LonLat) {
   return distanceMeters({ lng: a[0], lat: a[1] }, { lng: b[0], lat: b[1] })
 }
 
-/** 경로 시작부터 지정한 미터 거리만큼 진행한 좌표를 보간한다. */
+/** 경로 시작부터 지정한 미터 거리만큼 진행한 좌표를 두 점 사이의 위치를 계산한다. */
 function coordinateAtDistance(points: LonLat[], distance: number): LonLat {
   let remaining = Math.max(0, distance)
   for (let index = 1; index < points.length; index++) {
@@ -280,11 +282,13 @@ const seasonGuides: Record<TourSeason, { title: [string, string]; atmosphere: [s
 /** 목적지·현재 위치·선택 구간이 보이도록 Leaflet 중심과 축척을 맞춘다. */
 function FocusMap({ points, linePoints, approachPoints, walkingPoints, selectedStop, hasDestination, userLocation, locationFocusRequest }: { points: LatLngExpression[]; linePoints: LatLngExpression[]; approachPoints: LatLngExpression[]; walkingPoints: LatLngExpression[]; selectedStop: number | null; hasDestination: boolean; userLocation: Coordinates | null; locationFocusRequest: number }) {
   const map = useMap()
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const lastFocusRequest = useRef(0)
   const initialSeoulViewAt = useRef<number | null>(null)
   const focusTimer = useRef<number | null>(null)
   const userLocationRef = useRef(userLocation)
   userLocationRef.current = userLocation
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => () => {
     if (focusTimer.current !== null) window.clearTimeout(focusTimer.current)
   }, [])
@@ -343,12 +347,14 @@ function MapCenterReporter({ onChange }: { onChange: (center: Coordinates) => vo
 /** 선택한 주변 대여소 목록을 자전거 수량이 표시된 마커로 만든다. */
 function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[]; locale: string }) {
   const map = useMap()
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [viewRevision, setViewRevision] = useState(0)
   useEffect(() => {
     const refresh = () => setViewRevision(value => value + 1)
     map.on('moveend zoomend', refresh)
     return () => { map.off('moveend zoomend', refresh) }
   }, [map])
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const clusters = useMemo(() => {
     const points = stations.map(station => ({ station, point: map.latLngToContainerPoint([station.lat, station.lng]) }))
     const groups: Array<{ stations: NearbyBikeStation[]; x: number; y: number; lat: number; lng: number }> = []
@@ -371,6 +377,7 @@ function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[
     return groups
   }, [stations, map, viewRevision])
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>{clusters.map(cluster => {
     if (cluster.stations.length === 1) {
       const station = cluster.stations[0]
@@ -392,7 +399,7 @@ function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[
   })}</>
 }
 
-/** 도착지 선택 모드에서 지도 클릭 좌표를 상위 화면에 전달한다. */
+/** 도착지 선택 모드에서 지도 클릭 좌표를 이 화면을 사용하는 부모 화면에 전달한다. */
 function DestinationPickerMapEvents({ enabled, onPick }: { enabled: boolean; onPick: (point: Coordinates) => void }) {
   useMapEvents({ click: event => { if (enabled) onPick({ lat: event.latlng.lat, lng: event.latlng.lng }) } })
   return null
@@ -425,7 +432,7 @@ function RentalDigitalDisplay({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, onRoadviewOpen, searchedDestination, onInitialMapSequenceComplete }: {
+export function TourRouteExplorer({ route, routes, category, onRouteSelect, locale, shadowDate, shadowMinutes, originStopIndex, destinationStopIndex, viaStopIndex, onOriginStopChange, onDestinationStopChange, onViaStopChange, rentalWidgetTarget, rentalTimerOpen, onRoadviewOpen, onDestinationSelected, searchedDestination, onInitialMapSequenceComplete }: {
   route: TouristRoute
   routes: TouristRoute[]
   category: TourCategory
@@ -441,6 +448,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   onViaStopChange: (index: number | null) => void
   rentalWidgetTarget: HTMLDivElement | null
   rentalTimerOpen: boolean
+  onDestinationSelected: () => void
   onRoadviewOpen: () => void
   searchedDestination: { lat: number; lng: number; serial: number } | null
   onInitialMapSequenceComplete?: () => void
@@ -491,13 +499,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
   const [showShadows, setShowShadows] = useState(true)
   const [locationFocusRequest, setLocationFocusRequest] = useState(0)
-  const [nearbyFoodState, setNearbyFoodState] = useState<{ routeKey: string; places: RouteRestaurant[]; status: 'loading' | 'ready' | 'unavailable' } | null>(
-    null,
-  )
+
   const [locationMovementTick, setLocationMovementTick] = useState(0)
   const [rideFoodPrompt, setRideFoodPrompt] = useState<{ routeId: string; stopIndex: number } | null>(null)
-  const [foodGuideOpen, setFoodGuideOpen] = useState(false)
-  const [rentalLimitMinutes, setRentalLimitMinutes] = useState(60)
+  const [discoveryCategory, setDiscoveryCategory] = useState<DiscoveryCategory | null>('bikes')
+  const [focusedPlacePoint, setFocusedPlacePoint] = useState<LonLat | null>(null)
+  const [rentalLimitMinutes, setRentalLimitMinutes] = useState(() => {
+    try { return localStorage.getItem('seoul-bike-rental-minutes') === '120' ? 120 : 60 }
+    catch { return 60 }
+  })
   const [rentalDeadline, setRentalDeadline] = useState<number | null>(readRentalDeadline)
   const [rentalReminderStatus, setRentalReminderStatus] = useState<'idle' | 'five_minutes' | 'expired' | 'permission_denied'>('idle')
   const [rentalNow, setRentalNow] = useState(Date.now())
@@ -531,6 +541,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   useEffect(() => () => {
     if (initialMapSequenceTimerRef.current !== null) window.clearTimeout(initialMapSequenceTimerRef.current)
   }, [])
+  // 다른 화면에 전달할 함수를 기억한다. 대괄호 안의 값이 바뀌면 함수를 새로 만든다.
   const closeRoadview = useCallback(() => {
     setRoadviewEnabled(false)
     setRoadviewTarget(null)
@@ -552,9 +563,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   useEffect(() => {
     if (locale === 'en' && (view === 'google' || (view === 'kakao' && !roadviewEnabled))) setView('city')
   }, [locale, roadviewEnabled, view])
-  const openFoodGuideAt = useCallback((_point: LonLat) => {
-    setFoodGuideOpen(true)
-    setMapLayers(current => ({ ...current, restaurants: true }))
+  const openFoodGuideAt = useCallback((point: LonLat) => {
+    setFocusedPlacePoint(point)
+    setActiveMapTool(null)
   }, [])
   const publishLocation = (position: GeolocationPosition) => {
     const latitude = position.coords.latitude
@@ -613,6 +624,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapCenter(current => `${current.lat.toFixed(5)}:${current.lng.toFixed(5)}` === nextKey ? current : center)
   }, [])
   const destinationKey = customDestination ? `point-${customDestination.lat.toFixed(5)}:${customDestination.lng.toFixed(5)}` : selectedStop === null ? 'course' : destinationIndex
+  const timerDestinationRef = useRef<string | null>(null)
+  useEffect(() => {
+    const key = hasDestination ? `${route.id}:${destinationKey}` : null
+    if (key && timerDestinationRef.current !== key && bikeUseMode === 'ttareungi') onDestinationSelected()
+    timerDestinationRef.current = key
+  }, [hasDestination, destinationKey, route.id, bikeUseMode, onDestinationSelected])
   // 사진에서 경로 끝에 도달한 안내는 현재 목적지마다 한 번만 표시한다.
   const roadviewTripKey = hasDestination ? `${route.id}:${destinationKey}` : null
   const [roadviewCelebrationKey, setRoadviewCelebrationKey] = useState<string | null>(null)
@@ -626,7 +643,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     roadviewArrivedRef.current = roadviewTripKey
     setRoadviewCelebrationKey(roadviewTripKey)
   }, [roadviewTripKey])
-  // 실제 이동 도착은 정확도와 관측 시각을 가진 GPS 훅으로 따로 판정한다.
+  // 실제 이동 도착은 정확도와 관측 시각을 가진 GPS 훅으로 따로 확인한다.
   const arrival = useDestinationArrival({
     destinationKey: hasDestination ? `${route.id}:${destinationKey}` : null,
     destination: destinationStation,
@@ -634,9 +651,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     enabled: trackingLocation,
   })
   const dismissArrival = useCallback(() => { arrival.dismiss(); setRoadviewCelebrationKey(null) }, [arrival.dismiss])
-  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1_000, 1_000), [mapCenter])
+  // 실시간 검색을 기다리는 동안 미리 저장된 가까운 대여소를 먼저 보여 준다.
+  const mapNearbySnapshot = useMemo(() => nearestSnapshotStations(mapCenter, 1_000, MAP_NEARBY_RADIUS_METERS), [mapCenter])
   const snapshotNearby = useMemo(() => locationLat === null || locationLng === null ? []
-    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, 1_000), [locationLat, locationLng])
+    : nearestSnapshotStations({ lat: locationLat, lng: locationLng }, 1000, MAP_NEARBY_RADIUS_METERS), [locationLat, locationLng])
   const activeNearbyBikes = nearbyBikes?.key === locationKey ? nearbyBikes : null
   const activeViewportBikes = viewportBikes?.key === mapCenterKey ? viewportBikes : null
   const nearbyStations = useMemo(() => {
@@ -707,6 +725,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const routeGeometry = selectedRouteOption ? { key: routeGuidanceKey, points: selectedRouteOption.route.geometry, distanceMeters: selectedRouteOption.route.distanceMeters ?? pathDistance(selectedRouteOption.route.geometry), instructions: selectedRouteOption.route.instructions } : null
   const routedPath = routeGeometry?.points ?? null
   // 대여소까지 걷는 구간과 자전거 경로 뒤에 정확히 선택한 목적지 좌표를 잇는다.
+  // 도보와 자전거 길을 연결해 로드뷰에서 따라갈 하나의 길로 만든다.
   const roadviewRoutePath = useMemo(() => {
     if (!hasDestination || !routedPath) return null
     return [...(walkingPath ?? []), ...routedPath, [destinationStation.lng, destinationStation.lat] as LonLat]
@@ -714,23 +733,36 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const activePathKey = routedPath && selectedRouteOption ? `${routeGuidanceKey}:${activeRouteOptions.indexOf(selectedRouteOption)}` : null
   const routeInstructions = routeGeometry?.instructions ?? []
   const activeElevation = elevationState?.key === activePathKey ? elevationState : null
-  const routeAmenities = useMemo(() => (amenitiesState?.routeId === route.id ? amenitiesState.places : EMPTY_ROUTE_AMENITIES)
+  const originalAmenities = useMemo(() => (amenitiesState?.routeId === route.id ? amenitiesState.places : EMPTY_ROUTE_AMENITIES)
     .filter(amenity => amenity.kind !== 'pump' && amenity.kind !== 'water'), [amenitiesState?.places, amenitiesState?.routeId, route.id])
   const courseBikeStations = courseBikeStationsState?.routeId === route.id ? courseBikeStationsState.stations : []
   const activeRoadConditions = roadConditions.key === activePathKey ? roadConditions : null
-  const activeNearbyFood = nearbyFoodState?.routeKey === activePathKey ? nearbyFoodState : null
-  const routeSignals = activeRoadConditions?.signals ?? []
+
+  const nearbySignals = useNearbySignals(discoveryCategory === 'signals', mapCenter)
+  // 신호등 자료 중 현재 지도 중심에서 500m 안의 점만 남긴다.
+  const routeSignals = useMemo(() => nearbySignals.places.filter(place => distanceMeters(mapCenter, place) <= MAP_NEARBY_RADIUS_METERS), [nearbySignals.places, mapCenter])
   const routeGrades = activeRoadConditions?.grades ?? []
-  const routeRestaurants = activeNearbyFood?.places ?? EMPTY_ROUTE_RESTAURANTS
+
+  // 대여소·신호등·CCTV는 별도 자료를 사용한다. 음식점 같은 장소만 장소 검색으로 보낸다.
+  const placeCategory = discoveryCategory && !['bikes', 'signals', 'cctv'].includes(discoveryCategory) ? discoveryCategory as NearbyPlaceCategory : null
+  const nearbyPlaces = useNearbyPlaces(placeCategory, mapCenter)
+  // 선택한 맛집 또는 카페를 지도 표시 형식으로 바꾼다. 다른 버튼이 선택되면 빈 목록을 보낸다.
+  const routeRestaurants = useMemo<RouteRestaurant[]>(() => placeCategory === 'food' || placeCategory === 'cafe'
+    ? nearbyPlaces.places.map(place => ({ id: place.id, name: place.name, lat: place.lat, lng: place.lng, kind: placeCategory === 'cafe' ? 'cafe' : 'restaurant' }))
+    : EMPTY_ROUTE_RESTAURANTS, [nearbyPlaces.places, placeCategory])
+  // 편의점·화장실·명소도 선택한 한 종류의 검색 결과만 지도에 보낸다.
+  const routeAmenities = useMemo<RouteAmenity[]>(() => placeCategory && ['convenience', 'toilet', 'visit'].includes(placeCategory)
+    ? nearbyPlaces.places.map(place => ({ id: place.id, name: place.name, lat: place.lat, lng: place.lng, kind: placeCategory as RouteAmenity['kind'], distanceMeters: place.distanceMeters }))
+    : EMPTY_ROUTE_AMENITIES, [nearbyPlaces.places, placeCategory])
   const showCourse = mapLayers.course
   const showRidingRoute = (showCourse || hasDestination) && Boolean(routedPath?.length)
-  const showRestaurants = mapLayers.restaurants
-  const showCctv = mapLayers.cctv
-  const showRoadInfo = mapLayers.roadInfo
+  const showRestaurants = discoveryCategory === 'food' || discoveryCategory === 'cafe'
+  const showCctv = discoveryCategory === 'cctv'
+  const showRoadInfo = discoveryCategory === 'signals'
   const showRiders = mapLayers.riders
-  const showAmenities = mapLayers.amenities
-  const showBikeStations = mapLayers.bikeStations || userLocation !== null || mapNearbySnapshot.length > 0
-    || (activeViewportBikes?.status === 'live' && activeViewportBikes.stations.length > 0)
+  const showAmenities = discoveryCategory !== null && ['convenience', 'toilet', 'visit'].includes(discoveryCategory)
+  const showBikeStations = discoveryCategory === 'bikes'
+  // 기본 대여소 자료와 실시간 잔여 수를 합친다. 같은 대여소는 한 번만 표시한다.
   const mapBikeStations = useMemo(() => {
     const byId = new Map((mapLayers.bikeStations ? courseBikeStations : []).map(station => [station.id, station]))
     const liveStations = activeViewportBikes?.stations ?? activeNearbyBikes?.stations ?? []
@@ -739,13 +771,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       byId.set(station.id, liveStation ? { ...station, ...liveStation, distanceMeters: station.distanceMeters } : station)
     }
     for (const station of liveStations) {
-      if (distanceMeters(mapCenter, station) <= 1_000) byId.set(station.id, station)
+      if (distanceMeters(mapCenter, station) <= MAP_NEARBY_RADIUS_METERS) byId.set(station.id, station)
     }
     return [...byId.values()]
-      .filter(station => distanceMeters(mapCenter, station) <= 1_000)
+      .filter(station => distanceMeters(mapCenter, station) <= MAP_NEARBY_RADIUS_METERS)
       .sort((first, second) => distanceMeters(mapCenter, first) - distanceMeters(mapCenter, second))
   }, [activeNearbyBikes, activeViewportBikes, courseBikeStations, mapCenter, mapLayers.bikeStations, mapNearbySnapshot])
-  const routeConditions = useMemo(() => [...routeSignals, ...routeGrades], [routeGrades, routeSignals])
+  const routeConditions = routeSignals
   const signalCountLabel = !routedPath || activeRoadConditions?.signalsStatus === 'loading' ? '…'
     : activeRoadConditions?.signalsStatus === 'ready' ? String(routeSignals.length) : '—'
   const uphillCountLabel = !routedPath || activeRoadConditions?.gradesStatus === 'loading' ? '…'
@@ -787,6 +819,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <strong>{routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 길 안내를 불러오는 중…') : text('Turn-by-turn directions unavailable', '상세 방향 안내를 사용할 수 없어요')}</strong>
         <small>≈ {distanceLabel(remainingRouteMeters)} {text('remaining · estimated', '남음 · 예상 거리')}</small>
       </div>
+  // 시각은 밀리초이므로 1000으로 나누어 초로 바꾼다. 시간이 끝나면 0 아래로 내려가지 않는다.
   const rentalSecondsRemaining = rentalDeadline === null ? null : Math.max(0, Math.ceil((rentalDeadline - rentalNow) / 1000))
   const elevationPoints = activeElevation?.points ?? EMPTY_ROUTE_ELEVATION
   const elevationMinimum = elevationPoints.length ? Math.min(...elevationPoints.map(point => point.elevationMeters)) : 0
@@ -803,18 +836,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const approachPoints = useMemo<LatLngExpression[]>(() => approachPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [approachPath])
   const walkingPoints = useMemo<LatLngExpression[]>(() => walkingPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [walkingPath])
   const cctvData = usePublicCctvData()
-  const cctvRoutePath = useMemo<LonLat[]>(() => {
-    const bikePath = approachPath && approachPath.length > 1 ? approachPath
-      : routedPath && routedPath.length > 1 ? routedPath
-        : route.stops.map((stop) => {
-          const station = getTouristStation(stop.stationId)
-          return [station.lng, station.lat] as LonLat
-        })
-    return walkingPath && walkingPath.length > 1 ? [...walkingPath, ...bikePath.slice(1)] : bikePath
-  }, [approachPath, route.stops, routedPath, walkingPath])
+  // CCTV가 선택됐을 때만 현재 지도 중심 500m 안의 카메라를 남긴다.
   const cctvCameras = useMemo(() => showCctv
-    ? publicCamerasAlongRoute(cctvData.cameras, cctvRoutePath)
-    : [], [cctvData.cameras, cctvRoutePath, showCctv])
+    ? cctvData.cameras.filter(camera => distanceMeters(mapCenter, camera) <= MAP_NEARBY_RADIUS_METERS)
+    : [], [cctvData.cameras, mapCenter, showCctv])
   const fallbackCctvClusters = useMemo(() => showCctv
     ? clusterPublicCameras(cctvCameras, getTouristStation(route.stops[0].stationId), 48_000, 2_000)
     : [], [cctvCameras, route.stops, showCctv])
@@ -913,19 +938,18 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       setTransferRecommendation(null)
     }
   }
-  const startRentalTimer = async (minutes = rentalLimitMinutes) => {
+  // 1시간 또는 2시간을 누르면 현재 시각에 이용시간을 더하고 바로 카운트다운을 시작한다.
+  const startRentalTimer = (minutes: 60 | 120) => {
+    // 이미 같은 시간을 사용 중이면 실수로 다시 눌러도 남은 시간을 처음으로 돌리지 않는다.
+    if (rentalDeadline !== null && rentalDeadline > Date.now() && rentalLimitMinutes === minutes) return
+    setRentalLimitMinutes(minutes)
+    try { localStorage.setItem('seoul-bike-rental-minutes', String(minutes)) } catch { /* 화면에서는 계속 선택할 수 있다. */ }
     rentalNoticeRef.current = { fiveMinutes: false, expired: false }
     const now = Date.now()
     setRentalNow(now)
-    setRentalDeadline(now + Math.max(1, Math.min(720, minutes)) * 60_000)
-    let notificationsGranted = false
-    if ('Notification' in window) {
-      try {
-        const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
-        notificationsGranted = permission === 'granted'
-      } catch { /* The visible countdown still works if browser alerts are unavailable. */ }
-    }
-    setRentalReminderStatus(notificationsGranted ? 'idle' : 'permission_denied')
+    // 1분은 60,000밀리초다. 현재 시각에 선택한 분 수를 더해 종료 시각을 정한다.
+    setRentalDeadline(now + minutes * 60_000)
+    setRentalReminderStatus('idle')
   }
   const chooseDestination = (index: number | null) => {
     setDestinationError(false)
@@ -966,7 +990,20 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setMapMenuOpen(false)
     setMobileSheetExpanded(false)
   }
-  const toggleMapLayer = (layer: MapLayerKey) => setMapLayers(current => ({ ...current, [layer]: !current[layer] }))
+  // 하나의 선택값을 새 종류로 바꾼다. 같은 버튼을 다시 누르면 모든 주변 표시를 끈다.
+  const selectDiscoveryCategory = (category: DiscoveryCategory) => {
+    // 종류별 true/false를 따로 두지 않고 하나만 기억하면 여러 종류가 동시에 켜지지 않는다.
+    setDiscoveryCategory(current => current === category ? null : category)
+    setMapLayers(current => ({ ...current, riders: false }))
+    setFocusedPlacePoint(null)
+    setActiveMapTool(null)
+    setMapMenuOpen(false)
+  }
+  const toggleMapLayer = (layer: MapLayerKey) => {
+    const category = layer === 'restaurants' ? 'food' : layer === 'cctv' ? 'cctv' : layer === 'roadInfo' ? 'signals' : layer === 'bikeStations' ? 'bikes' : null
+    if (category) selectDiscoveryCategory(category)
+    else setMapLayers(current => ({ ...current, [layer]: !current[layer] }))
+  }
   useLayoutEffect(() => {
     closeRoadview()
     setSelection(null)
@@ -1006,11 +1043,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     if (!nearbyStop) return
     promptedStopsRef.current.add(`${route.id}:${nearbyStop.index}`)
     setRideFoodPrompt({ routeId: route.id, stopIndex: nearbyStop.index })
-    setFoodGuideOpen(true)
   }, [locationMovementTick, route, trackingLocation, userLocation, rideFoodPrompt])
   useEffect(() => {
     setRideFoodPrompt(null)
-    setFoodGuideOpen(false)
+    setFocusedPlacePoint(null)
   }, [route.id])
   useEffect(() => {
     if (route.season) setDisplaySeason(route.season)
@@ -1132,31 +1168,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       gradesController.abort()
     }
   }, [activePathKey, routedPath])
-  useEffect(() => {
-    if (!activePathKey || !routedPath || (!showRestaurants && !foodGuideOpen)) return
-    const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 18000)
-    let active = true
-    setNearbyFoodState({ routeKey: activePathKey, places: [], status: 'loading' })
-    void fetchRouteRestaurants(routedPath, controller.signal).then(async places => {
-      const scored = await Promise.all(places.slice(0, 10).map(async place => ({ ...place, blogMentions: await countNaverBlogMentions(`${place.name} 서울 맛집`, controller.signal).catch(() => null) ?? undefined })))
-      scored.sort((a, b) => (b.blogMentions ?? -1) - (a.blogMentions ?? -1) || (a.distanceFromRouteMeters ?? Infinity) - (b.distanceFromRouteMeters ?? Infinity))
-      const recommended: RouteRestaurant[] = []
-      for (const place of scored) {
-        if (recommended.some(other => distanceMeters(place, other) < 300)) continue
-        recommended.push(place)
-        if (recommended.length >= 6) break
-      }
-      if (active) setNearbyFoodState({ routeKey: activePathKey, places: recommended, status: 'ready' })
-    }).catch(() => {
-      if (active) setNearbyFoodState(current => current?.routeKey === activePathKey ? { ...current, status: 'unavailable' } : current)
-    }).finally(() => window.clearTimeout(timeout))
-    return () => {
-      active = false
-      window.clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [activePathKey, routedPath, showRestaurants, foodGuideOpen])
+
   useEffect(() => {
     if (!locationKey || locationLat === null || locationLng === null) {
       setNearbyBikes(null)
@@ -1167,7 +1179,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const location = { lat: locationLat, lng: locationLng }
     setNearbyBikes({ key: locationKey, stations: nearestSnapshotStations(location, 1_000, 1_000), updatedAt: null, status: 'loading' })
     const refresh = () => {
-      void fetchNearbyBikeStations(location, controller.signal, 1_000).then(result => {
+      void fetchNearbyBikeStations(location, controller.signal, MAP_NEARBY_RADIUS_METERS).then(result => {
         if (active) setNearbyBikes({ key: locationKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
       }).catch(() => {
         if (active) setNearbyBikes(current => current?.key === locationKey ? { ...current, status: 'unavailable' } : current)
@@ -1186,7 +1198,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     let active = true
     setViewportBikes({ key: mapCenterKey, stations: mapNearbySnapshot, updatedAt: null, status: 'loading' })
     const refresh = () => {
-      void fetchNearbyBikeStations(mapCenter, controller.signal, 1_000).then(result => {
+      void fetchNearbyBikeStations(mapCenter, controller.signal, MAP_NEARBY_RADIUS_METERS).then(result => {
         if (active) setViewportBikes({ key: mapCenterKey, stations: result.stations, updatedAt: result.updatedAt, status: 'live' })
       }).catch(() => {
         if (active) setViewportBikes(current => current?.key === mapCenterKey ? { ...current, status: 'unavailable' } : current)
@@ -1397,7 +1409,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       eventHandlers={{ click: () => chooseDestination(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : viaStopIndex === index ? '#7657bd' : originStopIndex === index || (originStopIndex === null && !userLocation && index === 0) ? '#168653' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
     </CircleMarker>)}
-    <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ color: '#f1f2ec', weight: 0, fillColor: '#f1f2ec', fillOpacity: .38, fillRule: 'evenodd' }} interactive={false} />
     <Polyline positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ color: '#111511', weight: 2.5, opacity: .95, lineCap: 'round', lineJoin: 'round' }} interactive={false} />
   </MapContainer>
 
@@ -1480,7 +1491,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <summary><strong>{text('My map', '나만의 지도')}</strong><span>{text('Choose what appears on the map', '지도에 표시할 항목을 선택하세요')}</span></summary>
           <div className="tour-my-map-layers" role="group" aria-label={text('Map layers', '지도 항목')}>
             <label><input type="checkbox" checked={showCourse} onChange={() => toggleMapLayer('course')} /><span>{text('Tour route', '관광 코스')}</span></label>
-            <label><input type="checkbox" checked={showRestaurants} onChange={() => toggleMapLayer('restaurants')} /><span>{text('Food along route', '길 주변 맛집')}</span><small>{activeNearbyFood?.status === 'loading' ? '…' : routeRestaurants.length || ''}</small></label>
+            <label><input type="checkbox" checked={showRestaurants} onChange={() => toggleMapLayer('restaurants')} /><span>{text('Food within 500 m', '주변 500m 맛집')}</span><small>{nearbyPlaces.status === 'loading' ? '…' : routeRestaurants.length || ''}</small></label>
             <button type="button" className="tour-my-map-cctv-button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>
               <span className="tour-cctv-dot" aria-hidden="true" /><span>{text('CCTV near route', '경로 주변 CCTV')}</span>
               <small>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</small><i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
@@ -1498,11 +1509,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </a>
         </details>
         {showRestaurants && <p className="tour-cctv-status" role="status">
-          {!routedPath ? text('Choose a destination to find food along the route.', '도착지를 선택하면 길 주변 맛집을 찾습니다.')
-            : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? text('Loading food places along your route…', '길 주변 맛집을 불러오는 중…')
-              : activeNearbyFood.status === 'unavailable' ? text('Nearby food places could not be loaded. Try again shortly.', '주변 맛집을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
-                : activeNearbyFood.places.length ? text(`${activeNearbyFood.places.length} recommended food places along the route.`, `길 주변 맛집 ${activeNearbyFood.places.length}곳을 표시합니다.`)
-                  : text('No named food places were found near the route.', '길 가까이에서 이름이 등록된 맛집을 찾지 못했습니다.')}
+          {nearbyPlaces.status === 'loading' ? text('Finding nearby food…', '주변 맛집을 찾는 중…')
+            : nearbyPlaces.status === 'error' ? text('Food search is temporarily unavailable.', '맛집 검색을 잠시 사용할 수 없어요.')
+              : text(`${nearbyPlaces.places.length} food places within 500 m.`, `주변 500m 맛집 ${nearbyPlaces.places.length}곳을 표시합니다.`)}
         </p>}
         <section className="tour-road-conditions" aria-live="polite" aria-label={text('Route terrain and traffic signals', '코스 경사와 신호등')}>
           <div className="tour-road-conditions-heading"><strong>{text('Along this route', '이 코스의 도로 정보')}</strong><span>{text('MAP DATA', '지도 자료')}</span></div>
@@ -1612,20 +1621,24 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>2</b>{text('Check the map', '지도를 살펴봐요')}</span><i aria-hidden="true">›</i>
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
+      <MapDiscoveryBar locale={locale} selected={discoveryCategory} onSelect={selectDiscoveryCategory}
+        status={discoveryCategory === 'signals' ? nearbySignals.status : discoveryCategory === 'cctv' ? (cctvData.loading ? 'loading' : 'ready') : discoveryCategory === 'bikes' ? 'ready' : nearbyPlaces.status}
+        count={discoveryCategory === 'bikes' ? mapBikeStations.length : discoveryCategory === 'cctv' ? cctvCameras.length : discoveryCategory === 'signals' ? routeSignals.length : nearbyPlaces.places.length}
+        places={nearbyPlaces.places} focusedPoint={focusedPlacePoint} onFocus={setFocusedPlacePoint} region={nearbyPlaces.region} />
       <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}${roadviewEnabled ? ' tour-map-stage--roadview' : ''}`} onMouseLeave={() => hoverStop(null)}>
         {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack">{rentalTimerOpen && <section id="tour-rental-timer-panel" className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
-          <div className="tour-rental-map-copy"><h3>{text('Return timer', '반납 타이머')}</h3><p>{text('Set minutes and start the countdown.', '분을 설정하고 타이머를 시작하세요.')}</p></div>
-          <label className="tour-rental-custom-time">{text('Minutes', '설정 시간 (분)')}<input type="number" min="1" max="720" step="1" value={rentalLimitMinutes} disabled={rentalDeadline !== null} onChange={event => setRentalLimitMinutes(Math.max(1, Math.min(720, Number(event.target.value) || 1)))} /></label>
+          <div className="tour-rental-map-copy"><h3>{text('Choose your pass time', '이용시간 선택')}</h3><p>{text('Choose a pass to start counting down.', '시간을 선택하면 바로 카운트다운을 시작해요.')}</p></div>
+          <div className="tour-rental-pass-options" role="group" aria-label={text('Ttareungi pass duration', '따릉이 이용시간')}>
+            <button type="button" aria-pressed={rentalDeadline !== null && rentalLimitMinutes === 60} onClick={() => startRentalTimer(60)}>{text('1 hour', '1시간')}</button>
+            <button type="button" aria-pressed={rentalDeadline !== null && rentalLimitMinutes === 120} onClick={() => startRentalTimer(120)}>{text('2 hours', '2시간')}</button>
+          </div>
           <div className={`tour-rental-clock-row${rentalDeadline !== null ? ' is-running' : ''}${rentalSecondsRemaining !== null && rentalSecondsRemaining <= 900 ? ' is-due-soon' : ''}`}>
             <div className="tour-rental-digital-panel" role="timer" aria-live="off" aria-label={`${text('Time remaining', '남은 시간')} ${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) / 3600)).padStart(2, '0')}:${String(Math.floor((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 3600 / 60)).padStart(2, '0')}:${String((rentalSecondsRemaining ?? rentalLimitMinutes * 60) % 60).padStart(2, '0')}`}>
               <RentalDigitalDisplay seconds={rentalSecondsRemaining ?? rentalLimitMinutes * 60} />
             </div>
             <span className="tour-rental-timer-status"><i aria-hidden="true" />{rentalDeadline === null ? text('READY', '대기') : text('RUNNING', '작동 중')}</span>
           </div>
-          <button type="button" className="tour-rental-start-button" aria-label={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} title={rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')} onClick={() => { if (rentalDeadline === null) void startRentalTimer(); else { setRentalDeadline(null); setRentalReminderStatus('idle') } }}>
-            <span className="tour-rental-button-label">{rentalDeadline === null ? text('Start rental timer', '대여 타이머 시작') : text('Stop timer', '타이머 종료')}</span>
-            <span className="tour-rental-button-icon" aria-hidden="true">{rentalDeadline === null ? '▶' : '■'}</span>
-          </button>
+          {rentalDeadline !== null && <button type="button" className="tour-rental-stop-button" onClick={() => { setRentalDeadline(null); setRentalReminderStatus('idle') }}>{text('Stop', '종료')}</button>}
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
         </section>}{roadSign}</div>, rentalWidgetTarget)}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
@@ -1656,24 +1669,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewEnabled} aria-controls="tour-roadview-panel" onClick={toggleRoadview}><span aria-hidden="true">▣</span>{text('Roadview', '로드뷰')}</button>
         </nav>}
     {view === 'city' && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}<p className="tour-map-loading-label" role="status">{text('Preparing the 3D city view…', '3D 도시 지도를 준비하고 있어요…')}</p></div>}>
-          <MapLibreRoute3D key={view} viewMode="city" route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D onMapCenterChange={reportMapCenter} key={view} viewMode="city" route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} onMapCenterChange={reportMapCenter} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} kakaoMapType={kakaoMapType} roadviewEnabled={roadviewEnabled} roadviewPosition={roadviewPosition} onSelectRoadview={selectRoadview} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} terrainPath={routedPath} elevationProfile={elevationPoints} destination={hasDestination ? destinationStation : null} onDestinationArrival={celebrateRoadviewArrival} />}
         {roadviewEnabled && <div className="tour-roadview-map-hint" role="status"><span>{text('Click a highlighted road to view the street', '표시된 도로를 누르면 거리 사진을 볼 수 있어요')}</span><button type="button" onClick={closeRoadview}>{text('Exit Roadview', '로드뷰 종료')}</button></div>}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
-          <MapLibreRoute3D key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
+          <MapLibreRoute3D onMapCenterChange={reportMapCenter} key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        <div className="tour-mobile-map-top">
-          <nav className="tour-mobile-map-chips" aria-label={text("Map shortcuts", "\uC9C0\uB3C4 \uBC14\uB85C\uAC00\uAE30")}>
-            <button type="button" aria-pressed={showCourse} onClick={() => toggleMapLayer("course")}><span aria-hidden="true">&#x1F6B2;</span>{text("Bike routes", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</button>
-            <button type="button" aria-pressed={showRestaurants} onClick={() => { toggleMapLayer("restaurants"); setFoodGuideOpen(true) }}><span aria-hidden="true">&#x1F35C;</span>{text("Food", "\uB9DB\uC9D1")}</button>
-            <button type="button" aria-pressed={activeMapTool === "facilities"} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Toilets", "\uD654\uC7A5\uC2E4")}</button>
-            <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
-            <button type="button" aria-pressed={destinationPicking} onClick={() => { closeRoadview(); setDestinationPicking(active => !active) }}><span aria-hidden="true">&#x1F4CD;</span>{destinationPicking ? text("Tap map", "\uC9C0\uB3C4 \uC120\uD0DD") : text("Destination", "\uB3C4\uCC29\uC9C0")}</button>
-          </nav>
-        </div>
         <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}${hasDestination ? ' is-navigating' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
           <button type="button" className="tour-mobile-sheet-handle" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded} aria-label={mobileSheetExpanded ? text('Collapse directions', '길 안내 접기') : text('Show all directions', '전체 길 안내 보기')} onClick={() => setMobileSheetExpanded(expanded => !expanded)}><i /></button>
           {hasDestination ? <>
@@ -1695,47 +1699,21 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <option value="ttareungi">{text('Ttareungi', '따릉이')}</option><option value="personal">{text('My bicycle', '내 자전거')}</option>
             </select>
           </label>}
-          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
+          <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { selectDiscoveryCategory('toilet') }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
         </section>
-        <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text("Map controls", "\uC9C0\uB3C4 \uB3C4\uAD6C")}>
+        <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text('Menu', '메뉴')}>
           <section className="tour-map-rail-group">
-            <h2>{text("Explore", "\uD0D0\uC0C9")}</h2>
-            <nav className="tour-map-quick-filters" aria-label={text("Explore map layers", "\uD0D0\uC0C9 \uBA54\uB274")}>
-              <button type="button" aria-current={activeMapTool === "food" ? "true" : undefined} onClick={() => { toggleMapLayer("restaurants"); setActiveMapTool("food") }}><span aria-hidden="true">&#x2668;</span>{text("Food", "\uB9DB\uC9D1")}</button>
-              <button type="button" aria-current={activeMapTool === "facilities" ? "true" : undefined} onClick={() => { if (!showAmenities) toggleMapLayer("amenities"); setActiveMapTool("facilities") }}><span aria-hidden="true">&#x2316;</span>{text("Facilities", "\uC2DC\uC124")}</button>
-              <button type="button" aria-pressed={showCctv} onClick={() => { toggleMapLayer("cctv"); setActiveMapTool(null) }}><span aria-hidden="true">&#x25CE;</span>{text("CCTV", "CCTV")}</button>
-              <button type="button" aria-pressed={showRoadInfo} onClick={() => toggleMapLayer("roadInfo")}><span aria-hidden="true">&#x1F6A6;</span>{text("Traffic lights", "\uC2E0\uD638\uB4F1")}</button>
-            </nav>
             <div className="tour-map-menu-actions">
-              <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === "settings"}
-                onClick={() => setActiveMapTool(current => current === "settings" ? null : "settings")}>
-                <span aria-hidden="true">&#x2699;</span>{text("Settings", "\uC124\uC815")}
+              <button type="button" className="tour-map-settings-button" aria-expanded={activeMapTool === 'settings'}
+                onClick={() => setActiveMapTool(current => current === 'settings' ? null : 'settings')}>
+                <span aria-hidden="true">⚙</span>{text('Settings', '설정')}
               </button>
-              <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={activeMapTool === "ridePlan"} aria-controls="tour-map-side-panel" onClick={() => { setSidebarOpen(false); setActiveMapTool(current => current === "ridePlan" ? null : "ridePlan") }}>
-                <span aria-hidden="true">&#x1F6B4;</span>{text("Ride plan", "\uB77C\uC774\uB529 \uACC4\uD68D")}
+              <button type="button" className="tour-map-rail-sidebar-toggle tour-riding-plan-toggle" aria-expanded={activeMapTool === 'ridePlan'}
+                onClick={() => { setSidebarOpen(false); setActiveMapTool(current => current === 'ridePlan' ? null : 'ridePlan') }}>
+                <span aria-hidden="true">🚴</span>{text('Ride plan', '라이딩 계획')}
               </button>
             </div>
             <div className="tour-menu-plan-slot" ref={setMenuPlanTarget} />
-          </section>
-          <section className="tour-map-rail-group tour-map-rail-group--map">
-            <h2>{text("Map", "\uC9C0\uB3C4")}</h2>
-            <div className="tour-map-mode-switch" role="group" aria-label={text("3D map view", "3D \uC9C0\uB3C4 \uBCF4\uAE30")}>
-              <button type="button" aria-pressed={view === "city" || view === "google"} onClick={() => { setActiveMapTool(null); chooseMapView("city") }}>3D</button>
-            </div>
-            <label className="tour-map-mode-select"><span>{text("Map type", "\uC9C0\uB3C4 \uC885\uB958")}</span>
-              <select value={view} aria-label={text("Choose a map view", "\uC9C0\uB3C4 \uC885\uB958 \uC120\uD0DD")} onChange={event => chooseMapView(event.currentTarget.value as typeof view)}>
-                {hasKakaoMapsKey && (locale === 'ko' || roadviewEnabled) && <option value="kakao">{text("Kakao map - road", "\uCE74\uCE74\uC624 \uC9C0\uB3C4 ? \uB3C4\uB85C")}</option>}
-                <option value="city">{text("3D city", "3D \uB3C4\uC2DC")}</option>
-                <option value="satellite">{text("Satellite", "\uC704\uC131")}</option>
-                <option value="map">{text("Flat map", "\uD3C9\uBA74 \uC9C0\uB3C4")}</option>
-                {hasGoogleMapsKey && locale === 'ko' && <option value="google">Google 3D</option>}
-              </select>
-            </label>
-            {hasKakaoMapsKey && (locale === 'ko' || roadviewEnabled) && <div className="tour-map-type-switch" role="group" aria-label={text('Kakao map type', '카카오 지도 종류')}>
-              <button type="button" aria-pressed={view === 'kakao' && kakaoMapType === 'roadmap'} onClick={() => chooseKakaoMapType('roadmap')}>{text('Map', '지도')}</button>
-              <button type="button" aria-pressed={view === 'kakao' && kakaoMapType === 'skyview'} onClick={() => chooseKakaoMapType('skyview')}>{text('Sky view', '스카이뷰')}</button>
-            </div>}
-            {hasKakaoMapsKey && <button type="button" className="tour-roadview-toggle" aria-pressed={roadviewEnabled} aria-controls="tour-roadview-panel" onClick={toggleRoadview}><span aria-hidden="true">▣</span>{text('Roadview', '로드뷰')}</button>}
           </section>
         </aside>
         <button type="button" className="tour-map-locate" onClick={() => { setActiveMapTool(null); locateNearestRoute(false, true) }} disabled={locating} aria-label={text("Show my current location", "\uB0B4 \uD604\uC7AC \uC704\uCE58 \uD45C\uC2DC")}>
@@ -1775,29 +1753,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <p>{text('Show the selected route and the path from your location.', '선택한 코스와 내 위치에서 출발하는 경로를 지도에 표시합니다.')}</p>
               <button type="button" className="tour-map-panel-action" aria-pressed={showCourse} onClick={() => toggleMapLayer('course')}>{showCourse ? text('Hide route', '코스 숨기기') : text('Show route', '코스 표시')}</button>
             </>}
-            {activeMapTool === 'food' && <>
-              <p>{!routedPath ? text('Choose a destination to find food along the route.', '도착지를 고르면 길 주변 맛집을 찾습니다.') : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? text('Finding food along your route…', '길 주변 맛집을 찾는 중…') : text(`${routeRestaurants.length} food places recommended along the route.`, `길 주변 맛집 ${routeRestaurants.length}곳을 추천합니다.`)}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showRestaurants} onClick={() => toggleMapLayer('restaurants')}>{showRestaurants ? text('Hide food markers', '맛집 표시 끄기') : text('Show food markers', '맛집 표시 켜기')}</button>
-              <button type="button" className="tour-map-panel-action tour-map-panel-action--quiet" onClick={() => { setFoodGuideOpen(true); setMapLayers(current => ({ ...current, restaurants: true })); setActiveMapTool(null) }}>{text('Show nearby food places', '내 주변 맛집 보기')}</button>
-            </>}
-            {activeMapTool === 'facilities' && <>
-              <p>{amenitiesState?.status === 'loading' ? text('Searching near the selected route…', '선택한 코스 주변 시설을 찾고 있습니다…')
-                : amenitiesState?.status === 'unavailable' ? text('Facility data is temporarily unavailable. Try again later.', '시설 정보를 불러오지 못했어요. 잠시 후 다시 확인해 주세요.')
-                  : routeAmenities.length ? text(`${routeAmenities.length} facilities are marked along this route.`, `이 코스 주변 편의시설 ${routeAmenities.length}곳을 지도에 표시했어요.`)
-                    : text('No facilities are currently listed near this route.', '현재 이 코스 주변에 등록된 편의시설이 없습니다.')}</p>
-              <button type="button" className="tour-map-panel-action" aria-pressed={showAmenities} onClick={() => toggleMapLayer('amenities')}>{showAmenities ? text('Hide facility markers', '편의시설 표시 끄기') : text('Show facility markers', '편의시설 표시 켜기')}</button>
-              <section className="tour-facility-list" aria-label={text('Facility legend and nearby places', '편의시설 범례와 주변 장소')}>
-                {(['toilet', 'convenience'] as const).map(kind => {
-                  const matches = routeAmenities.filter(place => place.kind === kind)
-                  const display = AMENITY_DISPLAY[kind]
-                  return <div className={`tour-facility-group tour-facility-group--${kind}`} key={kind}>
-                    <div className="tour-facility-heading"><span aria-hidden="true">{display.icon}</span><strong>{locale === 'ko' ? display.shortKo : display.shortEn}</strong><b>{matches.length}</b></div>
-                    {matches.length ? <ul>{matches.slice(0, 4).map(place => <li key={place.id}><span>{place.name || (locale === 'ko' ? display.shortKo : display.shortEn)}</span><small>{distanceLabel(place.distanceMeters)} {text('along route', '지점')}</small></li>)}</ul>
-                      : <p>{text('None found on this route', '이 코스 주변 등록 정보 없음')}</p>}
-                  </div>
-                })}
-              </section>
-            </>}
+
+
             {activeMapTool === 'settings' && <>
               <section className="tour-map-panel-section"><h3>{text('Bike mode', '자전거 이용 모드')}</h3>
                 <div className="tour-bike-mode-picker" role="group" aria-label={text('Choose a bike mode', '자전거 이용 모드 선택')}>
@@ -1834,8 +1791,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
                 </div></div>
               </section>
               <section className="tour-map-panel-section tour-map-panel-section--actions"><h3>{text('On the map', '지도에 표시')}</h3>
-                <label className="tour-map-panel-check"><input type="checkbox" checked={showAmenities} onChange={() => setMapLayers(current => ({ ...current, amenities: !current.amenities }))} /><span>{text('Rider facilities', '라이더 편의시설')}</span><small>{amenitiesState?.status === 'loading' ? '…' : routeAmenities.length}</small></label>
-                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => setMapLayers(current => ({ ...current, bikeStations: !current.bikeStations }))} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{nearbyStations.length}</small></label>
+                <label className="tour-map-panel-check"><input type="checkbox" checked={discoveryCategory === 'convenience'} onChange={() => selectDiscoveryCategory('convenience')} /><span>{text('Convenience stores', '편의점')}</span><small>{nearbyPlaces.status === 'loading' ? '…' : routeAmenities.length}</small></label>
+                <label className="tour-map-panel-check"><input type="checkbox" checked={showBikeStations} onChange={() => selectDiscoveryCategory('bikes')} /><span>{text('Live Ttareungi stations', '실시간 따릉이 대여소')}</span><small>{nearbyStations.length}</small></label>
                 <button type="button" className="tour-map-panel-action" aria-pressed={showShadows} onClick={() => setShowShadows(value => !value)}>{text('Building shadows', '건물 그림자')} · {showShadows ? text('On', '켜짐') : text('Off', '꺼짐')}</button>
               </section>
             </>}
@@ -1859,17 +1816,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
             ? text(`${pickupStation.available} bikes available`, `${pickupStation.available}대 대여 가능`)
             : activeNearbyBikes?.status === 'unavailable' ? text('Live count unavailable', '실시간 잔여 대수 확인 불가') : text('Checking bikes', '잔여 수 확인 중')}</strong><small>{pickupStation.name}</small></div>
         </div>}
-        {foodGuideOpen && <aside className='tour-food-guide-panel' id='tour-food-guide-panel' aria-label={text('Food along the bicycle route', '자전거 길 주변 맛집')}>
-          <div className='tour-food-guide-heading'>
-            <span><small>{text('NEAR THE ROUTE', '자전거 길 가까이')}</small><strong>{text('Food along the way', '길 주변 맛집')}</strong></span>
-            <button type='button' aria-label={text('Close food places', '맛집 닫기')} onClick={() => setFoodGuideOpen(false)}>&#x00D7;</button>
-          </div>
-          {!routedPath ? <p className='tour-food-guide-status'>{text('Choose a destination and wait for the bicycle route.', '도착지를 선택하고 자전거 경로를 불러와 주세요.')}</p>
-            : activeNearbyFood?.status === 'loading' || !activeNearbyFood ? <p className='tour-food-guide-status'>{text('Finding food near the bicycle route…', '자전거 길 주변 맛집을 찾는 중…')}</p>
-              : activeNearbyFood.status === 'unavailable' ? <p className='tour-food-guide-status'>{text('Food data is unavailable. Please try again shortly.', '맛집 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')}</p>
-                : routeRestaurants.length === 0 ? <p className='tour-food-guide-status'>{text('No named food places were found near this route.', '이 길 가까이에서 이름이 등록된 맛집을 찾지 못했어요.')}</p>
-                  : <div className='tour-nearby-food-list'>{routeRestaurants.map(place => <div className='tour-nearby-food-item' key={place.id}><span><strong>{place.name}</strong><small>{distanceLabel(place.distanceFromRouteMeters ?? 0)} {text('from route', '길에서')} · {place.blogMentions === undefined ? text('Blog data unavailable', '블로그 자료 없음') : text(`${place.blogMentions.toLocaleString()} blog matches`, `블로그 검색 ${place.blogMentions.toLocaleString()}건`)}</small></span><a href={'https://search.naver.com/search.naver?query=' + encodeURIComponent(place.name + ' 맛집')} target='_blank' rel='noopener noreferrer'>{text('Details ↗', '정보 ↗')}</a></div>)}</div>}
-        </aside>}
+
         {view !== 'kakao' && <div className={`tour-map-rotate-controls${view === 'city' || view === 'google' ? ' tour-map-rotate-controls--tilt' : ''}${hasDestination ? ' tour-map-rotate-controls--directions' : ''}`} role="group" aria-label={text('Map camera controls', '지도 방향 조작')}>
           <button type="button" className="tour-map-arrow--up" onClick={() => rotateMap('up')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera up', '카메라 시점을 올리기') : text('Move map north', '지도를 북쪽으로 이동')} title={view === 'city' ? text('Look up to the sky', '하늘 보기') : undefined}>↑</button>
           <button type="button" className="tour-map-arrow--left" onClick={() => rotateMap('left')} aria-label={text('Rotate map to the left', '지도를 왼쪽으로 회전')}>←</button>

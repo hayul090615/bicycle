@@ -161,7 +161,7 @@ function addRibbon(group: THREE.Group, coords: THREE.Vector3[], width: number, m
   const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = true; group.add(mesh)
 }
 
-/** 로컬 좌표가 건물 등의 다각형 외곽 안에 있는지 판정한다. */
+/** 로컬 좌표가 건물 등의 다각형 외곽 안에 있는지 확인한다. */
 function pointInFootprint(point: THREE.Vector3, footprint: THREE.Vector3[]) {
   let inside = false
   for (let current = 0, previous = footprint.length - 1; current < footprint.length; previous = current, current += 1) {
@@ -227,14 +227,18 @@ function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, c
 export function ThirdPersonRideScene({ route, progress, playing, onProgress, locale }: {
   route: TouristRoute; progress: number; playing: boolean; onProgress: (value: number) => void; locale: 'en' | 'ko'
 }) {
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const stopCoordinates = useMemo(() => route.stops.map(({ stationId }) => {
     const { lat, lng } = getTouristStation(stationId)
     return [lng, lat] as LonLat
   }), [route])
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [bikeRoute, setBikeRoute] = useState<BikeRouteResult | null>(null)
   const [mapStatus, setMapStatus] = useState<'routing' | 'loading' | 'osm' | 'river'>('routing')
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const host = useRef<HTMLDivElement>(null)
   const updateRef = useRef({ progress, playing, onProgress })
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => { updateRef.current = { progress, playing, onProgress } }, [progress, playing, onProgress])
   useEffect(() => {
     if (host.current) host.current.dataset.mapLabel = mapStatus === 'osm'
@@ -377,5 +381,6 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
     return () => { window.clearTimeout(osmTimeout); osmController.abort(); cancelAnimationFrame(raf); observer.disconnect(); scene.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); const materials = Array.isArray(object.material) ? object.material : [object.material]; materials.forEach((material) => material.dispose()) } }); renderer.dispose(); renderer.domElement.remove() }
   }, [route, bikeRoute, stopCoordinates])
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="third-person-scene" ref={host} data-map-label="" role="img" aria-label={locale === 'en' ? `Third-person 3D bicycle ride around ${route.title}` : `${route.titleKo} 3인칭 3D 자전거 주행 장면`} />
 }

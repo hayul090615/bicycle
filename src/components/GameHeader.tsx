@@ -1,5 +1,5 @@
 /**
- * 타자 게임의 점수·콤보·시간·정확도와 일시정지 제어를 표시한다. 계산된 게임 상태는 상위 컴포넌트에서 전달받는다.
+ * 타자 게임의 점수·콤보·시간·정확도와 일시정지 제어를 표시한다. 계산된 게임 상태는 이 화면을 사용하는 부모 화면에서 전달받는다.
  */
 interface GameHeaderProps {
   district: string
@@ -16,6 +16,7 @@ interface GameHeaderProps {
 }
 
 export function GameHeader(props: GameHeaderProps) {
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <header className="game-header">
     <div className="game-title-block">
       <div className="game-brand-row">

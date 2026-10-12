@@ -12,19 +12,24 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
   locale: 'ko' | 'en'
   onArrival: () => void
 }) {
+  // 사진 속 버튼과 상단 버튼이 같은 이동 함수를 실행하도록 연결한다.
   const jumpRef = useRef<() => void>(() => {})
   const arrivalRef = useRef(onArrival)
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
   const ko = locale === 'ko'
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => { arrivalRef.current = onArrival }, [onArrival])
 
   useEffect(() => {
     setBusy(false)
     setError(false)
     let disposed = false, request = 0, timeout = 0, confirmation = 0
+    // 도착 버튼으로 요청한 거리 사진 번호다. 이 번호의 사진이 실제로 열린 뒤에만 축하 문구를 띄운다.
     let expectedPano: number | null = null
     let searchRadius = 30
+    // 도착지 사진으로 이동 중인지 기억한다. 이동 중에 여러 번 눌러도 요청을 겹치지 않는다.
     let moving = false
     const client = new api.RoadviewClient()
     const position = new api.LatLng(destination.lat, destination.lng)
@@ -48,6 +53,7 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
       if (!disposed) { setBusy(false); setError(failed) }
     }
     // SDK의 사진 ID와 실제 촬영 좌표를 확인한다. 사진 로딩 중에는 안내를 띄우지 않는다.
+    // 사진 번호와 촬영 위치를 확인한 뒤 안내한다. 목적지와 다른 사진이면 도착으로 처리하지 않는다.
     const confirmPhoto = () => {
       if (disposed || !moving || expectedPano === null || roadview.getPanoId() !== expectedPano) return
       const currentRequest = request
@@ -114,6 +120,7 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
     }
   }, [api, destination.lat, destination.lng, ko, roadview])
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>
     <button type="button" className="tour-roadview-jump-destination" disabled={busy} aria-busy={busy}
       title={ko ? '도착지로 바로 이동' : 'Jump to destination'} onClick={() => jumpRef.current()}>

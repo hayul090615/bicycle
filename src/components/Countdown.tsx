@@ -11,6 +11,7 @@ interface CountdownProps {
 
 export function Countdown({ value, courseTitle, stationName }: CountdownProps) {
   const filledRingSegments = value > 0 ? 4 - value : 3
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="countdown-overlay" role="status" aria-live="assertive">
     <svg className="countdown-route-art" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
       <path className="countdown-route-shadow" d="M-40 560 C150 490 180 255 365 330 S660 485 1040 120" />

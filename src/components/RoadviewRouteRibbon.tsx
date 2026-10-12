@@ -1,5 +1,5 @@
 /**
- * 촬영 좌표 주변의 경로를 지면 앵커에 투영해 파란 SVG 선으로 그린다. 사진 전환 후 좌표·시점을 재확인하며 경로 끝 도착 여부와 다음 사진 이동을 처리한다.
+ * 로드뷰 사진 위에 파란 길을 그린다. 사진이 바뀌면 촬영 위치를 다시 확인하고, 앞으로 이동할 사진과 도착 여부를 찾는다.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { LonLat } from '../services/bikeRoute'
@@ -23,15 +23,18 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
   locale: 'ko' | 'en'
   onDestinationArrival: () => void
 }) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const ribbon = useRef<SVGPathElement>(null)
   const centerline = useRef<SVGPathElement>(null)
   const alignOnce = useRef(false)
   const advanceRef = useRef<() => void>(() => {})
   const arrivalCallback = useRef(onDestinationArrival)
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [offRoute, setOffRoute] = useState(false)
   const [moving, setMoving] = useState(false)
   const [moveFailed, setMoveFailed] = useState(false)
   const ko = locale === 'ko'
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => { arrivalCallback.current = onDestinationArrival }, [onDestinationArrival])
 
   useEffect(() => {
@@ -244,6 +247,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
     }
   }, [api, destination.lat, destination.lng, elevationProfile, host, ko, path, roadview, terrainPath])
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>
     <svg className="tour-roadview-route-ribbon" aria-hidden="true"><path className="tour-roadview-route-band" ref={ribbon} /><path className="tour-roadview-route-centerline" ref={centerline} /></svg>
     <div className="tour-roadview-route-guide">

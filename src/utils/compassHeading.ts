@@ -11,7 +11,7 @@ type OrientationReading = {
   webkitCompassAccuracy?: number
 }
 
-/** 방위 각도를 0 이상 360 미만으로 정규화한다. */
+/** 방위 각도를 0 이상 360 미만으로 같은 규칙의 형태로 바꾼다. */
 export function normalizeHeading(degrees: number) { return ((degrees % 360) + 360) % 360 }
 
 export function phoneCompassHeading(event: OrientationReading): number | null {

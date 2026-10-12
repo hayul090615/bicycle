@@ -20,10 +20,12 @@ interface DistrictSelectorProps {
 }
 
 export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, onOpenAuth, highScore, playedStations }: DistrictSelectorProps) {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [activeTab, setActiveTab] = useState('타자 연습')
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [dialog, setDialog] = useState<SiteDialogKind | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     if (!siteAuth) return
     let active = true
@@ -53,6 +55,7 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
     setDialog('learn')
   }
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <main className="start-screen start-screen--map">
     <div className="city-bike-backdrop" aria-hidden="true">
       <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">

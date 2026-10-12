@@ -13,9 +13,11 @@ export function AuthPage({ kind, onHome, onNavigate }: {
   onNavigate: (kind: AuthPageKind) => void
 }) {
   const isSignup = kind === 'signup'
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [emailSent, setEmailSent] = useState(false)
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => { window.scrollTo(0, 0) }, [])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -52,6 +54,7 @@ export function AuthPage({ kind, onHome, onNavigate }: {
     } finally { setBusy(false) }
   }
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <main className="auth-screen">
     <div className="auth-scenery" aria-hidden="true"><SeoulRideIllustration /></div>
     <header className="auth-topbar">

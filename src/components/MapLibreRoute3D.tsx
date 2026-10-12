@@ -1,5 +1,5 @@
 /**
- * MapLibre의 일반·위성·3D 도시 지도를 구성한다. 경로, 건물, 그림자와 계절별 하늘을 GeoJSON 레이어로 표시하고 이벤트·애니메이션을 정리한다.
+ * 일반·위성·3D 지도에 길과 건물, 그림자를 표시한다. 좌표 자료로 지도 위에 그림을 만들고 지도를 떠날 때 정리한다.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as maplibregl from 'maplibre-gl'
@@ -9,7 +9,7 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BIKE_MAP_BOUNDS_LONLAT, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BIKE_MAP_BOUNDS_LONLAT, SEOUL_BOUNDARY } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
@@ -152,7 +152,7 @@ function makeBuildingShadows(features: MapGeoJSONFeature[], sunElevation: number
   return { type: 'FeatureCollection', features: output }
 }
 
-export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
+export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, accessEstimated, walkPath, pickupStation, amenities, showAmenities, bikeStations, showBikeStations, season, weather, nightSky, routeConditions, restaurants, showCourse, hasDestination, showRestaurants, showRoadInfo, showRiders, cctvCameras, showCctv, showShadows, locationFocusRequest, rotationRequest, onFoodGuideOpen, onMapCenterChange, locale, userLocation, selectedStop, onSelectStop, destinationPicking, customDestination, onPickDestination, onHoverStop, shadowAzimuth, sunElevation, fallback }: {
   viewMode: 'city' | 'satellite' | 'map'
   route: TouristRoute
   routePath: LonLat[] | null
@@ -183,6 +183,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   showShadows: boolean
   locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
+  onMapCenterChange: (point: { lat: number; lng: number }) => void
   onFoodGuideOpen: (point: LonLat) => void
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
@@ -196,6 +197,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   sunElevation: number
   fallback: ReactNode
 }) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
+  const centerCallbackRef = useRef(onMapCenterChange)
+  centerCallbackRef.current = onMapCenterChange
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<MapLibreMarker[]>([])
@@ -215,6 +219,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   const sunElevationRef = useRef(sunElevation)
   const nightSkyRef = useRef(nightSky)
   const updateBuildingShadowsRef = useRef<() => void>(() => {})
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [satellite, setSatellite] = useState(() => viewMode !== 'map')
   shadowAzimuthRef.current = shadowAzimuth
@@ -224,6 +229,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   const is3DView = viewMode === 'city'
   const isFlatMap = !is3DView
   const showSatellite = viewMode === 'satellite' || (viewMode === 'city' && satellite)
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
@@ -231,6 +237,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   const linePoints = useMemo(() => routePath ?? points.map(point => [point.lng, point.lat] as LonLat), [routePath, points])
   if (initialCenter.current === null) initialCenter.current = [126.978, 37.5665]
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     if (!host.current) return
     let disposed = false
@@ -270,6 +277,14 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     updateBuildingShadowsRef.current = updateBuildingShadows
     map.on('idle', updateBuildingShadows)
     map.on('moveend', updateBuildingShadows)
+    // 지도를 옮긴 뒤 새 중심을 전달한다. 주변 500m 장소도 이 위치에서 다시 찾는다.
+    const reportCenter = () => {
+      if (disposed || failed) return
+      const center = map.getCenter()
+      centerCallbackRef.current({ lat: center.lat, lng: center.lng })
+    }
+    map.on('moveend', reportCenter)
+    map.on('load', reportCenter)
     map.addControl(new maplibregl.NavigationControl({ showZoom: false, showCompass: false, visualizePitch: is3DView }), 'top-right')
     const fail = () => {
       if (disposed || failed) return
@@ -326,13 +341,6 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
             map.setLayoutProperty(layer.id, 'text-field', labelTextField)
           }
         }
-        map.addSource('tour-seoul-outside-mask', { type: 'geojson', data: SEOUL_OUTSIDE_MASK })
-        map.addLayer({
-          id: 'tour-seoul-outside-mask',
-          type: 'fill',
-          source: 'tour-seoul-outside-mask',
-          paint: { 'fill-color': '#f1f2ec', 'fill-opacity': .38, 'fill-antialias': false },
-        })
         map.addSource('tour-seoul-boundary', {
           type: 'geojson',
           data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: SEOUL_BOUNDARY } },

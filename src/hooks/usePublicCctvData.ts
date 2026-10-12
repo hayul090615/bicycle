@@ -1,5 +1,5 @@
 /**
- * 압축 CCTV 자료의 비동기 로딩·오류 상태를 관리한다. 전체 원본 목록을 반환하며 지도에 보낼 경로 주변 자료 선택은 탐색 화면에서 수행한다.
+ * CCTV 자료를 가져오는 동안 기다림과 오류 상태를 기억한다. 화면에서는 이 자료 중 현재 지도 중심 500m 안의 위치만 골라 쓴다.
  */
 import { useEffect, useState } from 'react'
 import { loadPublicCctvBundle, type CameraBundle, type PublicCamera } from '../services/publicCctv'
@@ -7,10 +7,12 @@ import { loadPublicCctvBundle, type CameraBundle, type PublicCamera } from '../s
 const EMPTY_CAMERAS: PublicCamera[] = []
 
 export function usePublicCctvData() {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [bundle, setBundle] = useState<CameraBundle | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     let active = true
     void loadPublicCctvBundle()

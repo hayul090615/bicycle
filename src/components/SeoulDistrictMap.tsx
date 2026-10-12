@@ -19,6 +19,7 @@ const riverPolygonToSvgPath = (rings: (readonly [number, number])[][]) => rings.
 }).join(' ') + ' Z').join(' ')
 
 export function SeoulDistrictMap({ selected, onSelect, playedStationCounts, userLocation }: SeoulDistrictMapProps) {
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="seoul-map-wrap">
     <svg className="seoul-district-map" viewBox={SEOUL_MAP_VIEWBOX} role="img" aria-label="서울 25개 자치구 선택 지도">
       <defs>

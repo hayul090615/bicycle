@@ -127,7 +127,7 @@ export async function fetchBikeRoute(route: TouristRoute, signal: AbortSignal): 
   return fetchBikePath(waypoints, signal, true)
 }
 
-/** 자전거 경로를 조회하며 선택적으로 이전 경로 캐시를 재사용한다. */
+/** 자전거 경로를 조회하며 선택적으로 이전 경로 이전에 받은 결과를 재사용한다. */
 export async function fetchBikePath(waypoints: LonLat[], signal: AbortSignal, cache = false): Promise<BikeRouteResult> {
   const cacheKey = `safe-bike-route-v3-${waypoints.map(([lng, lat]) => `${lng.toFixed(5)},${lat.toFixed(5)}`).join(';')}`
   if (cache) {

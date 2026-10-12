@@ -1,5 +1,5 @@
 /**
- * 카카오 지도에서 경로·대여소·현재 위치·주변 시설을 표시한다. 지도 좌표 선택과 로드뷰 이동을 상위 화면에 알리고 SDK 오버레이를 갱신한다.
+ * 카카오 지도에 길과 현재 위치, 선택한 주변 장소를 표시한다. 지도를 옮기면 새 중심을 알려 주변 500m 정보를 다시 찾게 한다.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
@@ -13,7 +13,7 @@ import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY } from '../data/seoulBoundary'
 
 const MAX_KAKAO_MAP_LEVEL = 9
 
@@ -114,6 +114,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   onFoodGuideOpen: (point: LonLat) => void
   fallback: ReactNode
 }) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const apiRef = useRef<KakaoMapsApi | null>(null)
@@ -125,7 +126,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const cctvOverlaysRef = useRef<KakaoOverlay[]>([])
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
-  const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const arrivalOverlayRef = useRef<KakaoOverlay | null>(null)
@@ -138,7 +138,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const lastLocationFocusRequestRef = useRef(0)
   const initialSeoulViewAtRef = useRef<number | null>(null)
   const locationFocusTimerRef = useRef<number | null>(null)
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const points = useMemo(() => route.stops.map(stop => {
     const station = getTouristStation(stop.stationId)
     return { lat: station.lat, lng: station.lng }
@@ -148,6 +150,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const safeWalkPath = useMemo(() => isValidPath(walkPath) ? walkPath : null, [walkPath])
   const linePoints = useMemo(() => safeRoutePath?.map(([lng, lat]) => ({ lat, lng })) ?? points, [safeRoutePath, points])
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     let disposed = false
     let timeout = 0
@@ -168,16 +171,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       mapCreated = true
       api.event.addListener(map, 'zoom_changed', () => {
         if (map.getLevel() > MAX_KAKAO_MAP_LEVEL) map.setLevel(MAX_KAKAO_MAP_LEVEL, { animate: false })
-      })
-      const maskPaths = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => new api.LatLng(lat, lng)))
-      cityMaskOverlayRef.current = new api.Polygon({
-        map,
-        path: maskPaths,
-        strokeWeight: 0,
-        strokeColor: '#000000',
-        strokeOpacity: 0,
-        fillColor: '#f1f2ec',
-        fillOpacity: .76,
       })
       cityBoundaryOverlayRef.current = new api.Polyline({
         map,
@@ -236,7 +229,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cctvOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
-      cityMaskOverlayRef.current?.setMap(null)
       cityBoundaryOverlayRef.current?.setMap(null)
       destinationOverlayRef.current?.setMap(null)
       arrivalOverlayRef.current?.setMap(null)
@@ -252,7 +244,6 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       cctvOverlaysRef.current = []
       sceneryOverlaysRef.current = []
       userOverlayRef.current = null
-      cityMaskOverlayRef.current = null
       cityBoundaryOverlayRef.current = null
       destinationOverlayRef.current = null
       arrivalOverlayRef.current = null

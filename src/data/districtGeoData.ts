@@ -1,5 +1,5 @@
 /**
- * 서울 구 경계 GeoJSON을 읽고 이름별 경계 조회표를 만든다. 좌표 배열은 [경도, 위도] 순서이며 Polygon과 MultiPolygon의 링을 공통 형식으로 제공한다.
+ * 서울 25개 구의 경계 자료를 구 이름으로 찾기 쉽게 정리한다. 좌표는 [경도, 위도] 순서이며 여러 구역도 배열로 함께 저장한다.
  */
 import geoJsonText from './seoulDistricts.geojson?raw'
 import type { SeoulDistrict } from './districtCourses'

@@ -1,5 +1,5 @@
 /**
- * 서울시 대여소 응답을 게임 공통 BikeStation 형식으로 변환한다. 자치구별 API 조회와 사이트에 포함된 기본 대여소 스냅샷을 제공한다.
+ * 서울시 대여소 응답을 게임 공통 BikeStation 형식으로 변환한다. 자치구별 API 조회와 사이트에 포함된 기본 대여소 미리 저장해 둔 자료을 제공한다.
  */
 import type { BikeStation } from '../types/game'
 import { allBikeStations, stationSnapshotMeta, type SeoulDistrict } from '../data/districtCourses'

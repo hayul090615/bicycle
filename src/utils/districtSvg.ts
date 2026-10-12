@@ -1,5 +1,5 @@
 /**
- * 서울 구 경계의 위도·경도를 SVG 화면 좌표로 투영한다. 전체 경계가 정해진 viewBox 안에 들어오도록 비율을 맞추고 경로 문자열과 구 이름 위치를 구한다.
+ * 서울 구의 실제 위치를 작은 지도 그림 안의 위치로 바꾼다. 그림 크기에 맞춰 구 경계와 이름을 배치한다.
  */
 import { getFeatureCoordinates, getFeatureRings, seoulDistrictGeoData, type Coordinate, type DistrictGeoFeature } from '../data/districtGeoData'
 

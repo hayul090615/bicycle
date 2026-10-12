@@ -47,10 +47,12 @@ function readText(district: string) {
 }
 
 export function TextPractice({ district: initialDistrict, onDistrictChange, embedded = false, onBack }: { district: SeoulDistrict | null; onDistrictChange: (district: SeoulDistrict) => void; embedded?: boolean; onBack?: () => void }) {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [district, setDistrict] = useState<SeoulDistrict>(initialDistrict ?? SEOUL_DISTRICTS[0])
   const key = `${TEXT_KEY_PREFIX}${district}`
   const [target, setTarget] = useState(() => readText(initialDistrict ?? SEOUL_DISTRICTS[0]))
   const [typed, setTyped] = useState('')
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     if (!embedded) window.scrollTo(0, 0)
   }, [embedded])
@@ -61,6 +63,7 @@ export function TextPractice({ district: initialDistrict, onDistrictChange, embe
     try { localStorage.setItem(key, target) } catch { /* local saving is optional */ }
   }, [key, target])
 
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const targetCharacters = useMemo(() => toCharacters(target), [target])
   const typedCharacters = toCharacters(typed)
   let validPrefix = 0

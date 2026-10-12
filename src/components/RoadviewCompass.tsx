@@ -12,11 +12,14 @@ const DIRECTIONS = { ko: ['북', '북동', '동', '남동', '남', '남서', '�
 export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; roadview: KakaoRoadview; locale: 'ko' | 'en' }) {
   // 화면의 방위 이름은 언어만 바꾸며 SDK의 실제 회전 각도는 그대로 사용한다.
   const ko = locale === 'ko'
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [heading, setHeading] = useState(0)
   const [following, setFollowing] = useState(false)
   const [sensorStatus, setSensorStatus] = useState<'idle' | 'asking' | 'denied' | 'unavailable'>('idle')
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const operation = useRef(0)
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     let frame = 0
     const read = () => {
@@ -97,6 +100,7 @@ export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; 
   const message = sensorStatus === 'denied' ? (ko ? '방향 센서 권한을 허용해 주세요.' : 'Allow orientation access to use this.')
     : sensorStatus === 'unavailable' ? (ko ? '이 기기에서 방향 정보를 받지 못했어요.' : 'Direction data is unavailable on this device.') : null
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="tour-roadview-compass-dock">
     <button type="button" className="tour-roadview-compass" onClick={north} aria-label={northLabel} title={northLabel}>
       <span className="tour-roadview-compass-dial" style={{ '--compass-bearing': `${-heading}deg` } as CSSProperties} aria-hidden="true">

@@ -1,5 +1,5 @@
 /**
- * Google 3D 지도에서 사용하는 최소 타입과 SDK 로더다. 환경 변수 키를 확인하고 같은 SDK를 여러 번 불러오지 않도록 로딩 Promise를 공유한다.
+ * Google 지도 도구를 불러온다. 이미 불러오는 중이면 같은 작업을 기다려 여러 번 설치하지 않게 한다.
  */
 export const hasGoogleMapsKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim())
 

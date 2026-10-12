@@ -13,8 +13,10 @@ const headings: Record<SiteDialogKind, string> = {
 export function SiteDialog({ kind, userEmail, onClose }: {
   kind: SiteDialogKind; userEmail: string | null; onClose: () => void
 }) {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="site-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="site-dialog" role="dialog" aria-modal="true" aria-labelledby="site-dialog-title">
       <button className="site-dialog-close" type="button" aria-label="닫기" onClick={onClose}>×</button>

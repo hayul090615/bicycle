@@ -18,6 +18,7 @@ const seasonNames: Record<TourSeason, [string, string]> = {
 }
 
 export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () => void; darkMode: boolean; onToggleTheme: () => void }) {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [locale, setLocale] = useState<Locale>(initialSiteLocale)
   const [seoulClock, setSeoulClock] = useState(nowInSeoul)
   const initialRoute = touristRoutes.find(item => item.id === new URLSearchParams(window.location.search).get('route')) ?? touristRoutes[0]
@@ -33,10 +34,13 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   const [rentalWidgetTarget, setRentalWidgetTarget] = useState<HTMLDivElement | null>(null)
   const [rentalTimerOpen, setRentalTimerOpen] = useState(false)
   const [mapSequenceReady, setMapSequenceReady] = useState(false)
+  // 다른 화면에 전달할 함수를 기억한다. 대괄호 안의 값이 바뀌면 함수를 새로 만든다.
   const finishInitialMapSequence = useCallback(() => setMapSequenceReady(true), [])
   const closeRentalTimer = useCallback(() => setRentalTimerOpen(false), [])
+  const openRentalTimer = useCallback(() => setRentalTimerOpen(true), [])
   const categoryRoutes = touristRoutes.filter((candidate) => candidate.category === category)
   const route = categoryRoutes.find((candidate) => candidate.id === routeId) ?? categoryRoutes[0]
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     const timer = window.setInterval(() => setSeoulClock(nowInSeoul()), 60_000)
     return () => window.clearInterval(timer)
@@ -122,6 +126,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
     } catch { setPlaceSearchStatus('error') }
   }
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <main className={`tour-screen${darkMode ? ' tour-screen--dark' : ''}`}>
     <header className="tour-topbar">
       <div className="tour-brand"><img src={BIKE_IMAGE_PATH} alt="" /><span>{textFor(locale, 'TTAREUNGI SEOUL JOURNEY', '따릉이 서울 여행')}<small>{textFor(locale, 'Find your bike route through Seoul', '서울에서 자전거 길을 찾아보세요')}</small></span></div>
@@ -144,7 +149,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
           <span className="tour-theme-label">{darkMode ? textFor(locale, 'Light', '라이트') : textFor(locale, 'Dark', '다크')}</span>
         </button>
         <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
-        <button type="button" className="tour-timer-toggle" aria-expanded={rentalTimerOpen} aria-controls="tour-rental-timer-panel" onClick={() => setRentalTimerOpen(open => !open)}><span aria-hidden="true">⏱</span>{textFor(locale, 'Timer', '타이머')}</button>
+        <button type="button" className="tour-timer-toggle" aria-expanded={rentalTimerOpen} aria-controls="tour-rental-timer-panel" onClick={() => setRentalTimerOpen(open => !open)}><span aria-hidden="true">⏱</span>{textFor(locale, 'Pass time', '이용시간')}</button>
         <div className="tour-typing-action">
           <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}>{textFor(locale, 'Typing game', '타자 게임')} ↗</button>
           <div className="tour-rental-widget-slot" ref={setRentalWidgetTarget} />
@@ -156,7 +161,7 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
         <TourRouteExplorer route={route} routes={touristRoutes} category={category} onRouteSelect={chooseRouteFromMap}
           originStopIndex={originStopIndex} destinationStopIndex={destinationStopIndex} viaStopIndex={viaStopIndex}
           onOriginStopChange={setOriginStopIndex} onDestinationStopChange={setDestinationStopIndex} onViaStopChange={setViaStopIndex}
-          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} onRoadviewOpen={closeRentalTimer} searchedDestination={searchedDestination} onInitialMapSequenceComplete={finishInitialMapSequence} />
+          locale={locale} shadowDate={seoulClock.date} shadowMinutes={seoulClock.minutes} rentalWidgetTarget={rentalWidgetTarget} rentalTimerOpen={rentalTimerOpen} onRoadviewOpen={closeRentalTimer} onDestinationSelected={openRentalTimer} searchedDestination={searchedDestination} onInitialMapSequenceComplete={finishInitialMapSequence} />
       </section>
       <details className="tour-more-details" id="tour-routes">
         <summary><span><small>{textFor(locale, 'MORE TO EXPLORE', '서울을 더 둘러보기')}</small><strong>{textFor(locale, 'Browse ride themes and seasonal routes', '계절별 풍경과 테마 코스 보기')}</strong></span><i aria-hidden="true">＋</i></summary>

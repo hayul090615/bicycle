@@ -1,5 +1,5 @@
 /**
- * 카카오 로드뷰 촬영 지점을 조회하고 사진 뷰어를 유지한다. 모바일 전체화면 포털, 초점 이동, 사진 로딩 상태와 나침반·경로 표시를 연결한다.
+ * 선택한 위치의 거리 사진을 가져온다. 휴대폰에서는 전체화면으로 열고, 나침반과 파란 길, 도착 버튼을 연결한다.
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -27,6 +27,7 @@ type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
 const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
 export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, terrainPath, elevationProfile, onDestinationArrival }: KakaoRoadviewPanelProps) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const anchorRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -36,6 +37,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   const confirmedPanoRef = useRef<number | null>(null)
   const requestRef = useRef(0)
   const positionCallbackRef = useRef(onPositionChange)
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<RoadviewStatus>('loading')
   const [retry, setRetry] = useState(0)
   const [expanded, setExpanded] = useState(() => window.matchMedia(MOBILE_ROADVIEW_QUERY).matches)
@@ -50,6 +52,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   const viewerId = useId()
   const ko = locale === 'ko'
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useLayoutEffect(() => {
     const stage = anchorRef.current?.closest('.tour-map-stage') ?? anchorRef.current?.parentElement
     if (!stage) return
@@ -144,6 +147,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     let expired = false
     let api: KakaoMapsApi | null = null
     let roadview: KakaoRoadview | null = null
+    // 도착 버튼으로 요청한 거리 사진 번호다. 이 번호의 사진이 실제로 열린 뒤에만 축하 문구를 띄운다.
     let expectedPano: number | null = null
     let panoramaReady = false
     const request = ++requestRef.current
@@ -268,6 +272,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
       ? (ko ? '이 위치 주변에 거리 사진이 없습니다.' : 'No street imagery near this location.')
       : (ko ? '거리 사진을 불러오지 못했습니다.' : 'Street imagery could not be loaded.')
 
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>
     <span className="tour-roadview-anchor" ref={anchorRef} aria-hidden="true" />
     {createPortal(<section

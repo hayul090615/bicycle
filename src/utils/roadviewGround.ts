@@ -1,5 +1,5 @@
 /**
- * 로드뷰 사진의 지면 표시 높이를 경로 고도 차이로 근사한다. 깊이 자료가 없는 오버레이이므로 경사 보정과 가시 거리·모퉁이 표시 범위를 제한한다.
+ * 로드뷰의 파란 길을 도로 높이에 가깝게 맞춘다. 사진에는 정확한 깊이 정보가 없어서 가까운 짧은 구간만 표시한다.
  */
 import type { LonLat } from '../services/bikeRoute'
 import type { RouteElevationPoint } from '../services/routeConditions'

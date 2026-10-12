@@ -18,12 +18,15 @@ interface TypingInputProps {
 export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(function TypingInput(
   { target, value, analysis, disabled, timerStarted, onValueChange, onCompositionCommit, onSubmitAttempt }, ref,
 ) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const inputRef = useRef<HTMLInputElement>(null)
   const composingRef = useRef(false)
   const compositionSettleFrameRef = useRef<number | null>(null)
   const compositionSettlePendingRef = useRef(false)
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [isComposing, setIsComposing] = useState(false)
   useImperativeHandle(ref, () => inputRef.current!, [])
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     if (!isComposing && !compositionSettlePendingRef.current && inputRef.current && inputRef.current.value !== value) inputRef.current.value = value
   }, [isComposing, target, value])
@@ -52,6 +55,7 @@ export const TypingInput = forwardRef<HTMLInputElement, TypingInputProps>(functi
       if (input.value !== acceptedValue) input.value = acceptedValue
     })
   }
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <section className={`typing-panel ${analysis.isWrong ? 'typing-panel--wrong' : ''}`}>
     <p className="typing-kicker">다음 대여소 이름을 입력하세요</p>
     <label className="sr-only" htmlFor="station-input">대여소 이름 입력</label>

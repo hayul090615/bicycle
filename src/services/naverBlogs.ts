@@ -1,5 +1,5 @@
 /**
- * 서버의 네이버 검색 API에서 블로그 목록이나 언급 수를 가져온다. 검색 실패는 별도 오류 타입으로 구분하고 언급 수 요청은 메모리 캐시를 사용한다.
+ * 서버의 네이버 검색 API에서 블로그 목록이나 언급 수를 가져온다. 검색 실패는 별도 오류 타입으로 구분하고 언급 수 요청은 메모리 받은 결과를 잠시 저장해서 쓴다.
  */
 export interface NaverBlogPost {
   title: string
@@ -27,7 +27,7 @@ export async function searchNaverBlogs(query: string, signal: AbortSignal): Prom
   return data.items ?? []
 }
 
-/** 블로그 검색의 총 언급 수를 조회하고 같은 검색어 결과를 캐시한다. */
+/** 블로그 검색의 총 언급 수를 조회하고 같은 검색어 결과를 잠시 저장해 다시 쓴다. */
 export async function countNaverBlogMentions(query: string, signal: AbortSignal): Promise<number | null> {
   if (mentionCache.has(query)) return mentionCache.get(query) ?? null
   const params = new URLSearchParams({ query, countOnly: '1' })

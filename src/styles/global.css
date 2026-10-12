@@ -2,6 +2,38 @@
    같은 선택자의 뒤쪽 보완 규칙이 앞쪽 기본값을 덮어쓰므로 선언 순서를 유지한다. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
+/* 지도 정보를 고르는 가로 버튼 줄은 지도와 다른 줄에 두어 기존 도구를 가리지 않는다. */
+.tour-discovery-bar { position: relative; z-index: 12; flex: 0 0 auto; min-width: 0; width: 100%; padding: 7px 10px; background: #edf2eb; }
+.tour-discovery-chips { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; padding: 2px; }
+.tour-discovery-chips > button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; gap: 7px; min-height: 42px; padding: 8px 15px; border: 1px solid #dae2db; border-radius: 999px; color: #20372c; background: #fff; box-shadow: 0 2px 5px #1b3d2812; font: 750 13px/1.2 system-ui, 'Malgun Gothic', sans-serif; cursor: pointer; transition: background-color .15s, border-color .15s; }
+.tour-discovery-chips > button > span { font-size: 17px; }
+.tour-discovery-chips > button > small { padding: 2px 5px; border-radius: 99px; color: #17603e; background: #edf5ed; font-size: 10px; }
+.tour-discovery-chips > button:hover { border-color: #71a789; background: #edf7ef; }
+.tour-discovery-chips > button[aria-pressed='true'] { border-color: #17603e; box-shadow: 0 0 0 2px #17603e26; }
+.tour-discovery-note { display: flex; justify-content: space-between; gap: 12px; padding: 6px 3px 0; color: #466152; font-size: 11px; }
+.tour-discovery-note a, .tour-discovery-detail a { flex-shrink: 0; color: #167944; font-weight: 750; }
+.tour-discovery-detail { display: flex; align-items: center; gap: 10px; padding: 10px 8px 2px; font-size: 12px; }
+.tour-discovery-detail > div { min-width: 0; flex: 1; }
+.tour-discovery-detail strong, .tour-discovery-detail small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-discovery-detail small { margin-top: 4px; color: #587365; }
+.tour-discovery-detail > button { width: 36px; height: 36px; border: 0; border-radius: 50%; color: #294637; background: #fff; font-size: 20px; cursor: pointer; }
+.tour-screen--dark .tour-discovery-bar { background: #1b2c23; }
+.tour-screen--dark .tour-discovery-chips > button { border-color: #455a4c; color: #fff; background: #293c30; }
+.tour-screen--dark .tour-discovery-chips > button:hover { background: #3b5945; }
+.tour-screen--dark .tour-discovery-chips > button[aria-pressed='true'] { border-color: #8bcaa2; background: #315a40; }
+.tour-screen--dark .tour-discovery-note, .tour-screen--dark .tour-discovery-detail small { color: #d9e8dc; }
+.tour-screen--dark .tour-discovery-note a, .tour-screen--dark .tour-discovery-detail a { color: #b4efcb; }
+/* 마우스나 키보드 초점을 올리면 테마 버튼의 색이 바뀐다. */
+.tour-header-actions .tour-theme-button { transition: background-color .15s, border-color .15s, color .15s; }
+.tour-screen .tour-header-actions .tour-theme-button:hover, .tour-screen .tour-header-actions .tour-theme-button:focus-visible { border-color: #d4b449; color: #244434; background: #fff0b8; }
+.tour-screen--dark .tour-header-actions .tour-theme-button:hover, .tour-screen--dark .tour-header-actions .tour-theme-button:focus-visible { border-color: #93b59a; color: #fff; background: #3b5b47; }
+/* 1시간 또는 2시간을 누르면 별도의 시작 버튼 없이 이용시간 계산을 시작한다. */
+.tour-rental-pass-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.tour-rental-pass-options > button { min-height: 44px; border: 1px solid #bcd2c1; border-radius: 12px; color: #174b34; background: #f0f7ee; font: 800 14px/1.2 system-ui, 'Malgun Gothic', sans-serif; cursor: pointer; }
+.tour-rental-pass-options > button:hover { border-color: #2c8859; background: #dfefdc; }
+.tour-rental-pass-options > button[aria-pressed='true'] { color: #fff; border-color: #17603e; background: #17603e; }
+.tour-rental-stop-button { min-height: 36px; padding: 6px 14px; border: 1px solid #dfd2ce; border-radius: 10px; color: #a53828; background: #fff4f0; font: 700 12px/1.2 system-ui, sans-serif; cursor: pointer; }
+
 :root {
   font-family: 'Noto Sans KR', system-ui, sans-serif;
   color: #173d36;
@@ -4131,6 +4163,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-header-actions .tour-language-button,
 .tour-screen--dark .tour-header-actions .tour-timer-toggle { border-color: #46545c; color: #eaf0f1; background: #202c33; }
 .tour-screen--dark .tour-header-actions .tour-back { border-color: #31444d; background: #31444d; }
+/* 메뉴 안에는 두 버튼만 있으므로 내용 높이만 사용하고, 하단 길 안내보다 위에 둔다. */
+.tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 4.1rem; bottom: auto; left: .65rem; right: auto; width: min(360px, calc(100% - 1.3rem)); height: auto; max-height: calc(100% - 5rem); transform: none; }
+@media (max-width: 900px) {
+  .tour-screen .tour-explorer-grid--menu-open .tour-map-control-rail { top: 6.6rem; bottom: auto; left: .65rem; max-height: calc(100% - 18rem); }
+}
 @media (max-width: 700px) {
   .typing-main-nav > button { min-height: 32px; padding: .32rem .62rem; font-size: .68rem; }
   .typing-account-actions button { min-height: 30px; padding: .3rem .55rem; font-size: .58rem; }

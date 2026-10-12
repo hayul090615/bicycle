@@ -1,5 +1,5 @@
 /**
- * 대여소 스냅샷을 자치구별 타자 게임 코스로 변환한다. 경계 안의 대여소를 고르고 중복 입력 이름과 경로 교차를 정리한다.
+ * 대여소 미리 저장해 둔 자료을 자치구별 타자 게임 코스로 변환한다. 경계 안의 대여소를 고르고 중복 입력 이름과 경로 교차를 정리한다.
  */
 import stationData from './seoulBikeStations.json'
 import type { BikeStation, DistrictCourse, Station } from '../types/game'
@@ -56,7 +56,7 @@ function makeDistrictTypingNames(stations: BikeStation[]) {
   }))
 }
 
-/** 지리 좌표가 다각형 링 내부에 있는지 교차 횟수로 판정한다. */
+/** 지리 좌표가 다각형 링 내부에 있는지 교차 횟수로 확인한다. */
 function isPointInRing(lng: number, lat: number, ring: [number, number][]) {
   let inside = false
   for (let current = 0, previous = ring.length - 1; current < ring.length; previous = current, current += 1) {

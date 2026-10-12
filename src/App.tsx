@@ -56,11 +56,13 @@ const SEOUL_SPLASH_PATH = SEOUL_BOUNDARY.map(([lng, lat], index) => {
 
 /** 게임 상태 훅과 입력창·지도·점수 표시를 연결한다. */
 function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onToggleTheme }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void; lightMode: boolean; onToggleTheme: () => void }) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const inputRef = useRef<HTMLInputElement>(null)
   const game = useTypingGame(course, onResult)
   const stationData = useBikeStations(course.district as SeoulDistrict)
   const overallProgress = ((game.stationIndex + game.segmentProgress) / (course.stations.length - 1)) * 100
   const upcomingStation = course.stations[game.stationIndex + 2]
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useLayoutEffect(() => {
     const updateVisualViewport = () => {
       const viewport = window.visualViewport
@@ -83,6 +85,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
   const focusGame = (event: MouseEvent<HTMLElement>) => {
     if (game.status === 'playing' && !(event.target as HTMLElement).closest('button, input')) inputRef.current?.focus()
   }
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <main className={`game-screen ${lightMode ? 'game-screen--light' : ''}`} onClick={focusGame}>
     <CourseMap course={course} stationIndex={game.stationIndex} segmentProgress={game.segmentProgress}
       isWrong={game.analysis.isWrong} errorPulse={game.errorPulse} arrivalPulse={game.arrivalPulse}
@@ -114,10 +117,12 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
 }
 
 export default function App() {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [screen, setScreen] = useState<AppScreen>(screenFromUrl)
   useEffect(() => { void registerSiteVisit() }, [])
   const [showSiteSplash, setShowSiteSplash] = useState(true)
   const [lightMode, setLightMode] = useState(() => localStorage.getItem(GAME_THEME_KEY) !== 'false')
+  // 다른 화면에 전달할 함수를 기억한다. 대괄호 안의 값이 바뀌면 함수를 새로 만든다.
   const toggleTheme = useCallback(() => setLightMode(current => {
     localStorage.setItem(GAME_THEME_KEY, String(!current))
     return !current

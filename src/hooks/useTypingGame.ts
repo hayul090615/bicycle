@@ -1,5 +1,5 @@
 /**
- * 타자 게임의 카운트다운·입력 판정·대여소 이동·점수를 관리한다. 한글 조합 입력을 고려하고 종료 결과는 한 번만 상위 화면에 전달한다.
+ * 타자 게임의 카운트다운·입력 판정·대여소 이동·점수를 관리한다. 한글 조합 입력을 고려하고 종료 결과는 한 번만 이 화면을 사용하는 부모 화면에 전달한다.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DistrictCourse, GameResultData, GameStatus } from '../types/game'
@@ -9,6 +9,7 @@ import { useGameTimer } from './useGameTimer'
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 
 export function useTypingGame(course: DistrictCourse, onFinish: (result: GameResultData) => void) {
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<GameStatus>('countdown')
   const [countdown, setCountdown] = useState(3)
   const [stationIndex, setStationIndex] = useState(0)
@@ -24,6 +25,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const [compositionActive, setCompositionActive] = useState(false)
   const [hasStartedTyping, setHasStartedTyping] = useState(false)
   const [highScore, setHighScore] = useState(() => Number(localStorage.getItem(HIGH_SCORE_KEY) ?? 0))
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const maxPrefixRef = useRef(0)
   const correctUnitsRef = useRef(0)
   const resultSentRef = useRef(false)
@@ -37,6 +39,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const currentStation = course.stations[stationIndex]
   const nextStation = course.stations[stationIndex + 1]
   const targetText = nextStation?.typingName ?? nextStation?.name ?? ''
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const rawAnalysis = useMemo(() => analyzeInput(input, targetText), [input, targetText])
   // 한글 조합 중에는 이미 확인한 진행률이 임시 자모 때문에 뒤로 가지 않게 한다.
   const analysis = useMemo(() => {
@@ -51,6 +54,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     return { ...stableAnalysis, firstWrongIndex: -1, isWrong: false, isComplete: false }
   }, [compositionActive, rawAnalysis, segmentProgress])
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     if (status !== 'countdown') return
     if (countdown === 0) {
@@ -61,6 +65,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     return () => window.clearTimeout(timeoutId)
   }, [countdown, status])
 
+  // 다른 화면에 전달할 함수를 기억한다. 대괄호 안의 값이 바뀌면 함수를 새로 만든다.
   const buildResult = useCallback((
     completed: boolean,
     finalPassed = stationIndex,

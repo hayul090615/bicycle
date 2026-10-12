@@ -25,6 +25,7 @@ export function GameResult({ district, result, highScore, totalStations, leaderb
   const rankingRows = currentRank > 10 && currentEntry
     ? [...leaderboard.slice(0, 10), currentEntry]
     : leaderboard.slice(0, 10)
+  // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <main className="result-screen"><div className="result-layout"><section className="result-card">
       <div className={`result-icon ${result.completed ? 'result-icon--complete' : ''}`}>{result.completed ? '⚑' : '⌛'}</div>
       <span className="eyebrow">{district} RIDE REPORT</span>

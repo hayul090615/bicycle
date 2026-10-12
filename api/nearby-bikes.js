@@ -1,5 +1,5 @@
 /**
- * 서울시 따릉이 실시간 데이터를 페이지별로 가져와 캐시한다. 요청 좌표와 반경에 맞는 대여소만 골라 자전거 수량과 갱신 시각을 반환한다.
+ * 서울시 따릉이 실시간 데이터를 페이지별로 가져와 잠시 저장해 다시 쓴다. 요청 좌표와 반경에 맞는 대여소만 골라 자전거 수량과 갱신 시각을 반환한다.
  */
 const SEOUL_BIKE_API = 'http://openapi.seoul.go.kr:8088'
 const MAX_STATIONS = 6000
@@ -26,7 +26,7 @@ async function fetchPage(key, start, end) {
   return data.rentBikeStatus
 }
 
-/** 서울시 실시간 대여소 전체 페이지를 불러와 짧은 캐시를 갱신한다. */
+/** 서울시 실시간 대여소 전체 페이지를 불러와 짧은 이전에 받은 결과를 갱신한다. */
 async function loadStations(key) {
   if (cached.rows.length && Date.now() - cached.updatedAt < CACHE_MS) return cached
   const first = await fetchPage(key, 1, 1000)

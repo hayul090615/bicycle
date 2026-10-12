@@ -66,12 +66,15 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   mapSequenceReady: boolean
 }) {
   const ko = locale === 'ko'
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
   const [adOpen, setAdOpen] = useState(false)
   const [hideAdForDay, setHideAdForDay] = useState(false)
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const sequenceHandledRef = useRef(false)
   const step = tutorialStep === null ? null : TUTORIAL_STEPS[tutorialStep]
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     if (!mapSequenceReady || sequenceHandledRef.current) return
     let cancelled = false

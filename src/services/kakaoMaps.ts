@@ -1,5 +1,5 @@
 /**
- * 카카오 지도·로드뷰의 타입과 SDK 로더, 서울 장소 검색을 제공한다. 카카오 검색과 보조 OSM 검색 결과를 공통 장소 좌표 형식으로 반환한다.
+ * 카카오 지도와 로드뷰 도구를 불러오고 장소를 검색한다. 지도에서 받은 결과를 사이트에서 쓰는 같은 모양으로 정리한다.
  */
 export const hasKakaoMapsKey = Boolean(import.meta.env.VITE_KAKAO_MAP_KEY?.trim())
 
@@ -51,6 +51,13 @@ export interface KakaoRoadview {
 export interface KakaoRoadviewClient {
   getNearestPanoId(position: KakaoLatLng, radius: number, callback: (panoId: number | null) => void): void
 }
+
+/** 장소 검색에서 받은 한 곳의 이름·주소·지도 좌표다. x는 경도, y는 위도다. */
+export interface KakaoPlaceResult {
+  id: string; place_name: string; address_name: string; road_address_name: string
+  x: string; y: string; category_name?: string; place_url?: string
+}
+type KakaoPlaceSearchOptions = { size?: number; page?: number; location?: KakaoLatLng; radius?: number; sort?: string }
 
 export interface KakaoMapsApi {
   event: {
@@ -111,8 +118,15 @@ export interface KakaoMapsApi {
   MapTypeId: { ROADMAP: string; SKYVIEW: string; ROADVIEW: string }
   services: {
     Status: { OK: string; ZERO_RESULT: string }
-    Places: new () => { keywordSearch(query: string, callback: (places: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string) => void, options?: { size?: number; page?: number }) : void }
-    Geocoder: new () => { addressSearch(query: string, callback: (addresses: Array<{ address_name: string; x: string; y: string }>, status: string) => void): void }
+    SortBy: { DISTANCE: string; ACCURACY: string }
+    Places: new () => {
+      keywordSearch(query: string, callback: (places: KakaoPlaceResult[], status: string) => void, options?: KakaoPlaceSearchOptions): void
+      categorySearch(code: string, callback: (places: KakaoPlaceResult[], status: string) => void, options: KakaoPlaceSearchOptions): void
+    }
+    Geocoder: new () => {
+      addressSearch(query: string, callback: (addresses: Array<{ address_name: string; x: string; y: string }>, status: string) => void): void
+      coord2RegionCode(lng: number, lat: number, callback: (regions: Array<{ address_name: string; region_type: string; region_2depth_name: string; region_3depth_name: string }>, status: string) => void): void
+    }
   }
 }
 

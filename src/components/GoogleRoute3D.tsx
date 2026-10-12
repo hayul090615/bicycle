@@ -1,16 +1,16 @@
 /**
- * Google 3D 지도 위에 선택 경로와 대여소·주변 정보를 올린다. SDK와 오버레이를 효과 안에서 만들고 지도 변경 또는 종료 시 정리한다.
+ * Google 3D 지도에 길과 주변 장소를 표시한다. 지도를 떠날 때 만든 표시와 실행 중인 작업을 정리한다.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
-import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePolygon3D, type GooglePosition3D, type Maps3DLibrary } from '../services/googleMaps3d'
+import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePosition3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
 import type { RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY } from '../data/seoulBoundary'
 
 const MAX_GOOGLE_3D_CAMERA_RANGE = 180_000
 
@@ -68,6 +68,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   onFoodGuideOpen: (point: LonLat) => void
   fallback: ReactNode
 }) {
+  // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<GoogleMap3D | null>(null)
   const libraryRef = useRef<Maps3DLibrary | null>(null)
@@ -80,10 +81,11 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
-  const cityMaskRef = useRef<GooglePolygon3D | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
+  // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [selectedCamera, setSelectedCamera] = useState<PublicCamera | null>(null)
+  // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const points = useMemo(() => route.stops.map(stop => {
     const { lat, lng } = getTouristStation(stop.stationId)
     return { lat, lng }
@@ -101,6 +103,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   cameraRef.current = camera
   const rotatedCameraRef = useRef(camera)
 
+  // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     let disposed = false
     let failed = false
@@ -139,16 +142,6 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
           })
         }
       })
-      const cityMask = new library.Polygon3DElement({
-        fillColor: '#F1F2ECBF',
-        strokeColor: '#00000000',
-        strokeWidth: 0,
-        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
-        drawsOccludedSegments: true,
-      })
-      cityMask.path = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => ({ lat, lng, altitude: 0 })))
-      map.append(cityMask)
-      cityMaskRef.current = cityMask
       const cityBoundary = new library.Polygon3DElement({
         fillColor: '#00000000',
         strokeColor: '#111511FF',
@@ -186,8 +179,6 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
-      cityMaskRef.current?.remove()
-      cityMaskRef.current = null
       routeLineRef.current.forEach(line => line.remove())
       accessLineRef.current?.remove()
       routeLineRef.current = []
