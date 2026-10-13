@@ -29,13 +29,12 @@ import { usePublicCctvData } from '../hooks/usePublicCctvData'
 import { clusterPublicCameras, nearbyPublicCameras } from '../services/publicCctv'
 import { fetchRouteAmenities, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteSignals, type RouteAmenity, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
-import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
+import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
 import { coloredRouteSegments } from '../services/routeGradient'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
 const SEOUL_REFERENCE = { lat: 37.5665, lng: 126.978 }
 const CCTV_NEARBY_RADIUS_METERS = 20
-const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
 const SEOUL_MASK_LATLNG = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as LatLngExpression))
 const EMPTY_STOP_INDEXES: number[] = []
 const EMPTY_ROUTE_AMENITIES: RouteAmenity[] = []
@@ -1428,7 +1427,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       eventHandlers={{ click: () => chooseDestination(index), mouseover: () => hoverStop(index) }} pathOptions={{ color: '#fff', weight: 3, fillColor: selectedStop === index ? '#d99628' : viaStopIndex === index ? '#7657bd' : originStopIndex === index || (originStopIndex === null && !userLocation && index === 0) ? '#168653' : '#08765b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{index + 1}. {text(stop.place, stop.placeKo)}</Tooltip>
     </CircleMarker>)}
-    <Polyline positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ color: '#111511', weight: 2.5, opacity: .95, lineCap: 'round', lineJoin: 'round' }} interactive={false} />
   </MapContainer>
 
   const walkingToPickup = bikeUseMode === 'ttareungi' && pickupStation && userLocation && distanceMeters(userLocation, pickupStation) > 30

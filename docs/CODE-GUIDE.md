@@ -59,7 +59,7 @@ const remainingSeconds = Math.max(0, Math.ceil((end - Date.now()) / 1000))
 
 `lat`는 위도, `lng`는 경도입니다. 이 프로젝트의 경로 배열은 **[경도, 위도]**이고 Leaflet의 위치 배열은 **[위도, 경도]**입니다. 순서를 바꾸면 다른 곳이 표시됩니다. 거리 계산은 미터, 타이머는 밀리초와 초를 사용하므로 각 파일의 주석에서 단위를 확인하세요.
 
-`seoulBikeServiceBoundary.ts`는 서울 모양에서 바깥 대여소 주변만 220m 확장한 검정 선입니다. `node scripts/build-bike-service-boundary.mjs`로 다시 만듭니다. 공식 행정 경계 자료와는 다릅니다.
+`seoulBikeServiceBoundary.ts`는 서울 모양에서 바깥 대여소 주변만 220m 확장한 범위 좌표입니다. 지도에서는 검정 선을 그리지 않고, 바깥 지역을 흐리게 하는 범위와 장소 선택 범위에 사용합니다. `node scripts/build-bike-service-boundary.mjs`로 다시 만듭니다. 공식 행정 경계 자료와는 다릅니다.
 
 ## 코드가 연결되는 순서
 
@@ -84,7 +84,7 @@ JSON과 GeoJSON에는 주석 문법이 없으므로 파일 안에 `//` 또는 `/
 | `vercel.json` | Vercel 빌드·서버 API·페이지 경로 연결을 설정합니다. |
 | `src/data/seoulBikeStations.json` | 대여소 스냅샷과 출처 날짜를 저장합니다. 지도·코스 생성의 기본 자료입니다. |
 | `src/data/seoulDistricts.geojson` | 서울 자치구 이름과 Polygon/MultiPolygon 경계를 저장합니다. 좌표는 `[경도, 위도]` 순서입니다. |
-| `src/data/seoulBikeServiceBoundary.ts` | 검정 테두리 좌표입니다. 대여소 자료와 구 경계로 생성하며 지도 표시·선택 범위에 사용합니다. |
+| `src/data/seoulBikeServiceBoundary.ts` | 대여소를 포함한 범위 좌표입니다. 대여소 자료와 구 경계로 생성하며 지도 바깥 흐림·선택 범위에 사용합니다. |
 | `public/datasets/seoul-cctv.json.gz` | CCTV 위치·출처 자료의 압축 JSON입니다. `scripts/build-seoul-cctv-data.mjs`로 생성합니다. |
 
 ## 환경 설정과 생성 결과
