@@ -10,6 +10,10 @@ import type { StationDataStatus } from '../hooks/useBikeStations'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { districtFeatureMap, getFeatureCoordinates, type Coordinate, type DistrictGeoFeature } from '../data/districtGeoData'
 import type { SeoulDistrict } from '../data/districtCourses'
+import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH } from '../data/seoulBoundary'
+
+const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
+
 interface CourseMapProps {
   course: DistrictCourse
   stationIndex: number
@@ -208,6 +212,7 @@ export function CourseMap({ course, stationIndex, segmentProgress, isWrong, erro
         </CircleMarker>
       })}
 
+      <Polyline positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ color: SEOUL_BOUNDARY_COLOR, weight: SEOUL_BOUNDARY_WIDTH, opacity: 1, dashArray: '10 7', lineCap: 'round', lineJoin: 'round' }} interactive={false} />
       <Marker key={`bike-${errorPulse}-${arrivalPulse}`} position={[position.lat, position.lng]} icon={bikeIcon} zIndexOffset={1000} />
     </MapContainer>
   </section>

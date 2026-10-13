@@ -13,7 +13,7 @@ import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
+import { SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
 
 const MAX_KAKAO_MAP_LEVEL = 9
 
@@ -127,6 +127,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   const sceneryOverlaysRef = useRef<KakaoOverlay[]>([])
   const userOverlayRef = useRef<KakaoOverlay | null>(null)
   const cityMaskOverlayRef = useRef<KakaoOverlay | null>(null)
+  const cityBoundaryOverlayRef = useRef<KakaoOverlay | null>(null)
   const destinationOverlayRef = useRef<KakaoOverlay | null>(null)
   const arrivalOverlayRef = useRef<KakaoOverlay | null>(null)
   const arrivalConnectorOverlaysRef = useRef<KakaoOverlay[]>([])
@@ -181,6 +182,14 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
         fillColor: SEOUL_OUTSIDE_DIM_COLOR,
         fillOpacity: SEOUL_OUTSIDE_DIM_OPACITY,
       })
+      cityBoundaryOverlayRef.current = new api.Polyline({
+        map,
+        path: SEOUL_BOUNDARY.map(([lng, lat]) => new api.LatLng(lat, lng)),
+        strokeWeight: SEOUL_BOUNDARY_WIDTH,
+        strokeColor: SEOUL_BOUNDARY_COLOR,
+        strokeOpacity: 1,
+        strokeStyle: 'shortdash',
+      })
       let correctingCenter = false
       api.event.addListener(map, 'center_changed', () => {
         if (correctingCenter) return
@@ -231,6 +240,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       sceneryOverlaysRef.current.forEach(overlay => overlay.setMap(null))
       userOverlayRef.current?.setMap(null)
       cityMaskOverlayRef.current?.setMap(null)
+      cityBoundaryOverlayRef.current?.setMap(null)
       destinationOverlayRef.current?.setMap(null)
       arrivalOverlayRef.current?.setMap(null)
       roadviewOverlayRef.current?.setMap(null)
@@ -246,6 +256,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       sceneryOverlaysRef.current = []
       userOverlayRef.current = null
       cityMaskOverlayRef.current = null
+      cityBoundaryOverlayRef.current = null
       destinationOverlayRef.current = null
       arrivalOverlayRef.current = null
       roadviewOverlayRef.current = null

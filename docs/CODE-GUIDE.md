@@ -59,7 +59,7 @@ const remainingSeconds = Math.max(0, Math.ceil((end - Date.now()) / 1000))
 
 `lat`는 위도, `lng`는 경도입니다. 이 프로젝트의 경로 배열은 **[경도, 위도]**이고 Leaflet의 위치 배열은 **[위도, 경도]**입니다. 순서를 바꾸면 다른 곳이 표시됩니다. 거리 계산은 미터, 타이머는 밀리초와 초를 사용하므로 각 파일의 주석에서 단위를 확인하세요.
 
-`seoulBikeServiceBoundary.ts`는 서울 모양에서 바깥 대여소 주변만 220m 확장한 범위 좌표입니다. 지도에서는 검정 선을 그리지 않고, 바깥 지역을 흐리게 하는 범위와 장소 선택 범위에 사용합니다. `node scripts/build-bike-service-boundary.mjs`로 다시 만듭니다. 공식 행정 경계 자료와는 다릅니다.
+`seoulBikeServiceBoundary.ts`는 서울 모양에서 바깥 대여소 주변만 220m 확장한 범위 좌표입니다. 지도와 타자게임에서는 노란 점선으로 둘러 표시하고, 바깥 지역을 흐리게 하는 범위와 장소 선택 범위에도 사용합니다. `node scripts/build-bike-service-boundary.mjs`로 다시 만듭니다. 공식 행정 경계 자료와는 다릅니다.
 
 ## 코드가 연결되는 순서
 
