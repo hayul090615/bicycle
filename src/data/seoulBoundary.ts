@@ -7,6 +7,20 @@ import { allBikeStations } from './districtCourses'
 type Position = [number, number]
 // 서울의 모양에서 경계 밖 대여소 주변만 확장한 검정 테두리다. 행정 경계와는 다르다.
 export const SEOUL_BOUNDARY: Position[] = SEOUL_BIKE_SERVICE_BOUNDARY
+export const SEOUL_OUTSIDE_DIM_COLOR = '#f4f5f0'
+export const SEOUL_OUTSIDE_DIM_OPACITY = 0.24
+// 바깥 사각형에서 검정 테두리 안을 구멍으로 뺀다. 서울 안에는 덮개를 그리지 않는다.
+export const SEOUL_OUTSIDE_MASK: GeoJSON.Feature<GeoJSON.Polygon> = {
+  type: 'Feature',
+  properties: {},
+  geometry: {
+    type: 'Polygon',
+    coordinates: [
+      [[124, 35], [130, 35], [130, 40], [124, 40], [124, 35]],
+      [...SEOUL_BOUNDARY].reverse(),
+    ],
+  },
+}
 
 const MAP_AREA_PADDING = 0.008
 const bikeMapPositions = [

@@ -9,7 +9,7 @@ import { getTouristStation, type TourSeason, type TouristRoute } from '../data/t
 import { castBuildingShadow } from '../utils/buildingShadow'
 import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BIKE_MAP_BOUNDS_LONLAT, SEOUL_BOUNDARY } from '../data/seoulBoundary'
+import { SEOUL_BIKE_MAP_BOUNDS_LONLAT, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
 import type { LonLat } from '../services/bikeRoute'
 import type { PublicCamera } from '../services/publicCctv'
 import type { NearbyBikeStation } from '../services/nearbyBikes'
@@ -341,6 +341,13 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
             map.setLayoutProperty(layer.id, 'text-field', labelTextField)
           }
         }
+        map.addSource('tour-seoul-outside-mask', { type: 'geojson', data: SEOUL_OUTSIDE_MASK })
+        map.addLayer({
+          id: 'tour-seoul-outside-mask',
+          type: 'fill',
+          source: 'tour-seoul-outside-mask',
+          paint: { 'fill-color': SEOUL_OUTSIDE_DIM_COLOR, 'fill-opacity': SEOUL_OUTSIDE_DIM_OPACITY, 'fill-antialias': true },
+        })
         map.addSource('tour-seoul-boundary', {
           type: 'geojson',
           data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: SEOUL_BOUNDARY } },
