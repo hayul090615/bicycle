@@ -29,7 +29,7 @@ import { usePublicCctvData } from '../hooks/usePublicCctvData'
 import { clusterPublicCameras, nearbyPublicCameras } from '../services/publicCctv'
 import { fetchRouteAmenities, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteSignals, type RouteAmenity, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
-import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
+import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_AREA_COLOR, SEOUL_AREA_OPACITY, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
 import { coloredRouteSegments } from '../services/routeGradient'
 
 const MapLibreRoute3D = lazy(() => import('./MapLibreRoute3D').then(module => ({ default: module.MapLibreRoute3D })))
@@ -1381,6 +1381,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} minZoom={9.5} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BIKE_MAP_BOUNDS_LATLNG)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ stroke: false, fillColor: SEOUL_OUTSIDE_DIM_COLOR, fillOpacity: SEOUL_OUTSIDE_DIM_OPACITY, fillRule: 'evenodd' }} interactive={false} />
+    <Polygon positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ stroke: false, fillColor: SEOUL_AREA_COLOR, fillOpacity: SEOUL_AREA_OPACITY }} interactive={false} />
     <Polyline positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ color: SEOUL_BOUNDARY_COLOR, weight: SEOUL_BOUNDARY_WIDTH, opacity: 1, dashArray: '10 7', lineCap: 'round', lineJoin: 'round' }} interactive={false} />
     <FocusMap points={points} linePoints={linePoints} approachPoints={approachPoints} walkingPoints={walkingPoints} selectedStop={selectedStop} hasDestination={hasDestination} userLocation={userLocation} locationFocusRequest={locationFocusRequest} />
     <MapCenterReporter onChange={reportMapCenter} />

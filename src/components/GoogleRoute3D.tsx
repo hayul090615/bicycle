@@ -10,7 +10,7 @@ import type { RouteCondition, RouteElevationPoint, RouteRestaurant } from '../se
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_AREA_COLOR, SEOUL_AREA_OPACITY } from '../data/seoulBoundary'
 
 const MAX_GOOGLE_3D_CAMERA_RANGE = 180_000
 
@@ -143,7 +143,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
         }
       })
       const cityBoundary = new library.Polygon3DElement({
-        fillColor: '#00000000',
+        fillColor: `${SEOUL_AREA_COLOR}${Math.round(SEOUL_AREA_OPACITY * 255).toString(16).padStart(2, '0')}`,
         strokeColor: SEOUL_BOUNDARY_COLOR,
         strokeWidth: SEOUL_BOUNDARY_WIDTH,
         altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,

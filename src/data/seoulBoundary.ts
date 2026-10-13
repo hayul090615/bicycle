@@ -9,6 +9,14 @@ type Position = [number, number]
 export const SEOUL_BOUNDARY: Position[] = SEOUL_BIKE_SERVICE_BOUNDARY
 export const SEOUL_BOUNDARY_COLOR = '#ffc65c'
 export const SEOUL_BOUNDARY_WIDTH = 4
+export const SEOUL_AREA_COLOR = '#28ad7e'
+export const SEOUL_AREA_OPACITY = 0.12
+// 노란 점선 안에 옅은 색을 채워 서울의 전체 모양을 알아보기 쉽게 한다.
+export const SEOUL_AREA: GeoJSON.Feature<GeoJSON.Polygon> = {
+  type: 'Feature',
+  properties: {},
+  geometry: { type: 'Polygon', coordinates: [SEOUL_BOUNDARY] },
+}
 export const SEOUL_OUTSIDE_DIM_COLOR = '#f4f5f0'
 export const SEOUL_OUTSIDE_DIM_OPACITY = 0.24
 // 바깥 사각형에서 테두리 안을 구멍으로 뺀다. 서울 안에는 덮개를 그리지 않는다.
