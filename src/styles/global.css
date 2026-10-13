@@ -4153,6 +4153,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-discovery-chips > .tour-discovery-directions-toggle { border-color: #18232d; color: #fff; background: #18232d; }
 .tour-screen .tour-discovery-chips > .tour-discovery-directions-toggle:hover { background: #2c3b48; }
 .tour-screen .tour-mobile-route-sheet[hidden] { display: none; }
+.tour-mobile-directions-toggle { display: none; }
+@media (max-width: 700px) {
+  .tour-screen .tour-mobile-directions-toggle { position: absolute; z-index: 1469; bottom: min(calc(min(35dvh, 265px) + .65rem), calc(100% - 60px)); left: max(.65rem, env(safe-area-inset-left)); display: grid; width: 48px; height: 48px; place-items: center; padding: 0; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #16573f; box-shadow: 0 3px 12px #112c2740; cursor: pointer; }
+  .tour-screen .tour-mobile-directions-toggle svg { width: 24px; height: 24px; }
+  .tour-screen .tour-mobile-directions-toggle:hover { background: #103e2d; }
+  .tour-screen .tour-mobile-directions-toggle:focus-visible { outline: 3px solid #ffc65c; outline-offset: 3px; }
+  .tour-screen .tour-map-stage:has(> .tour-mobile-route-sheet.is-expanded:not([hidden])) > .tour-mobile-directions-toggle { bottom: min(calc(min(76dvh, 650px) + .65rem), calc(100% - 60px)); }
+  .tour-screen .tour-map-stage--directions-hidden > .tour-mobile-directions-toggle { bottom: max(.75rem, env(safe-area-inset-bottom)); }
+  .tour-screen .tour-map-stage--directions-hidden > .tour-map-locate,
+  .tour-screen .tour-map-stage--directions-hidden .maplibregl-ctrl-top-right { bottom: max(.75rem, env(safe-area-inset-bottom)); }
+  .tour-screen .tour-map-stage--tool-open > .tour-mobile-directions-toggle { display: none; }
+  .tour-screen--dark .tour-mobile-directions-toggle { border-color: #dcece1; background: #254936; }
+}
 .tour-screen .tour-map-stage--roadview > .kakao-route-map { top: 0; right: 50%; bottom: 0; left: 0; width: 50%; height: 100% !important; }
 .tour-screen .tour-map-stage--roadview > .tour-map-destination-tools { max-width: calc(50% - 1.3rem); }
 .tour-screen .tour-map-stage--roadview > .tour-roadview-map-hint { max-width: calc(50% - 1.6rem); }

@@ -499,6 +499,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
   const [directionsListOpen, setDirectionsListOpen] = useState(true)
   const [directionsPanelVisible, setDirectionsPanelVisible] = useState(true)
+  const toggleDirectionsPanel = useCallback(() => {
+    setDirectionsPanelVisible(visible => !visible)
+    setMobileSheetExpanded(false)
+  }, [])
   const [placePopupAnchor, setPlacePopupAnchor] = useState<Element | null>(null)
   const [placePopupPoint, setPlacePopupPoint] = useState<LonLat | null>(null)
   const [flatOnly, setFlatOnly] = useState(false)
@@ -636,7 +640,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const timerDestinationRef = useRef<string | null>(null)
   useEffect(() => {
     const key = hasDestination ? `${route.id}:${destinationKey}` : null
-    if (key && timerDestinationRef.current !== key && bikeUseMode === 'ttareungi') onDestinationSelected()
+    if (key && timerDestinationRef.current !== key) {
+      if (bikeUseMode === 'ttareungi') onDestinationSelected()
+      // 휴대폰에서는 지도를 먼저 보고, 원형 버튼을 눌러 목록을 열게 한다.
+      if (window.matchMedia('(max-width: 700px)').matches) {
+        setDirectionsPanelVisible(false)
+        setMobileSheetExpanded(false)
+      }
+    }
     timerDestinationRef.current = key
   }, [hasDestination, destinationKey, route.id, bikeUseMode, onDestinationSelected])
   // 사진에서 경로 끝에 도달한 안내는 현재 목적지마다 한 번만 표시한다.
@@ -1647,12 +1658,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
       <MapDiscoveryBar locale={locale} selected={discoveryCategory} onSelect={selectDiscoveryCategory}
-        showDirectionsToggle={hasDestination} directionsVisible={directionsPanelVisible} onToggleDirections={() => setDirectionsPanelVisible(visible => !visible)}
+        showDirectionsToggle={hasDestination} directionsVisible={directionsPanelVisible} onToggleDirections={toggleDirectionsPanel}
         cctvLocationStatus={userLocation ? 'ready' : locating ? 'locating' : 'unavailable'}
         status={discoveryCategory === 'signals' ? nearbySignals.status : discoveryCategory === 'cctv' ? (cctvData.loading ? 'loading' : cctvData.error ? 'error' : 'ready') : nearbyPlaces.status}
         count={discoveryCategory === 'cctv' ? cctvCameras.length : discoveryCategory === 'signals' ? routeSignals.length : nearbyPlaces.places.length}
         places={nearbyPlaces.places} focusedPoint={focusedPlacePoint} onFocus={setFocusedPlacePoint} region={nearbyPlaces.region} />
-      <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}${roadviewEnabled ? ' tour-map-stage--roadview' : ''}${activeMapTool ? ' tour-map-stage--tool-open' : ''}${customDestination ? ' tour-map-stage--custom-destination' : ''}`} onMouseLeave={() => hoverStop(null)}>
+      <div className={`tour-map-stage tour-map-stage--${mapWeather}${destinationPicking ? ' tour-map-stage--destination-picking' : ''}${roadviewEnabled ? ' tour-map-stage--roadview' : ''}${activeMapTool ? ' tour-map-stage--tool-open' : ''}${customDestination ? ' tour-map-stage--custom-destination' : ''}${hasDestination && !directionsPanelVisible ? ' tour-map-stage--directions-hidden' : ''}`} onMouseLeave={() => hoverStop(null)}>
         {bikeUseMode === 'ttareungi' && rentalWidgetTarget && createPortal(<div className="tour-rental-guidance-stack">{rentalTimerOpen && <section id="tour-rental-timer-panel" className="tour-rental-header-widget" aria-label={text('Rental return reminder', '반납 시간 알림')}>
           <div className="tour-rental-map-copy"><h3>{text('Choose your pass time', '이용시간 선택')}</h3><p>{text('Choose a pass to start counting down.', '시간을 선택하면 바로 카운트다운을 시작해요.')}</p></div>
           <div className="tour-rental-pass-options" role="group" aria-label={text('Ttareungi pass duration', '따릉이 이용시간')}>
@@ -1733,6 +1744,15 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </label>}
           <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { selectDiscoveryCategory('toilet') }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
         </section>
+        {hasDestination && !roadviewEnabled && <button type="button" className="tour-mobile-directions-toggle"
+          aria-controls="tour-mobile-route-sheet" aria-expanded={directionsPanelVisible}
+          aria-label={directionsPanelVisible ? text('Hide directions list', '길 안내 목록 닫기') : text('Show directions list', '길 안내 목록 열기')}
+          title={directionsPanelVisible ? text('Hide directions list', '길 안내 목록 닫기') : text('Show directions list', '길 안내 목록 열기')}
+          onClick={toggleDirectionsPanel}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {directionsPanelVisible ? <path d="m6 9 6 6 6-6" /> : <><path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></>}
+          </svg>
+        </button>}
         <aside id="tour-map-control-rail" className="tour-map-control-rail" aria-label={text('Menu', '메뉴')}>
           <section className="tour-map-rail-group">
             <div className="tour-map-menu-actions">
