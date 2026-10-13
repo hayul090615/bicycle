@@ -6,6 +6,7 @@ import type { RouteElevationPoint } from '../services/routeConditions'
 import { bearingToRoadviewPoint, type RibbonSection } from './roadviewRoute'
 
 const METERS_PER_LATITUDE = 111_320
+export const ROADVIEW_GUIDANCE_DISTANCE_METERS = 90
 // Kakao's overlay model assumes an eye height of 1.7 m. Vehicle panoramas
 // need a lower surface; 3 m is a conservative camera-height approximation,
 // not measured depth from the photograph.
@@ -62,7 +63,7 @@ export function visibleRoadviewGroundSections(sections: RibbonSection[]) {
   const bearing = bearingToRoadviewPoint({ lat: start[1], lng: start[0] }, initial.center)
   const result: RibbonSection[] = []
   for (const section of sections) {
-    if (section.progressMeters - sections[0].progressMeters > 40) break
+    if (section.progressMeters - sections[0].progressMeters > ROADVIEW_GUIDANCE_DISTANCE_METERS) break
     if (result.length > 2) {
       const previous = result.at(-1)!.center
       const nextBearing = bearingToRoadviewPoint({ lat: previous[1], lng: previous[0] }, section.center)

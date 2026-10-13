@@ -184,7 +184,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   locationFocusRequest: number
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   onMapCenterChange: (point: { lat: number; lng: number }) => void
-  onFoodGuideOpen: (point: LonLat) => void
+  onFoodGuideOpen: (point: LonLat, anchor?: Element, previewOnly?: boolean) => void
   locale: 'en' | 'ko'
   userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
@@ -1034,7 +1034,9 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       element.setAttribute('aria-label', `${place.name} · ${kindLabel}`)
       element.title = place.name
       element.textContent = place.kind === 'cafe' ? '☕' : '식'
-      element.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat]) })
+      element.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat], element) })
+      element.addEventListener('mouseenter', () => onFoodGuideOpen([place.lng, place.lat], element, true))
+      element.addEventListener('focus', () => onFoodGuideOpen([place.lng, place.lat], element, true))
       restaurantMarkersRef.current.push(new maplibregl.Marker({ element, anchor: 'bottom' })
         .setLngLat([place.lng, place.lat])
         .addTo(map))

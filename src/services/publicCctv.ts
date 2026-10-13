@@ -2,6 +2,7 @@
  * 공개 CCTV 위치 자료를 한 번 불러와 공유한다. 지도 축척에 맞는 위치 묶음과 선택 경로에서 일정 거리 안의 카메라 목록을 계산한다.
  */
 import type { LonLat } from './bikeRoute'
+import { metersBetween } from './nearbyBikes'
 
 export interface PublicCamera {
   id: string
@@ -23,6 +24,31 @@ export interface CameraBundle {
 }
 
 let bundleRequest: Promise<CameraBundle> | null = null
+const cameraIndexes = new WeakMap<PublicCamera[], Map<string, PublicCamera[]>>()
+const CAMERA_CELL_DEGREES = 0.005
+
+/** 지도 갱신 때 5만여 곳을 매번 검사하지 않고, 내 위치 근처의 작은 구역만 확인한다. */
+export function nearbyPublicCameras(cameras: PublicCamera[], center: { lat: number; lng: number }, radiusMeters: number) {
+  let index = cameraIndexes.get(cameras)
+  if (!index) {
+    index = new Map()
+    for (const camera of cameras) {
+      const key = `${Math.floor(camera.lat / CAMERA_CELL_DEGREES)}:${Math.floor(camera.lng / CAMERA_CELL_DEGREES)}`
+      const cell = index.get(key) ?? []
+      cell.push(camera); index.set(key, cell)
+    }
+    cameraIndexes.set(cameras, index)
+  }
+  const latitudeRadius = (radiusMeters + 2) / 111_000
+  const longitudeRadius = latitudeRadius / Math.max(.1, Math.cos(center.lat * Math.PI / 180))
+  const results: PublicCamera[] = []
+  for (let lat = Math.floor((center.lat - latitudeRadius) / CAMERA_CELL_DEGREES); lat <= Math.floor((center.lat + latitudeRadius) / CAMERA_CELL_DEGREES); lat++) {
+    for (let lng = Math.floor((center.lng - longitudeRadius) / CAMERA_CELL_DEGREES); lng <= Math.floor((center.lng + longitudeRadius) / CAMERA_CELL_DEGREES); lng++) {
+      for (const camera of index.get(`${lat}:${lng}`) ?? []) if (metersBetween(center, camera) <= radiusMeters) results.push(camera)
+    }
+  }
+  return results
+}
 
 /** 압축 CCTV JSON을 읽고 같은 데이터 요청의 Promise를 공유한다. */
 export function loadPublicCctvBundle() {

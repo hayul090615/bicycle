@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { KakaoMapsApi, KakaoRoadview } from '../services/kakaoMaps'
+import { findRoadviewPanorama } from '../services/roadviewPanoramas'
 
 export function RoadviewDestinationControl({ api, roadview, destination, locale, onArrival }: {
   api: KakaoMapsApi
@@ -84,7 +85,7 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
         stop(true)
       }, 12000)
       const findPhoto = (radius: number) => {
-        client.getNearestPanoId(position, radius, panoId => {
+        void findRoadviewPanorama(api, position, radius).then(panoId => {
           if (disposed || request !== currentRequest || !moving) return
           if (panoId === null) {
             if (radius === 30) findPhoto(80)
@@ -97,7 +98,7 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
             if (roadview.getPanoId() === panoId) confirmPhoto()
             else roadview.setPanoId(panoId, position)
           } catch { stop(true) }
-        })
+        }).catch(() => { if (!disposed && request === currentRequest) stop(true) })
       }
       findPhoto(30)
     }

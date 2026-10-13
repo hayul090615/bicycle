@@ -15,6 +15,7 @@ import { useDestinationArrival } from '../hooks/useDestinationArrival'
 import { useNearbyPlaces } from '../hooks/useNearbyPlaces'
 import { useNearbySignals } from '../hooks/useNearbySignals'
 import { MapDiscoveryBar, type DiscoveryCategory } from './MapDiscoveryBar'
+import { PlaceReviewPopup } from './PlaceReviewPopup'
 import { MAP_NEARBY_RADIUS_METERS, type NearbyPlaceCategory } from '../services/nearbyPlaces'
 import { hasKakaoMapsKey } from '../services/kakaoMaps'
 import { downloadEarthRoute, googleEarthUrl } from '../utils/googleEarth'
@@ -25,7 +26,7 @@ import { localizeBikeStationName } from '../utils/localizeBikeStationName'
 import { fetchBikePath, fetchBikePaths, fetchWalkingPath, type BikeRouteInstruction, type BikeRouteResult, type LonLat } from '../services/bikeRoute'
 import { fetchNearbyBikeStations, nearestSnapshotStations, type NearbyBikeStation } from '../services/nearbyBikes'
 import { usePublicCctvData } from '../hooks/usePublicCctvData'
-import { clusterPublicCameras } from '../services/publicCctv'
+import { clusterPublicCameras, nearbyPublicCameras } from '../services/publicCctv'
 import { fetchRouteAmenities, fetchRouteElevationProfile, fetchRouteGrades, fetchRouteSignals, type RouteAmenity, type RouteCondition, type RouteElevationPoint, type RouteRestaurant } from '../services/routeConditions'
 import { fetchSeoulToiletsAlongRoute } from '../services/seoulToilets'
 import { isInsideSeoul, SEOUL_BIKE_MAP_BOUNDS_LATLNG, SEOUL_BOUNDARY, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
@@ -497,6 +498,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [menuPlanTarget, setMenuPlanTarget] = useState<HTMLDivElement | null>(null)
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
   const [directionsListOpen, setDirectionsListOpen] = useState(true)
+  const [directionsPanelVisible, setDirectionsPanelVisible] = useState(true)
+  const [placePopupAnchor, setPlacePopupAnchor] = useState<Element | null>(null)
+  const [placePopupPoint, setPlacePopupPoint] = useState<LonLat | null>(null)
   const [flatOnly, setFlatOnly] = useState(false)
   const [durationFilter, setDurationFilter] = useState<30 | 60 | null>(null)
   const [mapLayers, setMapLayers] = useState<MapLayers>(readMapLayers)
@@ -566,10 +570,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   useEffect(() => {
     if (locale === 'en' && (view === 'google' || (view === 'kakao' && !roadviewEnabled))) setView('city')
   }, [locale, roadviewEnabled, view])
-  const openFoodGuideAt = useCallback((point: LonLat) => {
-    setFocusedPlacePoint(point)
-    setActiveMapTool(null)
+  const openFoodGuideAt = useCallback((point: LonLat, anchor?: Element, previewOnly = false) => {
+    if (!previewOnly) { setFocusedPlacePoint(point); setActiveMapTool(null) }
+    setPlacePopupPoint(point)
+    setPlacePopupAnchor(anchor ?? null)
   }, [])
+  const closePlacePopup = useCallback(() => setPlacePopupAnchor(null), [])
   const publishLocation = (position: GeolocationPosition) => {
     const latitude = position.coords.latitude
     const longitude = position.coords.longitude
@@ -749,6 +755,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   // 대여소·신호등·CCTV는 별도 자료를 사용한다. 음식점 같은 장소만 장소 검색으로 보낸다.
   const placeCategory = discoveryCategory && !['signals', 'cctv'].includes(discoveryCategory) ? discoveryCategory as NearbyPlaceCategory : null
   const nearbyPlaces = useNearbyPlaces(placeCategory, mapCenter)
+  const popupPlace = placePopupPoint ? nearbyPlaces.places.find(place => Math.abs(place.lng - placePopupPoint[0]) + Math.abs(place.lat - placePopupPoint[1]) < .0001) : null
   // 선택한 맛집 또는 카페를 지도 표시 형식으로 바꾼다. 다른 버튼이 선택되면 빈 목록을 보낸다.
   const routeRestaurants = useMemo<RouteRestaurant[]>(() => placeCategory === 'food' || placeCategory === 'cafe'
     ? nearbyPlaces.places.map(place => ({ id: place.id, name: place.name, lat: place.lat, lng: place.lng, kind: placeCategory === 'cafe' ? 'cafe' : 'restaurant' }))
@@ -839,10 +846,10 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const linePoints = useMemo<LatLngExpression[]>(() => displayRoutePath.map(([lng, lat]) => [lat, lng] as LatLngExpression), [displayRoutePath])
   const approachPoints = useMemo<LatLngExpression[]>(() => approachPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [approachPath])
   const walkingPoints = useMemo<LatLngExpression[]>(() => walkingPath?.map(([lng, lat]) => [lat, lng] as LatLngExpression) ?? [], [walkingPath])
-  const cctvData = usePublicCctvData()
+  const cctvData = usePublicCctvData(showCctv)
   // CCTV는 실제 내 위치에서 20m 안만 표시한다. GPS가 없으면 다른 위치로 대신 검색하지 않는다.
   const cctvCameras = useMemo(() => showCctv && userLocation
-    ? cctvData.cameras.filter(camera => distanceMeters(userLocation, camera) <= CCTV_NEARBY_RADIUS_METERS)
+    ? nearbyPublicCameras(cctvData.cameras, userLocation, CCTV_NEARBY_RADIUS_METERS)
     : [], [cctvData.cameras, userLocation, showCctv])
   const fallbackCctvClusters = useMemo(() => showCctv
     ? clusterPublicCameras(cctvCameras, getTouristStation(route.stops[0].stationId), 48_000, 2_000)
@@ -1000,9 +1007,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setDiscoveryCategory(current => current === category ? null : category)
     setMapLayers(current => ({ ...current, riders: false }))
     setFocusedPlacePoint(null)
+    setPlacePopupAnchor(null)
     setActiveMapTool(null)
     setMapMenuOpen(false)
-    if (category === 'cctv' && discoveryCategory !== 'cctv' && !userLocation && !locating) locateNearestRoute(false, true)
+    if (category === 'cctv' && discoveryCategory !== 'cctv') {
+      if (userLocation) setLocationFocusRequest(request => request + 1)
+      else if (!locating) locateNearestRoute(false, true)
+    }
   }
   const toggleMapLayer = (layer: MapLayerKey) => {
     const category = layer === 'restaurants' ? 'food' : layer === 'cctv' ? 'cctv' : layer === 'roadInfo' ? 'signals' : null
@@ -1396,7 +1407,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       </Tooltip>
     </CircleMarker>)}
     {showRestaurants && routeRestaurants.map(place => <CircleMarker key={`place-${place.id}`} center={[place.lat, place.lng]} radius={8}
-      bubblingMouseEvents={false} eventHandlers={{ click: () => openFoodGuideAt([place.lng, place.lat]) }}
+      bubblingMouseEvents={false} eventHandlers={{ click: event => openFoodGuideAt([place.lng, place.lat], event.target.getElement()), mouseover: event => openFoodGuideAt([place.lng, place.lat], event.target.getElement(), true) }}
       pathOptions={{ color: '#fff', weight: 2, fillColor: place.kind === 'cafe' ? '#8d6246' : '#d8723b', fillOpacity: 1 }}>
       <Tooltip direction="top" permanent>{place.kind === 'cafe' ? '☕ ' : '🍽 '}{place.name}</Tooltip>
     </CircleMarker>)}
@@ -1421,7 +1432,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   </MapContainer>
 
   const walkingToPickup = bikeUseMode === 'ttareungi' && pickupStation && userLocation && distanceMeters(userLocation, pickupStation) > 30
-  const roadSign = hasDestination ? <aside className="tour-road-sign" aria-label={text('Bicycle directions', '자전거 길 안내')}>
+  const roadSign = hasDestination && directionsPanelVisible ? <aside id="tour-road-sign" className="tour-road-sign" aria-label={text('Bicycle directions', '자전거 길 안내')}>
     <div className="tour-road-sign-current" role="status" aria-live="polite">
       <span className="tour-road-sign-arrow" aria-hidden="true">{walkingToPickup ? '🚶' : instructionArrow(nextInstruction?.instruction)}</span>
       <span><small>{walkingToPickup ? text('WALK TO BIKE', '먼저 대여소까지 도보') : text('NEXT DIRECTION', '다음 이동 방향')}</small><strong>{walkingToPickup ? localizeBikeStationName(pickupStation.name, locale) : routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 길 안내를 불러오는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{walkingToPickup ? `${distanceLabel(walkingDistance ?? distanceMeters(userLocation, pickupStation))} ${text('to the bike station', '후 대여소 도착')}` : `${distanceLabel(Math.max(0, (nextInstruction?.offsetMeters ?? routeDistance) - routeProgressMeters))} ${text('to next turn', '후 다음 안내')}`}</em></span>
@@ -1505,7 +1516,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <summary><strong>{text('My map', '나만의 지도')}</strong><span>{text('Choose what appears on the map', '지도에 표시할 항목을 선택하세요')}</span></summary>
           <div className="tour-my-map-layers" role="group" aria-label={text('Map layers', '지도 항목')}>
             <label><input type="checkbox" checked={showCourse} onChange={() => toggleMapLayer('course')} /><span>{text('Tour route', '관광 코스')}</span></label>
-            <label><input type="checkbox" checked={showRestaurants} onChange={() => toggleMapLayer('restaurants')} /><span>{text('Food within 500 m', '주변 500m 맛집')}</span><small>{nearbyPlaces.status === 'loading' ? '…' : routeRestaurants.length || ''}</small></label>
+            <label><input type="checkbox" checked={showRestaurants} onChange={() => toggleMapLayer('restaurants')} /><span>{text('Food within 500 m', '주변 500m 식당')}</span><small>{nearbyPlaces.status === 'loading' ? '…' : routeRestaurants.length || ''}</small></label>
             <button type="button" className="tour-my-map-cctv-button" aria-pressed={showCctv} onClick={() => toggleMapLayer('cctv')}>
               <span className="tour-cctv-dot" aria-hidden="true" /><span>{text('CCTV near route', '경로 주변 CCTV')}</span>
               <small>{cctvData.loading ? '…' : cctvData.error ? '!' : cctvCameras.length.toLocaleString()}</small><i>{showCctv ? text('ON', '켜짐') : text('OFF', '꺼짐')}</i>
@@ -1523,9 +1534,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </a>
         </details>
         {showRestaurants && <p className="tour-cctv-status" role="status">
-          {nearbyPlaces.status === 'loading' ? text('Finding nearby food…', '주변 맛집을 찾는 중…')
-            : nearbyPlaces.status === 'error' ? text('Food search is temporarily unavailable.', '맛집 검색을 잠시 사용할 수 없어요.')
-              : text(`${nearbyPlaces.places.length} food places within 500 m.`, `주변 500m 맛집 ${nearbyPlaces.places.length}곳을 표시합니다.`)}
+          {nearbyPlaces.status === 'loading' ? text('Finding nearby food…', '주변 식당을 찾는 중…')
+            : nearbyPlaces.status === 'error' ? text('Food search is temporarily unavailable.', '식당 검색을 잠시 사용할 수 없어요.')
+              : text(`${nearbyPlaces.places.length} food places within 500 m.`, `주변 500m 식당 ${nearbyPlaces.places.length}곳을 표시합니다.`)}
         </p>}
         <section className="tour-road-conditions" aria-live="polite" aria-label={text('Route terrain and traffic signals', '코스 경사와 신호등')}>
           <div className="tour-road-conditions-heading"><strong>{text('Along this route', '이 코스의 도로 정보')}</strong><span>{text('MAP DATA', '지도 자료')}</span></div>
@@ -1636,6 +1647,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
       <MapDiscoveryBar locale={locale} selected={discoveryCategory} onSelect={selectDiscoveryCategory}
+        showDirectionsToggle={hasDestination} directionsVisible={directionsPanelVisible} onToggleDirections={() => setDirectionsPanelVisible(visible => !visible)}
         cctvLocationStatus={userLocation ? 'ready' : locating ? 'locating' : 'unavailable'}
         status={discoveryCategory === 'signals' ? nearbySignals.status : discoveryCategory === 'cctv' ? (cctvData.loading ? 'loading' : cctvData.error ? 'error' : 'ready') : nearbyPlaces.status}
         count={discoveryCategory === 'cctv' ? cctvCameras.length : discoveryCategory === 'signals' ? routeSignals.length : nearbyPlaces.places.length}
@@ -1693,7 +1705,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D onMapCenterChange={reportMapCenter} key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        <section id="tour-mobile-route-sheet" className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}${hasDestination ? ' is-navigating' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
+        <section id="tour-mobile-route-sheet" hidden={hasDestination && !directionsPanelVisible} className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}${hasDestination ? ' is-navigating' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
           <button type="button" className="tour-mobile-sheet-handle" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded} aria-label={mobileSheetExpanded ? text('Collapse directions', '길 안내 접기') : text('Show all directions', '전체 길 안내 보기')} onClick={() => setMobileSheetExpanded(expanded => !expanded)}><i /></button>
           {hasDestination ? <>
             <div className="tour-mobile-nav-summary" role="status" aria-live="polite">
@@ -1743,7 +1755,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <header className="tour-map-side-panel-header">
             <div><small>{text('MAP TOOLS', '지도 도구')}</small><strong>{activeMapTool === 'ridePlan' ? text('Ride plan', '라이딩 계획') : activeMapTool === 'routes' ? text('Routes and stops', '코스와 경유지')
               : activeMapTool === 'course' ? text('Route display', '코스 표시')
-                : activeMapTool === 'food' ? text('Food along the way', '경로 주변 맛집')
+                : activeMapTool === 'food' ? text('Food along the way', '경로 주변 식당')
                     : activeMapTool === 'cctv' ? text('Public CCTV', '공공 CCTV')
                       : activeMapTool === 'settings' ? text('Map settings', '지도 설정')
                         : activeMapTool === 'location' ? text('Nearby bikes', '내 주변 따릉이')
@@ -1833,6 +1845,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           <button type="button" className="tour-map-arrow--right" onClick={() => rotateMap('right')} aria-label={text('Rotate map to the right', '지도를 오른쪽으로 회전')}>→</button>
           <button type="button" className="tour-map-arrow--down" onClick={() => rotateMap('down')} aria-label={view === 'city' || view === 'google' ? text('Tilt the camera down', '카메라 시점을 내리기') : text('Move map south', '지도를 남쪽으로 이동')}>↓</button>
         </div>}
+        {popupPlace && placePopupAnchor && <PlaceReviewPopup key={popupPlace.id} place={popupPlace} region={nearbyPlaces.region} locale={locale} anchor={placePopupAnchor} onClose={closePlacePopup} />}
         {hoveredStop !== null && <aside className="tour-scenery-preview" aria-live="polite" aria-label={text('Scenery near this stop', '경유지 주변 풍경 사진')}>
           <button className="tour-scenery-close" type="button" aria-label={text('Close photo preview', '사진 미리보기 닫기')} onClick={() => hoverStop(null)}>×</button>
           <span className="tour-scenery-kicker">{text('A VIEW NEAR THIS STOP', '경유지 주변 풍경')}</span>

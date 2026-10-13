@@ -8,6 +8,7 @@ import type { LonLat } from '../services/bikeRoute'
 import { RoadviewRouteRibbon } from './RoadviewRouteRibbon'
 import { RoadviewCompass } from './RoadviewCompass'
 import { RoadviewDestinationControl } from './RoadviewDestinationControl'
+import { findRoadviewPanorama } from '../services/roadviewPanoramas'
 import type { RouteElevationPoint } from '../services/routeConditions'
 import './KakaoRoadviewPanel.css'
 
@@ -40,7 +41,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<RoadviewStatus>('loading')
   const [retry, setRetry] = useState(0)
-  const [expanded, setExpanded] = useState(() => window.matchMedia(MOBILE_ROADVIEW_QUERY).matches)
+  const [expanded, setExpanded] = useState(false)
   // 동일한 포털 DOM을 지도와 body 사이에서 옮겨 전체화면 전환 때 SDK를 보존한다.
   const [portalLayer] = useState(() => {
     const layer = document.createElement('div')
@@ -77,7 +78,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
 
   useLayoutEffect(() => {
     const media = window.matchMedia(MOBILE_ROADVIEW_QUERY)
-    const change = (event: MediaQueryListEvent) => setExpanded(event.matches)
+    const change = () => roadviewRef.current?.relayout()
     media.addEventListener('change', change)
     return () => media.removeEventListener('change', change)
   }, [])
@@ -210,7 +211,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
       const position = new api.LatLng(target.lat, target.lng)
 
       const findPanorama = (radius: number) => {
-        client.getNearestPanoId(position, radius, panoId => {
+        void findRoadviewPanorama(api!, position, radius).then(panoId => {
           if (!isCurrent() || !roadview) return
           try {
             if (panoId === null) {
@@ -233,7 +234,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
           } catch {
             fail()
           }
-        })
+        }).catch(fail)
       }
       findPanorama(80)
     }).catch(fail)

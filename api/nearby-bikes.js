@@ -5,6 +5,7 @@ const SEOUL_BIKE_API = 'http://openapi.seoul.go.kr:8088'
 const MAX_STATIONS = 6000
 const CACHE_MS = 60_000
 let cached = { rows: [], updatedAt: 0 }
+let stationsRequest = null
 
 /** 두 위도·경도 위치 사이의 거리를 미터로 구한다. */
 function metersBetween(from, to) {
@@ -29,6 +30,11 @@ async function fetchPage(key, start, end) {
 /** 서울시 실시간 대여소 전체 페이지를 불러와 짧은 이전에 받은 결과를 갱신한다. */
 async function loadStations(key) {
   if (cached.rows.length && Date.now() - cached.updatedAt < CACHE_MS) return cached
+  if (!stationsRequest) stationsRequest = loadFreshStations(key).finally(() => { stationsRequest = null })
+  return stationsRequest
+}
+
+async function loadFreshStations(key) {
   const first = await fetchPage(key, 1, 1000)
   const total = Math.min(Number(first.list_total_count) || 0, MAX_STATIONS)
   const ranges = []

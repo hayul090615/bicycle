@@ -6,8 +6,9 @@ import type { LonLat } from '../services/bikeRoute'
 import type { KakaoMapsApi, KakaoOverlay, KakaoRoadview } from '../services/kakaoMaps'
 import type { RouteElevationPoint } from '../services/routeConditions'
 import { bearingToRoadviewPoint, roadviewRouteSections, type RibbonSection } from '../utils/roadviewRoute'
-import { roadviewGroundAltitude, visibleRoadviewGroundSections } from '../utils/roadviewGround'
+import { roadviewGroundAltitude, visibleRoadviewGroundSections, ROADVIEW_GUIDANCE_DISTANCE_METERS } from '../utils/roadviewGround'
 import { isAtRoadviewDestination } from '../utils/routeArrival'
+import { findRoadviewPanorama } from '../services/roadviewPanoramas'
 
 type AnchorPair = { section: RibbonSection; left: HTMLElement; right: HTMLElement }
 type ScreenPoint = { x: number; y: number }
@@ -89,20 +90,24 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
       const rows = anchors.map(pair => {
         const dx = (pair.section.center[0] - camera.lng) * 111_320 * Math.cos(camera.lat * Math.PI / 180)
         const dy = (pair.section.center[1] - camera.lat) * 111_320
-        if (dx * Math.sin(pan) + dy * Math.cos(pan) <= 2.5 || Math.hypot(dx, dy) > 45) return null
+        if (dx * Math.sin(pan) + dy * Math.cos(pan) <= 2.5 || Math.hypot(dx, dy) > ROADVIEW_GUIDANCE_DISTANCE_METERS + 5) return null
         const left = readScreen(pair.left, bounds), right = readScreen(pair.right, bounds)
         return left && right && Math.min(left.y, right.y) > horizonPoint.y + 2
           && Math.hypot(left.x - right.x, left.y - right.y) < Math.min(200, bounds.width * .5)
           ? { left, right } : null
       })
-      let band = '', line = ''
-      rows.forEach((row, index) => {
-        const next = rows[index + 1]
-        if (!row || !next || Math.hypot((row.left.x + row.right.x - next.left.x - next.right.x) / 2,
-          (row.left.y + row.right.y - next.left.y - next.right.y) / 2) > bounds.height * .6) return
-        band += `M${row.left.x},${row.left.y}L${row.right.x},${row.right.y}L${next.right.x},${next.right.y}L${next.left.x},${next.left.y}Z`
-        line += `M${(row.left.x + row.right.x) / 2},${(row.left.y + row.right.y) / 2}L${(next.left.x + next.right.x) / 2},${(next.left.y + next.right.y) / 2}`
-      })
+      const connected: NonNullable<(typeof rows)[number]>[] = []
+      for (const row of rows) {
+        if (!row) { if (connected.length) break; else continue }
+        const previous = connected.at(-1)
+        if (previous && Math.hypot((row.left.x + row.right.x - previous.left.x - previous.right.x) / 2,
+          (row.left.y + row.right.y - previous.left.y - previous.right.y) / 2) > bounds.height * .6) break
+        connected.push(row)
+      }
+      const band = connected.length < 2 ? '' : `M${connected[0].left.x},${connected[0].left.y}`
+        + connected.map(row => `L${row.right.x},${row.right.y}`).join('')
+        + [...connected].reverse().map(row => `L${row.left.x},${row.left.y}`).join('') + 'Z'
+      const line = connected.length < 2 ? '' : connected.map((row, index) => `${index ? 'L' : 'M'}${(row.left.x + row.right.x) / 2},${(row.left.y + row.right.y) / 2}`).join('')
       ribbon.current?.setAttribute('d', band)
       centerline.current?.setAttribute('d', line)
     }
@@ -113,7 +118,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
       element.setAttribute('aria-hidden', 'true')
       const overlay = new api.CustomOverlay({ map: null, position: new api.LatLng(point[1], point[0]), content: element, xAnchor: .5, yAnchor: .5, clickable: false })
       overlay.setAltitude?.(altitude)
-      overlay.setRange?.(60)
+      overlay.setRange?.(ROADVIEW_GUIDANCE_DISTANCE_METERS + 20)
       overlay.setMap(roadview)
       overlays.push(overlay)
       return { element, overlay }
@@ -219,7 +224,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
         const candidate = candidates[index]
         if (!candidate) { setMoveFailed(true); stopMoving(); return }
         const point = candidate.point
-        client.getNearestPanoId(new api.LatLng(point[1], point[0]), 35, panoId => {
+        void findRoadviewPanorama(api, new api.LatLng(point[1], point[0]), 35).then(panoId => {
           if (disposed || request !== moveRequest) return
           if (roadview.getPanoId() !== currentPano) { stopMoving(); return }
           if (panoId === null || panoId === currentPano) { tryCandidate(index + 1); return }
@@ -227,6 +232,9 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
           alignAfterMove = true
           try { roadview.setPanoId(panoId, new api.LatLng(point[1], point[0])) }
           catch { setMoveFailed(true); stopMoving() }
+        }).catch(() => {
+          if (disposed || request !== moveRequest) return
+          setMoveFailed(true); stopMoving()
         })
       }
       tryCandidate(0)

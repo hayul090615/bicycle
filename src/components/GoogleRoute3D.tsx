@@ -65,7 +65,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   userLocation: { lat: number; lng: number; accuracy?: number } | null
   onSelectStop: (index: number) => void; onHoverStop: (index: number | null) => void
-  onFoodGuideOpen: (point: LonLat) => void
+  onFoodGuideOpen: (point: LonLat, anchor?: Element, previewOnly?: boolean) => void
   fallback: ReactNode
 }) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
@@ -328,7 +328,8 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
         label: place.kind === 'cafe' ? '☕' : '식', title: `${place.name} · ${kindLabel}`,
         altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
       })
-      marker.addEventListener('gmp-click', () => onFoodGuideOpen([place.lng, place.lat]))
+      marker.addEventListener('gmp-click', () => onFoodGuideOpen([place.lng, place.lat], marker))
+      marker.addEventListener('mouseenter', () => onFoodGuideOpen([place.lng, place.lat], marker, true))
       map.append(marker)
       return marker
     })

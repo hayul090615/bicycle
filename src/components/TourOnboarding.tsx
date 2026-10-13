@@ -30,7 +30,7 @@ const TUTORIAL_STEPS = [
   {
     icon: '🚲',
     title: ['See nearby services', '주변 편의 정보'],
-    description: ['Bike stations are always shown. Use the category buttons above the map to show nearby food, toilets, or convenience stores.', '대여소는 기본으로 보여요. 지도 위 가로 버튼에서 맛집, 화장실, 편의점 등 주변 정보를 선택할 수 있어요.'],
+    description: ['Bike stations are always shown. Use the category buttons above the map to show nearby restaurants, toilets, or convenience stores.', '대여소는 기본으로 보여요. 지도 위 가로 버튼에서 식당, 화장실, 편의점 등 주변 정보를 선택할 수 있어요.'],
     tip: ['Tap a station marker to check its available-bike information.', '대여소 표시를 누르면 이용 가능한 자전거 정보를 확인할 수 있어요.'],
   },
   {
@@ -38,6 +38,37 @@ const TUTORIAL_STEPS = [
     title: ['Follow your ride', '길 안내와 로드뷰'],
     description: ['Choose a route and destination to see bicycle directions. Open Roadview to look around the street.', '코스와 도착지를 선택하면 자전거 길 안내가 나와요. 로드뷰에서 주변 거리도 살펴보세요.'],
     tip: ['The timer helps you keep track of your rental time.', '타이머로 대여 시간을 확인할 수 있어요.'],
+  },
+] as const
+
+// 광고 내용 세 개를 모아 두고, 사용자가 고른 번호의 광고를 보여 준다.
+const DEMO_ADS = [
+  {
+    id: 'seoul-ride',
+    theme: 'ride',
+    headline: ['Take the scenic way through Seoul.', '오늘은 서울을 달려볼까요?'],
+    caption: ['Find a route that follows the river and your own pace.', '강변 풍경을 따라 나만의 코스를 찾아보세요.'],
+    eyebrow: ['TTAREUNGI SEOUL JOURNEY', '따릉이 서울 여행'],
+    title: ['Start with a bike nearby', '가까운 대여소부터 확인해 보세요'],
+    description: ['Check nearby Ttareungi stations, then pick a Seoul ride that suits your day.', '내 주변 따릉이 대여소를 확인하고, 마음에 드는 서울 코스를 골라보세요.'],
+  },
+  {
+    id: 'riverside-picnic',
+    theme: 'picnic',
+    headline: ['A little picnic, a lovely ride.', '라이딩 끝에 작은 피크닉 어때요?'],
+    caption: ['Take a break with a riverside view.', '한강 풍경과 함께 잠깐 쉬어가세요.'],
+    eyebrow: ['RIVERSIDE PICNIC', '한강 피크닉'],
+    title: ['Pack a picnic for your next ride', '돗자리 하나로 완성하는 한강 나들이'],
+    description: ['Bring a picnic mat, water, and a light snack to enjoy after your ride.', '돗자리와 물, 간단한 간식을 챙겨보세요. 달린 뒤 여유로운 휴식까지 즐길 수 있어요.'],
+  },
+  {
+    id: 'ready-to-ride',
+    theme: 'gear',
+    headline: ['Ready for a safer ride?', '오늘의 라이딩, 안전하게 준비해요'],
+    caption: ['A helmet and lights make a good start.', '헬멧과 자전거 조명부터 챙겨보세요.'],
+    eyebrow: ['READY TO RIDE', '라이딩 준비'],
+    title: ['Small essentials for every ride', '가볍게 챙기는 나만의 라이딩 준비물'],
+    description: ['Get your helmet, lights, and water ready before heading out on your next ride.', '출발 전 헬멧, 조명, 물을 확인해 보세요. 준비를 마쳤다면 서울 자전거길로 출발!'],
   },
 ] as const
 
@@ -70,11 +101,14 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
   const [tutorialFinished, setTutorialFinished] = useState(false)
   const [adOpen, setAdOpen] = useState(false)
+  const [adIndex, setAdIndex] = useState(0)
   const [hideAdForDay, setHideAdForDay] = useState(false)
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const sequenceHandledRef = useRef(false)
   const adHandledRef = useRef(false)
   const step = tutorialStep === null ? null : TUTORIAL_STEPS[tutorialStep]
+  const ad = DEMO_ADS[adIndex]
+  const languageIndex = ko ? 1 : 0
 
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
@@ -160,7 +194,7 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
 
   if (adOpen) return createPortal(<div className={`tour-onboarding-overlay tour-onboarding-overlay--ad${darkMode ? ' tour-onboarding-overlay--dark' : ''}`}>
     <section className="tour-ad-card" role="dialog" aria-modal="true" aria-labelledby="tour-ad-title">
-      <div className="tour-ad-art" aria-hidden="true">
+      <div className={`tour-ad-art tour-ad-art--${ad.theme}`} aria-hidden="true">
         <span className="tour-ad-label">{ko ? '추천' : 'FEATURED'}</span>
         <svg viewBox="0 0 520 188" preserveAspectRatio="xMidYMid slice">
           <path className="tour-ad-sky" d="M0 0h520v188H0z" />
@@ -175,12 +209,22 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
             <circle cx="27" cy="-1" r="4" />
           </g>
         </svg>
-        <div className="tour-ad-art-copy"><strong>{ko ? '오늘은 서울을 달려볼까요?' : 'Take the scenic way through Seoul.'}</strong><span>{ko ? '강변 풍경을 따라 나만의 코스를 찾아보세요.' : 'Find a route that follows the river and your own pace.'}</span></div>
+        <div className="tour-ad-art-copy"><strong>{ad.headline[languageIndex]}</strong><span>{ad.caption[languageIndex]}</span></div>
       </div>
-      <div className="tour-ad-copy">
-        <span className="tour-ad-eyebrow">{ko ? '따릉이 서울 여행' : 'TTAREUNGI SEOUL JOURNEY'}</span>
-        <h2 id="tour-ad-title">{ko ? '가까운 대여소부터 확인해 보세요' : 'Start with a bike nearby'}</h2>
-        <p>{ko ? '내 주변 따릉이 대여소를 확인하고, 마음에 드는 서울 코스를 골라보세요.' : 'Check nearby Ttareungi stations, then pick a Seoul ride that suits your day.'}</p>
+      <div className="tour-ad-copy" aria-live="polite" aria-atomic="true">
+        <span className="tour-ad-eyebrow">{ad.eyebrow[languageIndex]}</span>
+        <h2 id="tour-ad-title">{ad.title[languageIndex]}</h2>
+        <p>{ad.description[languageIndex]}</p>
+      </div>
+      <div className="tour-ad-navigation" role="group" aria-label={ko ? '광고 선택' : 'Choose an advertisement'}>
+        <button type="button" className="tour-ad-arrow" onClick={() => setAdIndex(current => (current + DEMO_ADS.length - 1) % DEMO_ADS.length)} aria-label={ko ? '이전 광고' : 'Previous advertisement'}>‹</button>
+        <div className="tour-ad-pagination">
+          <span>{adIndex + 1} / {DEMO_ADS.length}</span>
+          <div className="tour-ad-dots">
+            {DEMO_ADS.map((item, index) => <button type="button" key={item.id} className={index === adIndex ? 'is-active' : ''} onClick={() => setAdIndex(index)} aria-label={ko ? `${index + 1}번째 광고 보기` : `Show advertisement ${index + 1}`} aria-pressed={index === adIndex}><span /></button>)}
+          </div>
+        </div>
+        <button type="button" className="tour-ad-arrow" onClick={() => setAdIndex(current => (current + 1) % DEMO_ADS.length)} aria-label={ko ? '다음 광고' : 'Next advertisement'}>›</button>
       </div>
       <footer className="tour-ad-footer">
         <label><input type="checkbox" checked={hideAdForDay} onChange={event => setHideAdForDay(event.target.checked)} /><span>{ko ? '24시간 동안 보지 않기' : "Don't show for 24 hours"}</span></label>

@@ -2,7 +2,7 @@
 import type { NearbyPlace, NearbyPlaceCategory } from '../services/nearbyPlaces'
 export type DiscoveryCategory = NearbyPlaceCategory | 'signals' | 'cctv'
 const OPTIONS: Array<{ id: DiscoveryCategory; ko: string; en: string; icon: string }> = [
-  { id: 'food', ko: '맛집', en: 'Food', icon: '🍴' },
+  { id: 'food', ko: '식당', en: 'Restaurants', icon: '🍴' },
   { id: 'cafe', ko: '카페', en: 'Cafés', icon: '☕' },
   { id: 'convenience', ko: '편의점', en: 'Shops', icon: '🏪' },
   { id: 'toilet', ko: '화장실', en: 'Toilets', icon: '🚻' },
@@ -10,11 +10,12 @@ const OPTIONS: Array<{ id: DiscoveryCategory; ko: string; en: string; icon: stri
   { id: 'signals', ko: '신호등', en: 'Signals', icon: '🚦' },
   { id: 'cctv', ko: 'CCTV', en: 'CCTV', icon: '◉' },
 ]
-export function MapDiscoveryBar({ locale, selected, onSelect, status, count, places, focusedPoint, onFocus, region, cctvLocationStatus }: {
+export function MapDiscoveryBar({ locale, selected, onSelect, status, count, places, focusedPoint, onFocus, region, cctvLocationStatus, showDirectionsToggle, directionsVisible, onToggleDirections }: {
   locale: 'ko' | 'en'; selected: DiscoveryCategory | null; onSelect: (category: DiscoveryCategory) => void
   status: string; count: number; places: NearbyPlace[]; focusedPoint: [number, number] | null
   onFocus: (point: [number, number] | null) => void; region: string
   cctvLocationStatus: 'ready' | 'locating' | 'unavailable'
+  showDirectionsToggle: boolean; directionsVisible: boolean; onToggleDirections: () => void
 }) {
   const ko = locale === 'ko'
   const focused = focusedPoint ? places.find(place => Math.abs(place.lng - focusedPoint[0]) + Math.abs(place.lat - focusedPoint[1]) < .0001) : null
@@ -25,13 +26,17 @@ export function MapDiscoveryBar({ locale, selected, onSelect, status, count, pla
         onClick={() => onSelect(option.id)}><span aria-hidden="true">{option.icon}</span>{ko ? option.ko : option.en}
         {selected === option.id && <small>{status === 'loading' ? '…' : count}</small>}
       </button>)}
+      {showDirectionsToggle && <button type="button" className="tour-discovery-directions-toggle" aria-expanded={directionsVisible} onClick={onToggleDirections}>
+        {directionsVisible ? (ko ? '목록 닫기' : 'Close list') : (ko ? '목록 열기' : 'Show list')}
+      </button>}
     </nav>
     {selected === 'cctv' && <div className="tour-discovery-note" role="status">
       <span>{cctvLocationStatus === 'locating' ? (ko ? '내 위치를 확인하는 중…' : 'Finding your location…')
         : cctvLocationStatus === 'unavailable' ? (ko ? '위치를 허용하면 내 주변 20m CCTV를 표시해요.' : 'Allow location access to see CCTV within 20 m of you.')
           : status === 'loading' ? (ko ? '내 주변 20m CCTV를 찾는 중…' : 'Finding CCTV within 20 m of you…')
             : status === 'error' ? (ko ? 'CCTV 위치 자료를 불러오지 못했어요.' : 'CCTV locations could not be loaded.')
-            : ko ? `내 주변 20m · CCTV ${count}곳` : `Within 20 m of you · ${count} CCTV locations`}</span>
+            : count === 0 ? (ko ? '내 위치 20m 안에 등록된 CCTV가 없어요.' : 'No registered CCTV within 20 m of your location.')
+              : ko ? `내 주변 20m · CCTV ${count}곳` : `Within 20 m of you · ${count} CCTV locations`}</span>
     </div>}
     {selected === 'signals' && <div className="tour-discovery-note" role="status"><span>
       {status === 'loading' ? (ko ? '주변 500m 신호등을 찾는 중…' : 'Finding signals within 500 m…')

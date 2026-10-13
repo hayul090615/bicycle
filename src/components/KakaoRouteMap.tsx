@@ -111,7 +111,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   customDestination: { lat: number; lng: number } | null
   onPickDestination: (point: { lat: number; lng: number }) => void
   onHoverStop: (index: number | null) => void
-  onFoodGuideOpen: (point: LonLat) => void
+  onFoodGuideOpen: (point: LonLat, anchor?: Element, previewOnly?: boolean) => void
   fallback: ReactNode
 }) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
@@ -529,7 +529,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   useEffect(() => {
     const map = mapRef.current
     const api = apiRef.current
-    if (!map || !api || status !== 'ready' || roadviewSelectionRef.current.enabled || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
+    if (!map || !api || status !== 'ready' || (roadviewSelectionRef.current.enabled && !showCctv) || !locationFocusRequest || locationFocusRequest === lastLocationFocusRequestRef.current || !userLocation) return
     if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
     const focusLocation = () => {
       lastLocationFocusRequestRef.current = locationFocusRequest
@@ -545,7 +545,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     return () => {
       if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
     }
-  }, [locationFocusRequest, status, userLocation])
+  }, [locationFocusRequest, showCctv, status, userLocation])
 
   useEffect(() => () => {
     if (locationFocusTimerRef.current !== null) window.clearTimeout(locationFocusTimerRef.current)
@@ -739,7 +739,9 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const kind = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
       marker.setAttribute('aria-label', `${place.name} · ${kind}`)
       marker.title = `${place.name} · ${kind}${place.cuisine ? ` · ${place.cuisine}` : ''}`
-      marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat]) })
+      marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat], marker) })
+      marker.addEventListener('mouseenter', () => onFoodGuideOpen([place.lng, place.lat], marker, true))
+      marker.addEventListener('focus', () => onFoodGuideOpen([place.lng, place.lat], marker, true))
       return new api.CustomOverlay({ map, position: new api.LatLng(place.lat, place.lng), content: marker, clickable: true, xAnchor: .5, yAnchor: 1, zIndex: 7 })
     })
   }, [locale, onFoodGuideOpen, restaurants, showRestaurants, status])
