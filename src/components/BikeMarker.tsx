@@ -1,6 +1,5 @@
-/**
- * 게임 지도 위의 자전거 SVG 표시다. 진행 위치·이동 방향과 오타·도착 애니메이션 상태를 CSS 클래스에 전달한다.
- */
+//**  게임 지도 위의 자전거 SVG 표시다. 진행 위치·이동 방향과 오타·도착 애니메이션 상태를 CSS 클래스에 전달한다. */
+
 import type { RoutePoint } from '../types/game'
 
 export const BIKE_IMAGE_PATH = `${import.meta.env.BASE_URL}bike.svg`
