@@ -2,8 +2,8 @@
    같은 선택자의 뒤쪽 보완 규칙이 앞쪽 기본값을 덮어쓰므로 선언 순서를 유지한다. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
-/* 지도 정보를 고르는 가로 버튼 줄은 지도와 다른 줄에 두어 기존 도구를 가리지 않는다. */
-.tour-discovery-bar { position: relative; z-index: 12; flex: 0 0 auto; min-width: 0; width: 100%; padding: 7px 10px; background: #edf2eb; }
+/* 주변 정보 버튼은 지도 위에 겹치고 지도는 버튼 아래까지 채운다. */
+.tour-discovery-bar { position: absolute; z-index: 12; top: 0; right: 0; left: 0; min-width: 0; width: 100%; padding: 7px 10px; background: transparent; }
 .tour-discovery-chips { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; padding: 2px; }
 .tour-discovery-chips > button:first-child { margin-left: auto; }
 .tour-discovery-chips > button:last-child { margin-right: auto; }
