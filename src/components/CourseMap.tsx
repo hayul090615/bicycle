@@ -10,9 +10,10 @@ import type { StationDataStatus } from '../hooks/useBikeStations'
 import { BIKE_IMAGE_PATH } from './BikeMarker'
 import { districtFeatureMap, getFeatureCoordinates, type Coordinate, type DistrictGeoFeature } from '../data/districtGeoData'
 import type { SeoulDistrict } from '../data/districtCourses'
-import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_AREA_COLOR, SEOUL_AREA_OPACITY } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_AREA_COLOR, SEOUL_AREA_OPACITY, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
 
 const SEOUL_BOUNDARY_LATLNG = SEOUL_BOUNDARY.map(([lng, lat]) => [lat, lng] as LatLngExpression)
+const SEOUL_MASK_LATLNG = SEOUL_OUTSIDE_MASK.geometry.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as LatLngExpression))
 
 interface CourseMapProps {
   course: DistrictCourse
@@ -169,6 +170,7 @@ export function CourseMap({ course, stationIndex, segmentProgress, isWrong, erro
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
       <FollowCourse course={course} stationIndex={stationIndex} />
       <ZoomObserver onZoomChange={setMapZoom} />
+      <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ stroke: false, fillColor: SEOUL_OUTSIDE_DIM_COLOR, fillOpacity: SEOUL_OUTSIDE_DIM_OPACITY, fillRule: 'evenodd' }} interactive={false} />
       <Polygon positions={SEOUL_BOUNDARY_LATLNG} pathOptions={{ stroke: false, fillColor: SEOUL_AREA_COLOR, fillOpacity: SEOUL_AREA_OPACITY }} interactive={false} />
       <DistrictBaseLayer feature={districtFeature} lightMode={lightMode} />
       {backgroundStations.map((station) => {

@@ -544,7 +544,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       element.innerHTML = `<span>${glyphs[amenity.kind]}</span><b>${shortLabels[amenity.kind]}</b>`
       element.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
       element.setAttribute('aria-label', element.title)
-      element.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([amenity.lng, amenity.lat]) })
+      element.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([amenity.lng, amenity.lat], element) })
       return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([amenity.lng, amenity.lat]).addTo(map)
     })
     return () => markers.forEach(marker => marker.remove())

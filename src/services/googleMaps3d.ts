@@ -21,6 +21,7 @@ export interface GoogleMap3D extends HTMLElement {
 export type GooglePosition3D = { lat: number; lng: number; altitude?: number }
 export interface GooglePolygon3D extends HTMLElement {
   path: GooglePosition3D[] | GooglePosition3D[][]
+  innerPaths?: GooglePosition3D[][]
 }
 export interface Maps3DLibrary {
   Map3DElement: new (options: Camera3D & { mode: string; gestureHandling: string; description: string }) => GoogleMap3D

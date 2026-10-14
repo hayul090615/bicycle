@@ -1,5 +1,5 @@
 /**
- * 서울 외곽 대여소까지 포함하는 노란 테두리와 지도를 움직일 수 있는 범위를 정한다.
+ * 서울 외곽 대여소까지 포함하는 보라색 테두리와 지도를 움직일 수 있는 범위를 정한다.
  */
 import { SEOUL_BIKE_SERVICE_BOUNDARY } from './seoulBikeServiceBoundary'
 import { allBikeStations } from './districtCourses'
@@ -7,18 +7,18 @@ import { allBikeStations } from './districtCourses'
 type Position = [number, number]
 // 서울의 모양에서 경계 밖 대여소 주변만 확장한 테두리다. 행정 경계와는 다르다.
 export const SEOUL_BOUNDARY: Position[] = SEOUL_BIKE_SERVICE_BOUNDARY
-export const SEOUL_BOUNDARY_COLOR = '#ffc65c'
+export const SEOUL_BOUNDARY_COLOR = '#9b5de5'
 export const SEOUL_BOUNDARY_WIDTH = 4
 export const SEOUL_AREA_COLOR = '#28ad7e'
-export const SEOUL_AREA_OPACITY = 0.12
-// 노란 점선 안에 옅은 색을 채워 서울의 전체 모양을 알아보기 쉽게 한다.
+export const SEOUL_AREA_OPACITY = 0
+// 서울 안쪽은 투명하게 두어 지도 색과 지명을 그대로 보여 준다.
 export const SEOUL_AREA: GeoJSON.Feature<GeoJSON.Polygon> = {
   type: 'Feature',
   properties: {},
   geometry: { type: 'Polygon', coordinates: [SEOUL_BOUNDARY] },
 }
 export const SEOUL_OUTSIDE_DIM_COLOR = '#f4f5f0'
-export const SEOUL_OUTSIDE_DIM_OPACITY = 0.24
+export const SEOUL_OUTSIDE_DIM_OPACITY = 0.45
 // 바깥 사각형에서 테두리 안을 구멍으로 뺀다. 서울 안에는 덮개를 그리지 않는다.
 export const SEOUL_OUTSIDE_MASK: GeoJSON.Feature<GeoJSON.Polygon> = {
   type: 'Feature',

@@ -6,11 +6,11 @@ import { getTouristStation, type TouristRoute } from '../data/touristRoutes'
 import { loadGoogleMaps3D, type Camera3D, type GoogleMap3D, type GooglePosition3D, type Maps3DLibrary } from '../services/googleMaps3d'
 import type { LonLat } from '../services/bikeRoute'
 import { clusterPublicCameras, type PublicCamera } from '../services/publicCctv'
-import type { RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
+import type { RouteAmenity, RouteCondition, RouteElevationPoint, RouteRestaurant } from '../services/routeConditions'
 import { coloredRouteSegments } from '../services/routeGradient'
 import { createRouteMotion } from '../services/routeMotion'
 import { createCyclistMarker } from './cyclistMarker'
-import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_AREA_COLOR, SEOUL_AREA_OPACITY } from '../data/seoulBoundary'
+import { SEOUL_BOUNDARY, SEOUL_BOUNDARY_COLOR, SEOUL_BOUNDARY_WIDTH, SEOUL_AREA_COLOR, SEOUL_AREA_OPACITY, SEOUL_OUTSIDE_MASK, SEOUL_OUTSIDE_DIM_COLOR, SEOUL_OUTSIDE_DIM_OPACITY } from '../data/seoulBoundary'
 
 const MAX_GOOGLE_3D_CAMERA_RANGE = 180_000
 
@@ -45,7 +45,7 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
   })
 }
 
-export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
+export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, amenities, showAmenities, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
   route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
@@ -55,6 +55,8 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   accessPath: LonLat[] | null
   routeConditions: RouteCondition[]
   restaurants: RouteRestaurant[]
+  amenities: RouteAmenity[]
+  showAmenities: boolean
   showCourse: boolean
   showRestaurants: boolean
   showRoadInfo: boolean
@@ -79,6 +81,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   const treeMarkersRef = useRef<HTMLElement[]>([])
   const conditionMarkersRef = useRef<HTMLElement[]>([])
   const restaurantMarkersRef = useRef<HTMLElement[]>([])
+  const amenityMarkersRef = useRef<HTMLElement[]>([])
   const cctvMarkersRef = useRef<HTMLElement[]>([])
   const userMarkerRef = useRef<HTMLElement | null>(null)
   const lastLocationFocusRequestRef = useRef(0)
@@ -142,6 +145,15 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
           })
         }
       })
+      const outsideMask = new library.Polygon3DElement({
+        fillColor: `${SEOUL_OUTSIDE_DIM_COLOR}${Math.round(SEOUL_OUTSIDE_DIM_OPACITY * 255).toString(16).padStart(2, '0')}`,
+        strokeColor: '#00000000', strokeWidth: 0,
+        altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
+        drawsOccludedSegments: false,
+      })
+      outsideMask.path = SEOUL_OUTSIDE_MASK.geometry.coordinates[0].map(([lng, lat]) => ({ lat, lng, altitude: 0 }))
+      outsideMask.innerPaths = SEOUL_OUTSIDE_MASK.geometry.coordinates.slice(1).map(ring => ring.map(([lng, lat]) => ({ lat, lng, altitude: 0 })))
+      map.append(outsideMask)
       const cityBoundary = new library.Polygon3DElement({
         fillColor: `${SEOUL_AREA_COLOR}${Math.round(SEOUL_AREA_OPACITY * 255).toString(16).padStart(2, '0')}`,
         strokeColor: SEOUL_BOUNDARY_COLOR,
@@ -175,6 +187,8 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       conditionMarkersRef.current = []
       restaurantMarkersRef.current.forEach(marker => marker.remove())
       restaurantMarkersRef.current = []
+      amenityMarkersRef.current.forEach(marker => marker.remove())
+      amenityMarkersRef.current = []
       cctvMarkersRef.current.forEach(marker => marker.remove())
       cctvMarkersRef.current = []
       userMarkerRef.current?.remove()
@@ -335,6 +349,24 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     })
     return () => { restaurantMarkersRef.current.forEach(marker => marker.remove()); restaurantMarkersRef.current = [] }
   }, [locale, onFoodGuideOpen, restaurants, showRestaurants, status])
+
+  useEffect(() => {
+    const map = mapRef.current, library = libraryRef.current
+    if (!map || !library || status !== 'ready' || !showAmenities) return
+    const labels: Record<RouteAmenity['kind'], [string, string, string]> = {
+      toilet: ['🚻', '화장실', 'Toilet'], convenience: ['🏪', '편의점', 'Shop'], visit: ['📍', '명소', 'Attraction'],
+      pump: ['🔧', '공기주입기', 'Bike pump'], water: ['💧', '음수대', 'Water'], parking: ['🚲', '자전거 주차', 'Bike parking'], repair: ['🛠️', '자전거 수리', 'Bike repair'],
+    }
+    amenityMarkersRef.current = amenities.map(place => {
+      const [icon, ko, en] = labels[place.kind]
+      const marker = new library.Marker3DInteractiveElement({ position: { lat: place.lat, lng: place.lng },
+        label: icon, title: place.name || (locale === 'ko' ? ko : en), altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false })
+      marker.addEventListener('gmp-click', () => onFoodGuideOpen([place.lng, place.lat], marker))
+      map.append(marker)
+      return marker
+    })
+    return () => { amenityMarkersRef.current.forEach(marker => marker.remove()); amenityMarkersRef.current = [] }
+  }, [amenities, locale, onFoodGuideOpen, showAmenities, status])
 
   useEffect(() => {
     const map = mapRef.current, library = libraryRef.current

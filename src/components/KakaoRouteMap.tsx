@@ -730,7 +730,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       marker.innerHTML = `<span>${glyphs[amenity.kind]}</span><b>${shortLabels[amenity.kind]}</b>`
       marker.title = `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
       marker.setAttribute('aria-label', marker.title)
-      marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([amenity.lng, amenity.lat]) })
+      marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([amenity.lng, amenity.lat], marker) })
       return new api.CustomOverlay({ map, position: new api.LatLng(amenity.lat, amenity.lng), content: marker, clickable: true, xAnchor: .5, yAnchor: .5, zIndex: 8 })
     })
     return () => overlays.forEach(overlay => overlay.setMap(null))

@@ -4240,3 +4240,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-header-actions .tour-timer-toggle,
   .tour-screen .tour-header-actions .tour-back { min-height: 34px; }
 }
+
+/* 라이트 모드의 조작 버튼은 흰 배경으로 통일한다. */
+.tour-screen:not(.tour-screen--dark) .tour-header-actions > button,
+.tour-screen:not(.tour-screen--dark) .tour-typing-action > button,
+.tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button,
+.tour-screen:not(.tour-screen--dark) .tour-map-view-dock button,
+.tour-screen:not(.tour-screen--dark) .tour-map-destination-tools button,
+.tour-screen:not(.tour-screen--dark) .tour-place-review-toggle,
+.tour-screen:not(.tour-screen--dark) .tour-place-review-navigate { border-color: #d5e2d8; color: #244536; background: #fff; }
+.tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button[aria-pressed='true'],
+.tour-screen:not(.tour-screen--dark) .tour-map-view-dock button[aria-pressed='true'] { border-color: #9b5de5; color: #713bb7; background: #fff; }
+
+/* 지도 기능 버튼의 테두리가 마우스와 키보드 초점에 반응한다. */
+.tour-screen .tour-discovery-chips > button { transition: border-color .16s, box-shadow .16s; }
+.tour-screen .tour-discovery-chips > button:hover,
+.tour-screen .tour-discovery-chips > button:focus-visible { border-color: #b781f8; box-shadow: 0 0 0 1px #b781f8, 0 0 14px #9b5de580; outline: none; }
+.tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:hover,
+.tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:focus-visible { border-color: #9b5de5; box-shadow: 0 0 0 1px #9b5de5, 0 0 14px #9b5de580; }

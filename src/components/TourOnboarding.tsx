@@ -134,13 +134,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
     setAdOpen(!hasCookie(AD_HIDDEN_COOKIE))
   }, [mapSequenceReady, tutorialFinished])
 
-  // 광고가 열려 있는 동안 세 장을 0.3초마다 순서대로 보여 준다.
-  useEffect(() => {
-    if (!adOpen) return
-    const timer = window.setInterval(() => setAdIndex(current => (current + 1) % DEMO_ADS.length), 300)
-    return () => window.clearInterval(timer)
-  }, [adOpen])
-
   const finishTutorial = () => {
     writeCookie(TUTORIAL_COOKIE, YEAR_SECONDS)
     setTutorialStep(null)
@@ -149,7 +142,8 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
 
   const closeAd = () => {
     if (hideAdForDay) writeCookie(AD_HIDDEN_COOKIE, DAY_SECONDS)
-    setAdOpen(false)
+    if (!hideAdForDay && adIndex + 1 < DEMO_ADS.length) setAdIndex(current => current + 1)
+    else setAdOpen(false)
   }
 
   useEffect(() => {
@@ -222,16 +216,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
         <span className="tour-ad-eyebrow">{ad.eyebrow[languageIndex]}</span>
         <h2 id="tour-ad-title">{ad.title[languageIndex]}</h2>
         <p>{ad.description[languageIndex]}</p>
-      </div>
-      <div className="tour-ad-navigation" role="group" aria-label={ko ? '광고 선택' : 'Choose an advertisement'}>
-        <button type="button" className="tour-ad-arrow" onClick={() => setAdIndex(current => (current + DEMO_ADS.length - 1) % DEMO_ADS.length)} aria-label={ko ? '이전 광고' : 'Previous advertisement'}>‹</button>
-        <div className="tour-ad-pagination">
-          <span>{adIndex + 1} / {DEMO_ADS.length}</span>
-          <div className="tour-ad-dots">
-            {DEMO_ADS.map((item, index) => <button type="button" key={item.id} className={index === adIndex ? 'is-active' : ''} onClick={() => setAdIndex(index)} aria-label={ko ? `${index + 1}번째 광고 보기` : `Show advertisement ${index + 1}`} aria-pressed={index === adIndex}><span /></button>)}
-          </div>
-        </div>
-        <button type="button" className="tour-ad-arrow" onClick={() => setAdIndex(current => (current + 1) % DEMO_ADS.length)} aria-label={ko ? '다음 광고' : 'Next advertisement'}>›</button>
       </div>
       <footer className="tour-ad-footer">
         <label><input type="checkbox" checked={hideAdForDay} onChange={event => setHideAdForDay(event.target.checked)} /><span>{ko ? '24시간 동안 보지 않기' : "Don't show for 24 hours"}</span></label>
