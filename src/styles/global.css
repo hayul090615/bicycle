@@ -5,6 +5,8 @@
 /* 지도 정보를 고르는 가로 버튼 줄은 지도와 다른 줄에 두어 기존 도구를 가리지 않는다. */
 .tour-discovery-bar { position: relative; z-index: 12; flex: 0 0 auto; min-width: 0; width: 100%; padding: 7px 10px; background: #edf2eb; }
 .tour-discovery-chips { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; padding: 2px; }
+.tour-discovery-chips > button:first-child { margin-left: auto; }
+.tour-discovery-chips > button:last-child { margin-right: auto; }
 .tour-discovery-chips > button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; gap: 7px; min-height: 42px; padding: 8px 15px; border: 1px solid #dae2db; border-radius: 999px; color: #20372c; background: #fff; box-shadow: 0 2px 5px #1b3d2812; font: 750 13px/1.2 system-ui, 'Malgun Gothic', sans-serif; cursor: pointer; transition: background-color .15s, border-color .15s; }
 .tour-discovery-chips > button > span { font-size: 17px; }
 .tour-discovery-chips > button > small { padding: 2px 5px; border-radius: 99px; color: #17603e; background: #edf5ed; font-size: 10px; }
@@ -3515,7 +3517,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-topbar { z-index: 1600; overflow: visible; }
 .tour-typing-action { position: static; flex: 0 0 auto; }
 .tour-rental-widget-slot { display: contents; }
-.tour-rental-guidance-stack { position: absolute; z-index: 2; top: calc(100% + 1.5rem); right: 1.25rem; width: min(282px, calc(100vw - 2.5rem)); max-height: calc(100dvh - 112px); display: grid; align-content: start; gap: .7rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #a3c9ad transparent; }
+.tour-rental-guidance-stack { position: absolute; z-index: 2; top: var(--tour-rental-stack-top, calc(100% + 1.5rem)); right: 1.25rem; width: min(282px, calc(100vw - 2.5rem)); max-height: var(--tour-rental-stack-max-height, calc(100dvh - 112px)); display: grid; align-content: start; gap: .7rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #a3c9ad transparent; }
 .tour-rental-guidance-stack .tour-road-sign { position: relative; top: auto; right: auto; left: auto; width: 100%; }
 .tour-journey-start { min-width: 0; flex: 1 1 0; display: grid; gap: .2rem; }
 .tour-journey-start > span { padding-left: .15rem; color: #64756a; font: 800 .58rem 'Noto Sans KR', sans-serif; }
@@ -3767,7 +3769,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-topbar:has(.tour-rental-header-widget) { min-height: 104px; flex: 0 0 auto; }
   .tour-journey-start > span { font-size: .53rem; }
   .tour-journey-start > strong { height: 32px; padding: 0 .35rem; font-size: .58rem; }
-  .tour-rental-guidance-stack { top: calc(100% + .35rem); right: .5rem; width: min(250px, calc(100vw - 1rem)); max-height: min(38dvh, 310px); gap: .4rem; }
+  .tour-rental-guidance-stack { top: var(--tour-rental-stack-top, calc(100% + .35rem)); right: .5rem; width: min(250px, calc(100vw - 1rem)); max-height: min(38dvh, 310px, var(--tour-rental-stack-max-height, 100dvh)); gap: .4rem; }
   .tour-rental-guidance-stack .tour-road-sign-directions { display: none; }
   .tour-rental-header-widget { gap: .4rem; padding: .6rem; }
   .tour-rental-header-widget .tour-rental-duration button { min-height: 34px; padding: .3rem .35rem; font-size: .65rem; }
@@ -4205,8 +4207,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-road-sign-dock { display: none; }
   .tour-screen .tour-mobile-list-collapse { position: absolute; z-index: 1469; bottom: calc(var(--tour-mobile-sheet-height, 0px) + .8rem); right: max(.65rem, env(safe-area-inset-right)); left: auto; display: block; max-width: calc(100% - 90px); box-shadow: 0 3px 12px #112c2740; }
   .tour-screen .tour-mobile-route-sheet.is-expanded { max-height: min(76dvh, 650px, calc(100% - var(--tour-mobile-sheet-controls-top, 130px))); }
+  .tour-screen .tour-mobile-route-sheet:not(.is-expanded) { max-height: min(35dvh, 265px, calc(100% - var(--tour-mobile-sheet-controls-top, 130px))); }
   .tour-screen .tour-mobile-directions-toggle { bottom: calc(var(--tour-mobile-sheet-height, 0px) + .65rem); }
-  .tour-screen .tour-map-stage:has(> .tour-mobile-route-sheet.is-expanded:not([hidden])) > .tour-mobile-directions-toggle { bottom: calc(var(--tour-mobile-sheet-height, 0px) + .65rem); right: calc(max(.65rem, env(safe-area-inset-right)) + 96px); left: auto; }
+  .tour-screen .tour-map-stage:has(> .tour-mobile-route-sheet.is-expanded:not([hidden])) > .tour-mobile-directions-toggle { bottom: calc(var(--tour-mobile-sheet-height, 0px) + .65rem); right: max(.65rem, env(safe-area-inset-right)); left: auto; }
   .tour-screen .tour-map-stage--directions-hidden > .tour-mobile-directions-toggle { bottom: max(.75rem, env(safe-area-inset-bottom)); }
 }
 /* 설정이나 라이딩 계획을 열면 한 패널만 표시해 지도 조작 버튼과 겹치지 않게 한다. */

@@ -503,13 +503,29 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const stage = sheet?.closest<HTMLElement>('.tour-map-stage')
     if (!sheet || !stage) return
     const timer = rentalWidgetTarget?.querySelector<HTMLElement>('.tour-rental-header-widget')
+    const rentalStack = rentalWidgetTarget?.querySelector<HTMLElement>('.tour-rental-guidance-stack')
+    const header = rentalWidgetTarget?.closest<HTMLElement>('.tour-topbar')
     const tools = stage.querySelector<HTMLElement>('.tour-map-destination-tools')
     const mapDock = stage.querySelector<HTMLElement>('.tour-map-view-dock')
     const measure = () => {
       stage.style.setProperty('--tour-mobile-sheet-height', `${sheet.getBoundingClientRect().height}px`)
       const stageBounds = stage.getBoundingClientRect()
+      if (rentalStack && header) {
+        const headerBounds = header.getBoundingClientRect(), stackBounds = rentalStack.getBoundingClientRect()
+        let stackTop = Math.max(headerBounds.bottom, stageBounds.top) + 12
+        const obstacles = [...(tools?.children ?? []), ...(mapDock ? [mapDock] : [])]
+        obstacles.forEach(element => {
+          const bounds = element.getBoundingClientRect()
+          if (bounds.height && bounds.left < stackBounds.right && bounds.right > stackBounds.left) stackTop = Math.max(stackTop, bounds.bottom + 12)
+        })
+        const mobileNavigation = window.matchMedia('(max-width: 700px)').matches && sheet.classList.contains('is-navigating') && !sheet.hidden
+        const navigationSpace = mobileNavigation ? Math.min(160, window.innerHeight * .35) + 64 : 0
+        rentalStack.style.setProperty('--tour-rental-stack-top', `${stackTop - headerBounds.top}px`)
+        rentalStack.style.setProperty('--tour-rental-stack-max-height', `${Math.max(64, Math.min(stageBounds.bottom, window.innerHeight) - stackTop - 12 - navigationSpace)}px`)
+      }
       const timerBounds = timer?.getBoundingClientRect()
-      let clearance = timerBounds?.height ? timerBounds.bottom - stageBounds.top + 64 : 130
+      const visibleTimerBottom = timerBounds ? Math.min(timerBounds.bottom, rentalStack?.getBoundingClientRect().bottom ?? timerBounds.bottom) : 0
+      let clearance = timerBounds?.height ? visibleTimerBottom - stageBounds.top + 64 : 130
       tools?.querySelectorAll('button').forEach(button => {
         const bounds = button.getBoundingClientRect()
         if (bounds.height && bounds.right > stageBounds.right - 164) clearance = Math.max(clearance, bounds.bottom - stageBounds.top + 64)
@@ -522,12 +538,13 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     observer.observe(sheet)
     observer.observe(stage)
     if (timer) observer.observe(timer)
+    if (rentalStack) observer.observe(rentalStack)
+    if (header) observer.observe(header)
     if (tools) observer.observe(tools)
     if (mapDock) observer.observe(mapDock)
     measure()
     return () => observer.disconnect()
-  }, [rentalTimerOpen, rentalWidgetTarget, customDestination])
-  const [directionsListOpen, setDirectionsListOpen] = useState(true)
+  }, [rentalTimerOpen, rentalWidgetTarget, customDestination, bikeUseMode])
   const [directionsPanelVisible, setDirectionsPanelVisible] = useState(true)
   const toggleDirectionsPanel = useCallback(() => {
     setDirectionsPanelVisible(visible => !visible)
@@ -1483,8 +1500,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
 
   const walkingToPickup = bikeUseMode === 'ttareungi' && pickupStation && userLocation && distanceMeters(userLocation, pickupStation) > 30
   const roadSign = hasDestination && directionsPanelVisible ? <div className="tour-road-sign-dock">
-    {routeInstructions.length > 0 && <button type="button" className="tour-directions-list-toggle" aria-expanded={directionsListOpen} aria-controls="tour-road-sign-list"
-      onClick={() => setDirectionsListOpen(open => !open)}>{directionsListOpen ? text('Close list', '목록 닫기') : text('Show list', '목록 보기')}</button>}
     <aside id="tour-road-sign" className="tour-road-sign" aria-label={text('Bicycle directions', '자전거 길 안내')}>
     <div className="tour-road-sign-current" role="status" aria-live="polite">
       <span className="tour-road-sign-arrow" aria-hidden="true">{walkingToPickup ? '🚶' : instructionArrow(nextInstruction?.instruction)}</span>
@@ -1492,7 +1507,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </div>
     {routeInstructions.length > 0 && <div className="tour-road-sign-directions">
       <h3>{text('Full directions', '전체 길 안내')}</h3>
-      {directionsListOpen && <ol id="tour-road-sign-list">{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>}
+      <ol id="tour-road-sign-list">{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>
     </div>}
     </aside>
   </div> : null
@@ -1779,11 +1794,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </label>}
           <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { selectDiscoveryCategory('toilet') }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
         </section>
-        {hasDestination && directionsPanelVisible && mobileSheetExpanded && !roadviewEnabled && <button type="button" className="tour-directions-list-toggle tour-mobile-list-collapse" aria-controls="tour-mobile-route-sheet"
-          onClick={() => {
-            document.getElementById('tour-mobile-route-sheet')?.querySelector<HTMLButtonElement>('.tour-mobile-sheet-handle')?.focus({ preventScroll: true })
-            setMobileSheetExpanded(false)
-          }}>{text('Close list', '목록 닫기')}</button>}
         {hasDestination && !roadviewEnabled && <button type="button" className="tour-mobile-directions-toggle"
           aria-controls="tour-mobile-route-sheet" aria-expanded={directionsPanelVisible}
           aria-label={directionsPanelVisible ? text('Hide directions list', '길 안내 목록 닫기') : text('Show directions list', '길 안내 목록 열기')}
