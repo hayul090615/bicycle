@@ -134,6 +134,13 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
     setAdOpen(!hasCookie(AD_HIDDEN_COOKIE))
   }, [mapSequenceReady, tutorialFinished])
 
+  // 광고가 열려 있는 동안 세 장을 0.3초마다 순서대로 보여 준다.
+  useEffect(() => {
+    if (!adOpen) return
+    const timer = window.setInterval(() => setAdIndex(current => (current + 1) % DEMO_ADS.length), 300)
+    return () => window.clearInterval(timer)
+  }, [adOpen])
+
   const finishTutorial = () => {
     writeCookie(TUTORIAL_COOKIE, YEAR_SECONDS)
     setTutorialStep(null)
