@@ -19,7 +19,7 @@
 .tour-discovery-detail strong, .tour-discovery-detail small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tour-discovery-detail small { margin-top: 4px; color: #587365; }
 .tour-discovery-detail > button { width: 36px; height: 36px; border: 0; border-radius: 50%; color: #294637; background: #fff; font-size: 20px; cursor: pointer; }
-.tour-screen--dark .tour-discovery-bar { background: #1b2c23; }
+.tour-screen--dark .tour-discovery-bar { background: transparent; }
 .tour-screen--dark .tour-discovery-chips > button { border-color: #455a4c; color: #fff; background: #293c30; }
 .tour-screen--dark .tour-discovery-chips > button:hover { background: #3b5945; }
 .tour-screen--dark .tour-discovery-chips > button[aria-pressed='true'] { border-color: #8bcaa2; background: #315a40; }
