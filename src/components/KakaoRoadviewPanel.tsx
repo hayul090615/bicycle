@@ -321,7 +321,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
       <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
       {status === 'ready' && apiRef.current && roadviewRef.current && <RoadviewCompass api={apiRef.current} roadview={roadviewRef.current} locale={locale} />}
-      {expanded && status === 'ready' && destination && apiRef.current && roadviewRef.current && <RoadviewDirections
+      {status === 'ready' && destination && apiRef.current && roadviewRef.current && <RoadviewDirections
         api={apiRef.current} roadview={roadviewRef.current} path={routePath} instructions={directions} locale={locale} />}
       {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} terrainPath={terrainPath} elevationProfile={elevationProfile} destination={destination} locale={locale} onDestinationArrival={onDestinationArrival} />}
       {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
