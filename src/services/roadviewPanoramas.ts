@@ -1,6 +1,17 @@
 /** 같은 거리 사진 위치를 다시 누르면 앞서 찾은 사진 번호를 재사용해 기다리는 시간을 줄인다. */
 import type { KakaoMapsApi, KakaoLatLng } from './kakaoMaps'
 
+export type DestinationPanorama = { id: number; radius: number }
+
+/** 목적지를 가장 가깝게 보여 주는 사진을 찾는다. 좁은 범위에 사진이 없으면 주변 도로까지 확인한다. */
+export async function findDestinationPanorama(api: KakaoMapsApi, destination: KakaoLatLng): Promise<DestinationPanorama | null> {
+  for (const radius of [30, 80]) {
+    const id = await findRoadviewPanorama(api, destination, radius)
+    if (id !== null) return { id, radius }
+  }
+  return null
+}
+
 const cache = new Map<string, { id: number | null; expires: number }>()
 const pending = new Map<string, Promise<number | null>>()
 

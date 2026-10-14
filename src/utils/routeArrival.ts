@@ -18,10 +18,14 @@ function distanceMeters(first: LonLat, second: LonLat) {
 }
 
 /** 로드뷰의 실제 촬영 좌표가 목적지와 경로 끝에 함께 도달했는지 확인한다. */
-export function isAtRoadviewDestination(position: { lat: number; lng: number }, destination: { lat: number; lng: number }, remainingMeters: number, routeGapMeters: number) {
+export function isAtRoadviewDestination(position: { lat: number; lng: number }, destination: { lat: number; lng: number }, remainingMeters: number, routeGapMeters: number, destinationPhotoRadius?: number) {
+  // 목적지와 촬영 위치가 일치하지 않을 때는 SDK가 확인한 목적지 사진의 범위만 허용한다.
+  const confirmedPhoto = destinationPhotoRadius === 30 || destinationPhotoRadius === 80
+  const proximity = confirmedPhoto ? destinationPhotoRadius + 10 : 10
   return [position.lat, position.lng, destination.lat, destination.lng, remainingMeters, routeGapMeters].every(Number.isFinite)
-    && remainingMeters >= 0 && remainingMeters <= 6 && routeGapMeters >= 0 && routeGapMeters <= 10
-    && distanceMeters([position.lng, position.lat], [destination.lng, destination.lat]) <= 10
+    && remainingMeters >= 0 && remainingMeters <= (confirmedPhoto ? proximity : 6)
+    && routeGapMeters >= 0 && routeGapMeters <= proximity
+    && distanceMeters([position.lng, position.lat], [destination.lng, destination.lat]) <= proximity
 }
 
 /** Connect a snapped bicycle-route endpoint to the exact selected destination. */

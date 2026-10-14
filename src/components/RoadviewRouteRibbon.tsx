@@ -8,7 +8,7 @@ import type { RouteElevationPoint } from '../services/routeConditions'
 import { bearingToRoadviewPoint, roadviewRouteSections, type RibbonSection } from '../utils/roadviewRoute'
 import { roadviewGroundAltitude, visibleRoadviewGroundSections, ROADVIEW_GUIDANCE_DISTANCE_METERS } from '../utils/roadviewGround'
 import { isAtRoadviewDestination } from '../utils/routeArrival'
-import { findRoadviewPanorama } from '../services/roadviewPanoramas'
+import { findDestinationPanorama, findRoadviewPanorama, type DestinationPanorama } from '../services/roadviewPanoramas'
 
 type AnchorPair = { section: RibbonSection; left: HTMLElement; right: HTMLElement }
 type ScreenPoint = { x: number; y: number }
@@ -34,6 +34,8 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
   const [offRoute, setOffRoute] = useState(false)
   const [moving, setMoving] = useState(false)
   const [moveFailed, setMoveFailed] = useState(false)
+  const [finalStep, setFinalStep] = useState(false)
+  const [arrived, setArrived] = useState(false)
   const ko = locale === 'ko'
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => { arrivalCallback.current = onDestinationArrival }, [onDestinationArrival])
@@ -59,8 +61,29 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
     let stableZoom = alignOnce.current ? roadview.getViewpoint().zoom : 0
     let horizon: { element: HTMLElement; overlay: KakaoOverlay } | null = null
     let camera = { lat: 0, lng: 0 }
+    let remainingMeters = Infinity
+    let destinationPhoto: DestinationPanorama | null = null
+    let arrivalReported = false
+    setFinalStep(false)
+    setArrived(false)
     const client = new api.RoadviewClient()
     const stopMoving = () => { window.clearTimeout(moveTimeout); moveInFlight = false; if (!disposed) setMoving(false) }
+
+    const confirmArrival = () => {
+      if (disposed || settling) return
+      const position = roadview.getPosition()
+      const confirmed = { lat: position.getLat(), lng: position.getLng() }
+      const route = roadviewRouteSections(path, confirmed, progressFloor)
+      const photoRadius = destinationPhoto?.id === roadview.getPanoId() ? destinationPhoto.radius : undefined
+      const atDestination = isAtRoadviewDestination(confirmed, destination, route.remainingMeters, route.closestDistance, photoRadius)
+      setArrived(atDestination)
+      if (atDestination && !arrivalReported) { arrivalReported = true; arrivalCallback.current() }
+    }
+    void findDestinationPanorama(api, new api.LatLng(destination.lat, destination.lng)).then(photo => {
+      if (disposed) return
+      destinationPhoto = photo
+      confirmArrival()
+    }).catch(() => {})
 
     const readScreen = (anchor: HTMLElement, rect: DOMRect): ScreenPoint | null => {
       if (!anchor.isConnected || !anchor.getClientRects().length) return null
@@ -151,10 +174,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
         // 사진 전환이 끝난 뒤 한 번 더 같은 촬영 지점인지 확인한다.
         arrivalTimeout = window.setTimeout(() => {
           if (disposed || settling || roadview.getPanoId() !== panoId) return
-          const position = roadview.getPosition()
-          const confirmed = { lat: position.getLat(), lng: position.getLng() }
-          const route = roadviewRouteSections(path, confirmed, progressFloor)
-          if (isAtRoadviewDestination(confirmed, destination, route.remainingMeters, route.closestDistance)) arrivalCallback.current()
+          confirmArrival()
         }, 1000)
       }, 650)
     }
@@ -189,6 +209,8 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
       nearestPoint = route.nearestPoint
       progressFloor = Math.max(progressFloor, (sections[0]?.progressMeters ?? 0) - 12)
       routeIsNearby = route.closestDistance <= 12
+      remainingMeters = route.remainingMeters
+      setFinalStep(routeIsNearby && remainingMeters <= 48)
       setOffRoute(!routeIsNearby)
       setMoveFailed(false)
       const altitudeAt = roadviewGroundAltitude(terrainPath, elevationProfile, camera)
@@ -220,6 +242,20 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
       setMoving(true)
       setMoveFailed(false)
       moveTimeout = window.setTimeout(() => { if (!disposed && request === moveRequest) { ++moveRequest; setMoveFailed(true); stopMoving() } }, 7000)
+      // 마지막 구간의 다음 버튼도 상단 도착 버튼과 같은 목적지 사진으로 이동한다.
+      if (routeIsNearby && remainingMeters <= 48) {
+        void findDestinationPanorama(api, new api.LatLng(destination.lat, destination.lng)).then(photo => {
+          if (disposed || request !== moveRequest) return
+          if (roadview.getPanoId() !== currentPano) { stopMoving(); return }
+          if (!photo) { setMoveFailed(true); stopMoving(); return }
+          destinationPhoto = photo
+          if (photo.id === currentPano) { stopMoving(); confirmArrival(); return }
+          alignAfterMove = true
+          try { roadview.setPanoId(photo.id, new api.LatLng(destination.lat, destination.lng)) }
+          catch { setMoveFailed(true); stopMoving() }
+        }).catch(() => { if (!disposed && request === moveRequest) { setMoveFailed(true); stopMoving() } })
+        return
+      }
       const tryCandidate = (index: number) => {
         const candidate = candidates[index]
         if (!candidate) { setMoveFailed(true); stopMoving(); return }
@@ -264,8 +300,8 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
   return <>
     <svg className="tour-roadview-route-ribbon" aria-hidden="true"><path className="tour-roadview-route-band" ref={ribbon} /><path className="tour-roadview-route-centerline" ref={centerline} /></svg>
     <div className="tour-roadview-route-guide">
-      <span>{moveFailed ? (ko ? '다음 사진이 없어요. 다른 지점을 눌러 보세요.' : 'No next photo here. Try another point.') : offRoute ? (ko ? '선택한 경로로 이동해 보세요' : 'Go to your selected route') : (ko ? '파란 경로를 따라 도착지까지' : 'Follow blue to your destination')}</span>
-      <button type="button" disabled={moving} onClick={() => advanceRef.current()}>{moving ? '…' : offRoute ? (ko ? '경로로' : 'To route') : (ko ? '다음 ›' : 'Next ›')}</button>
+      <span>{arrived ? (ko ? '도착지에 도착했어요' : 'You have arrived') : moveFailed ? (ko ? '다음 사진이 없어요. 다른 지점을 눌러 보세요.' : 'No next photo here. Try another point.') : offRoute ? (ko ? '선택한 경로로 이동해 보세요' : 'Go to your selected route') : finalStep ? (ko ? '마지막 구간 · 도착지로 이동' : 'Final stretch · arrive at your destination') : (ko ? '파란 경로를 따라 도착지까지' : 'Follow blue to your destination')}</span>
+      <button type="button" disabled={moving || arrived} onClick={() => advanceRef.current()}>{moving ? '…' : arrived || finalStep ? (ko ? '도착' : 'Arrive') : offRoute ? (ko ? '경로로' : 'To route') : (ko ? '다음 ›' : 'Next ›')}</button>
     </div>
   </>
 }

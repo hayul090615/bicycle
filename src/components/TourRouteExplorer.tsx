@@ -497,6 +497,36 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [mapMenuOpen, setMapMenuOpen] = useState(false)
   const [menuPlanTarget, setMenuPlanTarget] = useState<HTMLDivElement | null>(null)
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false)
+  const mobileSheetRef = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const sheet = mobileSheetRef.current
+    const stage = sheet?.closest<HTMLElement>('.tour-map-stage')
+    if (!sheet || !stage) return
+    const timer = rentalWidgetTarget?.querySelector<HTMLElement>('.tour-rental-header-widget')
+    const tools = stage.querySelector<HTMLElement>('.tour-map-destination-tools')
+    const mapDock = stage.querySelector<HTMLElement>('.tour-map-view-dock')
+    const measure = () => {
+      stage.style.setProperty('--tour-mobile-sheet-height', `${sheet.getBoundingClientRect().height}px`)
+      const stageBounds = stage.getBoundingClientRect()
+      const timerBounds = timer?.getBoundingClientRect()
+      let clearance = timerBounds?.height ? timerBounds.bottom - stageBounds.top + 64 : 130
+      tools?.querySelectorAll('button').forEach(button => {
+        const bounds = button.getBoundingClientRect()
+        if (bounds.height && bounds.right > stageBounds.right - 164) clearance = Math.max(clearance, bounds.bottom - stageBounds.top + 64)
+      })
+      const mapBounds = mapDock?.getBoundingClientRect()
+      if (mapBounds?.height) clearance = Math.max(clearance, mapBounds.bottom - stageBounds.top + 12)
+      stage.style.setProperty('--tour-mobile-sheet-controls-top', `${Math.max(130, clearance)}px`)
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(sheet)
+    observer.observe(stage)
+    if (timer) observer.observe(timer)
+    if (tools) observer.observe(tools)
+    if (mapDock) observer.observe(mapDock)
+    measure()
+    return () => observer.disconnect()
+  }, [rentalTimerOpen, rentalWidgetTarget, customDestination])
   const [directionsListOpen, setDirectionsListOpen] = useState(true)
   const [directionsPanelVisible, setDirectionsPanelVisible] = useState(true)
   const toggleDirectionsPanel = useCallback(() => {
@@ -752,6 +782,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }, [destinationStation.lat, destinationStation.lng, hasDestination, routedPath, walkingPath])
   const activePathKey = routedPath && selectedRouteOption ? `${routeGuidanceKey}:${activeRouteOptions.indexOf(selectedRouteOption)}` : null
   const routeInstructions = routeGeometry?.instructions ?? []
+  const roadviewDirections = useMemo(() => [
+    ...(walkingPath?.length && pickupStation ? [{ point: walkingPath[0], label: text('Walk to the bike station', '대여소까지 도보'), arrow: '🚶', distanceMeters: pathDistance(walkingPath), maneuver: 'depart' }] : []),
+    ...routeInstructions.map(instruction => ({
+      point: instruction.maneuver === 'arrive' ? [destinationStation.lng, destinationStation.lat] as LonLat : instruction.point,
+      label: instructionLabel(instruction, locale), arrow: instructionArrow(instruction),
+      distanceMeters: instruction.distanceMeters, maneuver: instruction.maneuver,
+    })),
+  ], [routeGeometry?.instructions, walkingPath, pickupStation?.id, locale, destinationStation.lat, destinationStation.lng])
   const activeElevation = elevationState?.key === activePathKey ? elevationState : null
   const originalAmenities = useMemo(() => (amenitiesState?.routeId === route.id ? amenitiesState.places : EMPTY_ROUTE_AMENITIES)
     .filter(amenity => amenity.kind !== 'pump' && amenity.kind !== 'water'), [amenitiesState?.places, amenitiesState?.routeId, route.id])
@@ -1444,19 +1482,20 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   </MapContainer>
 
   const walkingToPickup = bikeUseMode === 'ttareungi' && pickupStation && userLocation && distanceMeters(userLocation, pickupStation) > 30
-  const roadSign = hasDestination && directionsPanelVisible ? <aside id="tour-road-sign" className="tour-road-sign" aria-label={text('Bicycle directions', '자전거 길 안내')}>
+  const roadSign = hasDestination && directionsPanelVisible ? <div className="tour-road-sign-dock">
+    {routeInstructions.length > 0 && <button type="button" className="tour-directions-list-toggle" aria-expanded={directionsListOpen} aria-controls="tour-road-sign-list"
+      onClick={() => setDirectionsListOpen(open => !open)}>{directionsListOpen ? text('Close list', '목록 닫기') : text('Show list', '목록 보기')}</button>}
+    <aside id="tour-road-sign" className="tour-road-sign" aria-label={text('Bicycle directions', '자전거 길 안내')}>
     <div className="tour-road-sign-current" role="status" aria-live="polite">
       <span className="tour-road-sign-arrow" aria-hidden="true">{walkingToPickup ? '🚶' : instructionArrow(nextInstruction?.instruction)}</span>
       <span><small>{walkingToPickup ? text('WALK TO BIKE', '먼저 대여소까지 도보') : text('NEXT DIRECTION', '다음 이동 방향')}</small><strong>{walkingToPickup ? localizeBikeStationName(pickupStation.name, locale) : routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Loading bicycle directions…', '자전거 길 안내를 불러오는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{walkingToPickup ? `${distanceLabel(walkingDistance ?? distanceMeters(userLocation, pickupStation))} ${text('to the bike station', '후 대여소 도착')}` : `${distanceLabel(Math.max(0, (nextInstruction?.offsetMeters ?? routeDistance) - routeProgressMeters))} ${text('to next turn', '후 다음 안내')}`}</em></span>
     </div>
     {routeInstructions.length > 0 && <div className="tour-road-sign-directions">
-      <div className="tour-directions-list-heading"><h3>{text('Full directions', '전체 길 안내')}</h3>
-        <button type="button" className="tour-directions-list-toggle" aria-expanded={directionsListOpen} aria-controls="tour-road-sign-list"
-          onClick={() => setDirectionsListOpen(open => !open)}>{directionsListOpen ? text('Close list', '목록 닫기') : text('Show list', '목록 보기')}</button>
-      </div>
+      <h3>{text('Full directions', '전체 길 안내')}</h3>
       {directionsListOpen && <ol id="tour-road-sign-list">{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span>{instructionLabel(instruction, locale)}</span><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></li>)}</ol>}
     </div>}
-  </aside> : null
+    </aside>
+  </div> : null
 
   // 길 안내·경로 고도·코스 선택 내용을 메뉴 또는 모바일 표시 위치에 연결한다.
   const itineraryPanel = (
@@ -1712,12 +1751,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         </Suspense>}
         {view === 'google' && hasGoogleMapsKey && <GoogleRoute3D route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
         {view === 'kakao' && hasKakaoMapsKey && <KakaoRouteMap route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} onMapCenterChange={reportMapCenter} showRiders={showRiders} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showCctv={showCctv} cctvCameras={cctvCameras} locationFocusRequest={locationFocusRequest} locale={locale} userLocation={userLocation} selectedStop={selectedStop} kakaoMapType={kakaoMapType} roadviewEnabled={roadviewEnabled} roadviewPosition={roadviewPosition} onSelectRoadview={selectRoadview} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} onFoodGuideOpen={openFoodGuideAt} fallback={map} />}
-        {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} terrainPath={routedPath} elevationProfile={elevationPoints} destination={hasDestination ? destinationStation : null} onDestinationArrival={celebrateRoadviewArrival} />}
+        {roadviewEnabled && view === 'kakao' && roadviewTarget && <KakaoRoadviewPanel target={roadviewTarget} locale={locale} onClose={closeRoadview} onPositionChange={reportRoadviewPosition} routePath={roadviewRoutePath} terrainPath={routedPath} elevationProfile={elevationPoints} directions={roadviewDirections} destination={hasDestination ? destinationStation : null} onDestinationArrival={celebrateRoadviewArrival} />}
         {roadviewEnabled && <div className="tour-roadview-map-hint" role="status"><span>{text('Click a highlighted road to view the street', '표시된 도로를 누르면 거리 사진을 볼 수 있어요')}</span><button type="button" onClick={closeRoadview}>{text('Exit Roadview', '로드뷰 종료')}</button></div>}
         {(view === 'satellite' || view === 'map') && <Suspense fallback={<div className="tour-maplibre-3d tour-map-starting">{map}</div>}>
           <MapLibreRoute3D onMapCenterChange={reportMapCenter} key={view} viewMode={view} route={route} routePath={displayRoutePath} elevationProfile={elevationPoints} activeStopIndexes={activeStopIndexes} originStopIndex={originStopIndex} viaStopIndex={viaStopIndex} accessPath={approachPath} accessEstimated={activeApproachRoute?.estimated ?? false} walkPath={walkingPath} pickupStation={pickupStation} amenities={routeAmenities} showAmenities={showAmenities} bikeStations={mapBikeStations} showBikeStations={showBikeStations} season={displaySeason} weather={mapWeather} nightSky={nightSkyActive} routeConditions={routeConditions} restaurants={routeRestaurants} showCourse={showRidingRoute} hasDestination={hasDestination} showRestaurants={showRestaurants} showRoadInfo={showRoadInfo} showRiders={showRiders} cctvCameras={cctvCameras} showCctv={showCctv} showShadows={showShadows} locationFocusRequest={locationFocusRequest} rotationRequest={rotationRequest} onFoodGuideOpen={openFoodGuideAt} locale={locale} userLocation={userLocation} selectedStop={selectedStop} onSelectStop={selectStop} destinationPicking={destinationPicking} customDestination={customDestination} onPickDestination={chooseCustomDestination} onHoverStop={hoverStop} shadowAzimuth={solar.shadowAzimuth} sunElevation={solar.elevation} fallback={map} />
         </Suspense>}
-        <section id="tour-mobile-route-sheet" hidden={hasDestination && !directionsPanelVisible} className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}${hasDestination ? ' is-navigating' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
+        <section id="tour-mobile-route-sheet" ref={mobileSheetRef} hidden={hasDestination && !directionsPanelVisible} className={`tour-mobile-route-sheet${mobileSheetExpanded ? ' is-expanded' : ''}${hasDestination ? ' is-navigating' : ''}`} aria-label={text("Selected bike route", "\uC120\uD0DD\uD55C \uC790\uC804\uAC70 \uCF54\uC2A4")}>
           <button type="button" className="tour-mobile-sheet-handle" aria-controls="tour-mobile-route-sheet" aria-expanded={mobileSheetExpanded} aria-label={mobileSheetExpanded ? text('Collapse directions', '길 안내 접기') : text('Show all directions', '전체 길 안내 보기')} onClick={() => setMobileSheetExpanded(expanded => !expanded)}><i /></button>
           {hasDestination ? <>
             <div className="tour-mobile-nav-summary" role="status" aria-live="polite">
@@ -1725,12 +1764,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <span><small>{walkingToPickup ? text('Walk to the rental station', '먼저 대여소까지 도보') : text('Bicycle directions', '자전거 길 안내')}</small><strong>{walkingToPickup ? localizeBikeStationName(pickupStation.name, locale) : routeInstructions.length ? instructionLabel(nextInstruction?.instruction ?? routeInstructions.at(-1)!, locale) : routeGuidanceStatus === 'loading' ? text('Finding a safer bicycle route…', '안전한 자전거 경로를 찾는 중…') : text('Follow the highlighted route', '표시된 경로를 따라 이동하세요')}</strong><em>{walkingToPickup ? distanceLabel(walkingDistance ?? distanceMeters(userLocation, pickupStation)) : `${distanceLabel(remainingRouteMeters)} ${text('remaining', '남음')}`}</em></span>
             </div>
             <div className="tour-mobile-nav-stats"><strong>{text(`About ${remainingJourneyMinutes} min`, `약 ${remainingJourneyMinutes}분`)}</strong><span>{distanceLabel(remainingRouteMeters)} · {destinationLabel}</span></div>
-            {mobileSheetExpanded && <div className="tour-mobile-nav-details"><div className="tour-directions-list-heading"><h3>{text('Full bicycle directions', '전체 자전거 길 안내')}</h3>
-              <button type="button" className="tour-directions-list-toggle" onClick={event => {
-                event.currentTarget.closest('section')?.querySelector<HTMLButtonElement>('.tour-mobile-sheet-handle')?.focus({ preventScroll: true })
-                setMobileSheetExpanded(false)
-              }}>{text('Close list', '목록 닫기')}</button>
-            </div>{routeInstructions.length ? <ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span aria-hidden="true">{instructionArrow(instruction)}</span><div><strong>{instructionLabel(instruction, locale)}</strong><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></div></li>)}</ol> : <p>{text('Route details will appear when the route loads.', '경로를 불러오면 상세 안내가 표시됩니다.')}</p>}</div>}
+            {mobileSheetExpanded && <div className="tour-mobile-nav-details"><h3>{text('Full bicycle directions', '전체 자전거 길 안내')}</h3>{routeInstructions.length ? <ol>{routeInstructions.map((instruction, index) => <li key={`${instruction.point.join(',')}-${index}`}><span aria-hidden="true">{instructionArrow(instruction)}</span><div><strong>{instructionLabel(instruction, locale)}</strong><small>{distanceLabel(instruction.distanceMeters)}{instruction.roadName ? ` · ${instruction.roadName}` : ''}</small></div></li>)}</ol> : <p>{text('Route details will appear when the route loads.', '경로를 불러오면 상세 안내가 표시됩니다.')}</p>}</div>}
           </> : <>
             <div className="tour-mobile-sheet-title"><span><small>{text("BIKE ROUTE", "\uC790\uC804\uAC70 \uCF54\uC2A4")}</small><strong>{text(route.title, route.titleKo)}</strong></span><button type="button" onClick={() => { setActiveMapTool("routes"); setSidebarOpen(true) }}>{text("Routes", "\uCF54\uC2A4")}</button></div>
             <div className="tour-mobile-sheet-metrics"><span><b>{distanceLabel(journeyDistance)}</b><small>{text("Distance", "\uAC70\uB9AC")}</small></span><span><b>{text(`About ${journeyMinutes} min`, `\uC57D ${journeyMinutes}\uBD84`)}</b><small>{text("By bike", "\uC790\uC804\uAC70")}</small></span><span><b>{route.stops.length}</b><small>{text("Stops", "\uACBD\uC720\uC9C0")}</small></span></div>
@@ -1745,6 +1779,11 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           </label>}
           <div className="tour-mobile-sheet-actions"><button type="button" onClick={() => { selectDiscoveryCategory('toilet') }}><span aria-hidden="true">&#x1F6BB;</span>{text("Find a toilet", "\uD654\uC7A5\uC2E4 \uCC3E\uAE30")}</button><button type="button" onClick={() => navigateRouteFromLocation(route.id)} disabled={locating || (selectedStop === null && customDestination === null)}><span aria-hidden="true">&#x1F6B2;</span>{locating ? text("Finding location...", "\uC704\uCE58 \uD655\uC778 \uC911...") : originStopIndex === null ? text("Go from my location", "\uB0B4 \uC704\uCE58\uC5D0\uC11C \uCD9C\uBC1C") : text("Start from selected place", "\uC120\uD0DD\uD55C \uC7A5\uC18C\uC5D0\uC11C \uCD9C\uBC1C")}</button></div>
         </section>
+        {hasDestination && directionsPanelVisible && mobileSheetExpanded && !roadviewEnabled && <button type="button" className="tour-directions-list-toggle tour-mobile-list-collapse" aria-controls="tour-mobile-route-sheet"
+          onClick={() => {
+            document.getElementById('tour-mobile-route-sheet')?.querySelector<HTMLButtonElement>('.tour-mobile-sheet-handle')?.focus({ preventScroll: true })
+            setMobileSheetExpanded(false)
+          }}>{text('Close list', '목록 닫기')}</button>}
         {hasDestination && !roadviewEnabled && <button type="button" className="tour-mobile-directions-toggle"
           aria-controls="tour-mobile-route-sheet" aria-expanded={directionsPanelVisible}
           aria-label={directionsPanelVisible ? text('Hide directions list', '길 안내 목록 닫기') : text('Show directions list', '길 안내 목록 열기')}

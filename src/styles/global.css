@@ -4194,6 +4194,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-directions-list-heading > h3 { min-width: 0; }
 .tour-directions-list-toggle { flex: 0 0 auto; min-height: 44px; padding: .5rem 1rem; border: 0; border-radius: 999px; color: #fff; background: #18232d; font: 800 .75rem/1.2 'Noto Sans KR', sans-serif; cursor: pointer; transition: background-color .15s; }
 .tour-directions-list-toggle:hover, .tour-directions-list-toggle:focus-visible { color: #fff; background: #2c3b48; }
+.tour-road-sign-dock { position: absolute; z-index: 1429; top: 6.3rem; right: .8rem; display: grid; gap: .5rem; width: min(320px, 34%); }
+.tour-road-sign-dock > .tour-directions-list-toggle { justify-self: end; }
+.tour-road-sign-dock > .tour-road-sign { position: relative; inset: auto; width: 100%; }
+.tour-rental-guidance-stack .tour-road-sign-dock { position: relative; inset: auto; width: 100%; }
+.tour-screen .tour-map-stage--roadview > .tour-road-sign-dock,
+.tour-screen:has(.tour-map-stage--roadview) .tour-rental-guidance-stack .tour-road-sign-dock { display: none; }
+.tour-mobile-list-collapse { display: none; }
+@media (max-width: 700px) {
+  .tour-screen .tour-road-sign-dock { display: none; }
+  .tour-screen .tour-mobile-list-collapse { position: absolute; z-index: 1469; bottom: calc(var(--tour-mobile-sheet-height, 0px) + .8rem); right: max(.65rem, env(safe-area-inset-right)); left: auto; display: block; max-width: calc(100% - 90px); box-shadow: 0 3px 12px #112c2740; }
+  .tour-screen .tour-mobile-route-sheet.is-expanded { max-height: min(76dvh, 650px, calc(100% - var(--tour-mobile-sheet-controls-top, 130px))); }
+  .tour-screen .tour-mobile-directions-toggle { bottom: calc(var(--tour-mobile-sheet-height, 0px) + .65rem); }
+  .tour-screen .tour-map-stage:has(> .tour-mobile-route-sheet.is-expanded:not([hidden])) > .tour-mobile-directions-toggle { bottom: calc(var(--tour-mobile-sheet-height, 0px) + .65rem); right: calc(max(.65rem, env(safe-area-inset-right)) + 96px); left: auto; }
+  .tour-screen .tour-map-stage--directions-hidden > .tour-mobile-directions-toggle { bottom: max(.75rem, env(safe-area-inset-bottom)); }
+}
 /* 설정이나 라이딩 계획을 열면 한 패널만 표시해 지도 조작 버튼과 겹치지 않게 한다. */
 .tour-screen .tour-map-stage--tool-open > .tour-map-view-dock { display: none; }
 .tour-screen .tour-map-stage > .tour-map-side-panel { top: 4.1rem; left: .65rem; right: auto; bottom: .65rem; width: min(400px, calc(100% - 1.3rem)); max-height: none; }

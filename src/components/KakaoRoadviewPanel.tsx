@@ -8,6 +8,7 @@ import type { LonLat } from '../services/bikeRoute'
 import { RoadviewRouteRibbon } from './RoadviewRouteRibbon'
 import { RoadviewCompass } from './RoadviewCompass'
 import { RoadviewDestinationControl } from './RoadviewDestinationControl'
+import { RoadviewDirections, type RoadviewDirection } from './RoadviewDirections'
 import { findRoadviewPanorama } from '../services/roadviewPanoramas'
 import type { RouteElevationPoint } from '../services/routeConditions'
 import './KakaoRoadviewPanel.css'
@@ -21,13 +22,14 @@ export interface KakaoRoadviewPanelProps {
   destination: { lat: number; lng: number } | null
   terrainPath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
+  directions: RoadviewDirection[]
   onDestinationArrival: (explicit?: boolean) => void
 }
 
 type RoadviewStatus = 'loading' | 'ready' | 'empty' | 'error'
 const MOBILE_ROADVIEW_QUERY = '(max-width: 700px), (hover: none) and (pointer: coarse)'
 
-export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, terrainPath, elevationProfile, onDestinationArrival }: KakaoRoadviewPanelProps) {
+export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, routePath, destination, terrainPath, elevationProfile, directions, onDestinationArrival }: KakaoRoadviewPanelProps) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const anchorRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLElement>(null)
@@ -319,6 +321,8 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
       <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
       {status === 'ready' && apiRef.current && roadviewRef.current && <RoadviewCompass api={apiRef.current} roadview={roadviewRef.current} locale={locale} />}
+      {expanded && status === 'ready' && destination && apiRef.current && roadviewRef.current && <RoadviewDirections
+        api={apiRef.current} roadview={roadviewRef.current} path={routePath} instructions={directions} locale={locale} />}
       {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} terrainPath={terrainPath} elevationProfile={elevationProfile} destination={destination} locale={locale} onDestinationArrival={onDestinationArrival} />}
       {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
       {status !== 'ready' && <div className="tour-roadview-panel__status" role="status" aria-live="polite">
