@@ -115,6 +115,8 @@
   .tour-roadview-directions-current > span { width: 32px; height: 36px; font-size: 24px; }
   .tour-roadview-directions-current strong { font-size: 12px; }
   .tour-roadview-directions-current em { font-size: 10px; }
+  .tour-roadview-panel:not(.tour-roadview-panel--expanded) .tour-roadview-directions-dock { top: auto; right: 12px; bottom: 12px; left: 12px; width: auto; max-height: min(58%, calc(100% - 24px)); }
+  .tour-roadview-panel--expanded .tour-roadview-directions-dock { width: min(280px, 72vw); max-height: calc(100dvh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
 }
 .tour-roadview-panel__status {
   position: absolute;
