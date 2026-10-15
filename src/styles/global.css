@@ -3,7 +3,8 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
 /* 주변 정보 버튼은 지도 위에 겹치고 지도는 버튼 아래까지 채운다. */
-.tour-discovery-bar { position: absolute; z-index: 12; top: 0; right: 0; left: 0; min-width: 0; width: 100%; padding: 7px 10px; background: transparent; }
+.tour-discovery-bar { position: absolute; z-index: 12; top: 0; right: 0; left: 0; min-width: 0; width: 100%; padding: 7px 10px; background: transparent; pointer-events: none; }
+.tour-discovery-bar button, .tour-discovery-bar a { pointer-events: auto; }
 .tour-discovery-chips { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; padding: 2px; }
 .tour-discovery-chips > button:first-child { margin-left: auto; }
 .tour-discovery-chips > button:last-child { margin-right: auto; }
@@ -4261,3 +4262,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen .tour-discovery-chips > button:focus-visible { border-color: #b781f8; box-shadow: 0 0 0 1px #b781f8, 0 0 14px #9b5de580; outline: none; }
 .tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:hover,
 .tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:focus-visible { border-color: #9b5de5; box-shadow: 0 0 0 1px #9b5de5, 0 0 14px #9b5de580; }
+
+/* 투명한 주변 정보 줄 아래에서 도착지와 지도 조작 버튼을 누를 수 있게 한다. */
+.tour-screen .tour-map-destination-tools,
+.tour-screen .tour-explorer-grid--destination-picking .tour-map-destination-tools { top: calc(var(--tour-discovery-height, 60px) + .55rem); }
+.tour-screen .tour-map-view-dock { top: calc(var(--tour-discovery-height, 60px) + 4.1rem); }
+@media (min-width: 701px) {
+  .tour-earth-preview:has(.tour-map-stage--roadview) > .tour-discovery-bar { width: 50%; }
+}

@@ -507,7 +507,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const header = rentalWidgetTarget?.closest<HTMLElement>('.tour-topbar')
     const tools = stage.querySelector<HTMLElement>('.tour-map-destination-tools')
     const mapDock = stage.querySelector<HTMLElement>('.tour-map-view-dock')
+    const discovery = preview.current?.querySelector<HTMLElement>('.tour-discovery-bar')
     const measure = () => {
+      stage.style.setProperty('--tour-discovery-height', `${discovery?.getBoundingClientRect().height ?? 0}px`)
       stage.style.setProperty('--tour-mobile-sheet-height', `${sheet.getBoundingClientRect().height}px`)
       const stageBounds = stage.getBoundingClientRect()
       if (rentalStack && header) {
@@ -542,6 +544,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     if (header) observer.observe(header)
     if (tools) observer.observe(tools)
     if (mapDock) observer.observe(mapDock)
+    if (discovery) observer.observe(discovery)
     measure()
     return () => observer.disconnect()
   }, [rentalTimerOpen, rentalWidgetTarget, customDestination, bikeUseMode])
