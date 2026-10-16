@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 로드뷰의 도착 버튼을 누르면 목적지 주변 촬영 지점으로 바로 이동한다.
  * 요청한 사진의 위치가 확인된 뒤 축하 안내를 호출하며 실제 GPS는 변경하지 않는다.
@@ -10,7 +12,7 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
   api: KakaoMapsApi
   roadview: KakaoRoadview
   destination: { lat: number; lng: number }
-  locale: 'ko' | 'en'
+  locale: SiteLocale
   onArrival: () => void
 }) {
   // 사진 속 버튼과 상단 버튼이 같은 이동 함수를 실행하도록 연결한다.
@@ -37,8 +39,8 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
     const marker = document.createElement('button')
     marker.type = 'button'
     marker.className = 'tour-roadview-route-destination'
-    marker.textContent = ko ? '도착' : 'End'
-    marker.title = ko ? '도착지로 바로 이동' : 'Jump to destination'
+    marker.textContent = siteText(locale, 'End', '도착')
+    marker.title = siteText(locale, 'Jump to destination', '도착지로 바로 이동')
     marker.setAttribute('aria-label', marker.title)
     const overlay = new api.CustomOverlay({ map: null, position, content: marker, xAnchor: .5, yAnchor: 1, clickable: true })
     overlay.setAltitude?.(0)
@@ -50,7 +52,7 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
       window.clearTimeout(timeout)
       window.clearTimeout(confirmation)
       marker.disabled = false
-      marker.textContent = ko ? '도착' : 'End'
+      marker.textContent = siteText(locale, 'End', '도착')
       if (!disposed) { setBusy(false); setError(failed) }
     }
     // SDK의 사진 ID와 실제 촬영 좌표를 확인한다. 사진 로딩 중에는 안내를 띄우지 않는다.
@@ -124,11 +126,11 @@ export function RoadviewDestinationControl({ api, roadview, destination, locale,
   // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>
     <button type="button" className="tour-roadview-jump-destination" disabled={busy} aria-busy={busy}
-      title={ko ? '도착지로 바로 이동' : 'Jump to destination'} onClick={() => jumpRef.current()}>
-      {busy ? '…' : ko ? '도착' : 'End'}
+      title={siteText(locale, 'Jump to destination', '도착지로 바로 이동')} onClick={() => jumpRef.current()}>
+      {busy ? '…' : siteText(locale, 'End', '도착')}
     </button>
     {error && <span className="tour-roadview-jump-error" role="status">
-      {ko ? '도착지 근처 사진을 불러오지 못했어요. 다시 눌러 주세요.' : 'Destination imagery is unavailable. Please try again.'}
+      {siteText(locale, 'Destination imagery is unavailable. Please try again.', '도착지 근처 사진을 불러오지 못했어요. 다시 눌러 주세요.')}
     </span>}
   </>
 }

@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 선택한 위치의 거리 사진을 가져온다. 휴대폰에서는 전체화면으로 열고, 나침반과 파란 길, 도착 버튼을 연결한다.
  */
@@ -15,7 +17,7 @@ import './KakaoRoadviewPanel.css'
 
 export interface KakaoRoadviewPanelProps {
   target: { lat: number; lng: number }
-  locale: 'en' | 'ko'
+  locale: SiteLocale
   onClose: () => void
   onPositionChange: (position: { lat: number; lng: number }) => void
   routePath: LonLat[] | null
@@ -53,7 +55,6 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
   const openerRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const titleId = useId()
   const viewerId = useId()
-  const ko = locale === 'ko'
 
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useLayoutEffect(() => {
@@ -268,12 +269,12 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     }
   }, [])
 
-  const expandLabel = expanded ? (ko ? '지도로 돌아가기' : 'Return to map') : (ko ? '전체 화면으로 보기' : 'Full screen')
+  const expandLabel = expanded ? (siteText(locale, 'Return to map', '지도로 돌아가기')) : (siteText(locale, 'Full screen', '전체 화면으로 보기'))
   const message = status === 'loading'
-    ? (ko ? '거리 사진을 불러오는 중…' : 'Loading street imagery…')
+    ? (siteText(locale, 'Loading street imagery…', '거리 사진을 불러오는 중…'))
     : status === 'empty'
-      ? (ko ? '이 위치 주변에 거리 사진이 없습니다.' : 'No street imagery near this location.')
-      : (ko ? '거리 사진을 불러오지 못했습니다.' : 'Street imagery could not be loaded.')
+      ? (siteText(locale, 'No street imagery near this location.', '이 위치 주변에 거리 사진이 없습니다.'))
+      : (siteText(locale, 'Street imagery could not be loaded.', '거리 사진을 불러오지 못했습니다.'))
 
   // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <>
@@ -294,7 +295,7 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
     }}
   >
     <header className="tour-roadview-panel__header">
-      <strong id={titleId}>{ko ? '로드뷰' : 'Street view'}</strong>
+      <strong id={titleId}>{siteText(locale, 'Street view', '로드뷰')}</strong>
       <div className="tour-roadview-panel__controls">
         {status === 'ready' && destination && apiRef.current && roadviewRef.current && <RoadviewDestinationControl
           api={apiRef.current} roadview={roadviewRef.current} destination={destination} locale={locale}
@@ -313,24 +314,24 @@ export function KakaoRoadviewPanel({ target, locale, onClose, onPositionChange, 
               : <path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6" />}
           </svg>
         </button>
-        <button type="button" aria-label={ko ? '거리뷰 닫기' : 'Close street view'} title={ko ? '닫기' : 'Close'} onClick={onClose}>
+        <button type="button" aria-label={siteText(locale, 'Close street view', '거리뷰 닫기')} title={siteText(locale, 'Close', '닫기')} onClick={onClose}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       </div>
     </header>
     <div className="tour-roadview-panel__body" aria-busy={status === 'loading'}>
-      <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={ko ? '카카오 거리 파노라마' : 'Kakao street panorama'} />
+      <div id={viewerId} className="tour-roadview-panel__host" ref={hostRef} aria-label={siteText(locale, 'Kakao street panorama', '카카오 거리 파노라마')} />
       {status === 'ready' && apiRef.current && roadviewRef.current && <RoadviewCompass api={apiRef.current} roadview={roadviewRef.current} locale={locale} />}
       {status === 'ready' && destination && apiRef.current && roadviewRef.current && <RoadviewDirections
         api={apiRef.current} roadview={roadviewRef.current} path={routePath} instructions={directions} locale={locale} />}
       {status === 'ready' && destination && routePath && apiRef.current && roadviewRef.current && hostRef.current && <RoadviewRouteRibbon api={apiRef.current} roadview={roadviewRef.current} host={hostRef.current} path={routePath} terrainPath={terrainPath} elevationProfile={elevationProfile} destination={destination} locale={locale} onDestinationArrival={onDestinationArrival} />}
-      {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{ko ? '자전거 경로를 불러오면 파란 길이 표시돼요.' : 'The blue line appears when your bicycle route loads.'}</span></div>}
+      {status === 'ready' && destination && !routePath && <div className="tour-roadview-route-guide" role="status"><span>{siteText(locale, 'The blue line appears when your bicycle route loads.', '자전거 경로를 불러오면 파란 길이 표시돼요.')}</span></div>}
       {status !== 'ready' && <div className="tour-roadview-panel__status" role="status" aria-live="polite">
         {status === 'loading' && <span className="tour-roadview-panel__spinner" aria-hidden="true" />}
         <p>{message}</p>
         {status !== 'loading' && <>
-          <small>{ko ? '지도에서 다른 도로를 선택해 보세요.' : 'Select another road on the map.'}</small>
-          <button type="button" onClick={() => setRetry(value => value + 1)}>{ko ? '다시 시도' : 'Retry'}</button>
+          <small>{siteText(locale, 'Select another road on the map.', '지도에서 다른 도로를 선택해 보세요.')}</small>
+          <button type="button" onClick={() => setRetry(value => value + 1)}>{siteText(locale, 'Retry', '다시 시도')}</button>
         </>}
       </div>}
     </div>

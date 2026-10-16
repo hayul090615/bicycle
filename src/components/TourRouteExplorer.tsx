@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 지도 기능이 만나는 중심 화면이다. 도착지와 내 위치로 길을 찾고, 주변 500m 장소와 로드뷰, 이용시간을 관리한다.
  */
@@ -120,10 +122,8 @@ function readRentalDeadline(): number | null {
 }
 
 /** 선택 언어와 시설 종류에 맞는 지도 표시 이름을 만든다. */
-function amenityTitle(amenity: RouteAmenity, locale: 'en' | 'ko') {
-  const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
-    ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
-    : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}
+function amenityTitle(amenity: RouteAmenity, locale: SiteLocale) {
+  const labels: Record<RouteAmenity['kind'], string> = siteText(locale, { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}, { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'})
   return `${labels[amenity.kind]}${amenity.name ? ` · ${amenity.name}` : ''}`
 }
 
@@ -159,7 +159,7 @@ function coordinateAtDistance(points: LonLat[], distance: number): LonLat {
 }
 
 /** 경로 서비스의 회전 동작을 선택 언어의 안내 문구로 변환한다. */
-function instructionLabel(instruction: BikeRouteInstruction, locale: 'en' | 'ko') {
+function instructionLabel(instruction: BikeRouteInstruction, locale: SiteLocale) {
   const { maneuver, modifier, roadName } = instruction
   const ko: Record<string, string> = { left: '왼쪽', right: '오른쪽', 'slight left': '왼쪽으로 살짝', 'slight right': '오른쪽으로 살짝', 'sharp left': '왼쪽으로 크게', 'sharp right': '오른쪽으로 크게', straight: '직진', uturn: '유턴' }
   const en: Record<string, string> = { left: 'left', right: 'right', 'slight left': 'slightly left', 'slight right': 'slightly right', 'sharp left': 'sharply left', 'sharp right': 'sharply right', straight: 'straight', uturn: 'make a U-turn' }
@@ -170,6 +170,16 @@ function instructionLabel(instruction: BikeRouteInstruction, locale: 'en' | 'ko'
     if (maneuver === 'merge') return roadName ? `${roadName} 방향으로 합류합니다` : '도로에 합류합니다'
     const action = maneuver === 'turn' || maneuver === 'end of road' ? `${ko[modifier ?? ''] ?? '앞쪽'}으로 돕니다` : '계속 직진합니다'
     return roadName ? `${roadName}에서 ${action}` : action
+  }
+  if (locale !== 'en') {
+    const action = maneuver === 'arrive' ? 'Arrive at your destination'
+      : maneuver === 'depart' ? 'Start riding'
+      : maneuver === 'roundabout' || maneuver === 'rotary' ? 'Enter the roundabout'
+      : maneuver === 'merge' ? 'Merge onto the road'
+      : maneuver === 'uturn' ? 'Turn make a U-turn'
+      : maneuver === 'turn' || maneuver === 'end of road' ? `Turn ${en[modifier ?? ''] ?? 'ahead'}` : 'Continue straight'
+    const label = siteText(locale, action, action)
+    return roadName && maneuver !== 'arrive' ? `${label} · ${roadName}` : label
   }
   if (maneuver === 'arrive') return 'Arrive at your destination'
   if (maneuver === 'depart') return roadName ? `Start on ${roadName}` : 'Start riding'
@@ -386,16 +396,16 @@ function BikeStationMarkers({ stations, locale }: { stations: NearbyBikeStation[
       const station = cluster.stations[0]
       return <Marker key={`live-bike-${station.id}`} position={[station.lat, station.lng]}
         icon={divIcon({ className: 'tour-live-bike-icon', html: `<span>${station.available ?? '–'}</span>`, iconSize: [42, 42], iconAnchor: [21, 37] })}>
-        <Tooltip className="tour-live-bike-tooltip"><span><strong>{localizeBikeStationName(station.name, locale)}</strong><i aria-hidden="true">—</i><b>{station.available === null ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable') : (locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`)}</b></span></Tooltip>
+        <Tooltip className="tour-live-bike-tooltip"><span><strong>{localizeBikeStationName(station.name, locale)}</strong><i aria-hidden="true">—</i><b>{station.available === null ? (siteText(locale, 'Live count unavailable', '실시간 잔여 대수 확인 불가')) : (siteText(locale, `${station.available} bikes available`, `${station.available}대 대여 가능`))}</b></span></Tooltip>
       </Marker>
     }
     const knownStations = cluster.stations.filter(station => station.available !== null)
     const bikeTotal = knownStations.reduce((total, station) => total + (station.available ?? 0), 0)
     const countLabel = knownStations.length === 0 ? '—' : `${bikeTotal}${knownStations.length < cluster.stations.length ? '+' : ''}`
     const stationNames = cluster.stations.map(station => localizeBikeStationName(station.name, locale)).join(', ')
-    const summary = locale === 'ko' ? `${countLabel}대 · 대여소 ${cluster.stations.length}곳` : `${countLabel} bikes · ${cluster.stations.length} stations`
+    const summary = siteText(locale, `${countLabel} bikes · ${cluster.stations.length} stations`, `${countLabel}대 · 대여소 ${cluster.stations.length}곳`)
     return <Marker key={`live-bike-cluster-${cluster.stations.map(station => station.id).join('-')}`} position={[cluster.lat, cluster.lng]}
-      icon={divIcon({ className: 'tour-live-bike-cluster-icon', html: `<span>${countLabel}</span><small>${cluster.stations.length}${locale === 'ko' ? '곳' : ' st.'}</small>`, iconSize: [52, 52], iconAnchor: [26, 26] })}
+      icon={divIcon({ className: 'tour-live-bike-cluster-icon', html: `<span>${countLabel}</span><small>${cluster.stations.length}${siteText(locale, ' st.', '곳')}</small>`, iconSize: [52, 52], iconAnchor: [26, 26] })}
       eventHandlers={{ click: () => map.flyTo([cluster.lat, cluster.lng], Math.min(map.getZoom() + 2, map.getMaxZoom())) }}>
       <Tooltip className="tour-live-bike-cluster-tooltip"><strong>{summary}</strong><span>{stationNames}</span></Tooltip>
     </Marker>
@@ -440,7 +450,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   routes: TouristRoute[]
   category: TourCategory
   onRouteSelect: (routeId: string) => void
-  locale: 'en' | 'ko'
+  locale: SiteLocale
   shadowDate: string
   shadowMinutes: number
   originStopIndex: number | null
@@ -463,7 +473,8 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [hover, setHover] = useState<{ routeId: string; index: number } | null>(null)
   const [sceneryPhoto, setSceneryPhoto] = useState<SceneryPhoto | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
-  const [view, setView] = useState<'city' | 'satellite' | 'map' | 'google' | 'kakao'>(() => hasKakaoMapsKey && locale === 'ko' ? 'kakao' : 'city')
+  const [view, setView] = useState<'city' | 'satellite' | 'map' | 'google' | 'kakao'>(() => hasKakaoMapsKey && locale === 'ko' ? 'kakao' : locale !== 'ko' ? 'map' : 'city')
+  const previousMapLocale = useRef(locale)
   const [kakaoMapType, setKakaoMapType] = useState<'roadmap' | 'skyview'>('roadmap')
   const [roadviewEnabled, setRoadviewEnabled] = useState(false)
   const [roadviewTarget, setRoadviewTarget] = useState<Coordinates | null>(null)
@@ -505,7 +516,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     const timer = rentalWidgetTarget?.querySelector<HTMLElement>('.tour-rental-header-widget')
     const rentalStack = rentalWidgetTarget?.querySelector<HTMLElement>('.tour-rental-guidance-stack')
     const header = rentalWidgetTarget?.closest<HTMLElement>('.tour-topbar')
-    const tools = stage.querySelector<HTMLElement>('.tour-map-destination-tools')
+    const tools = preview.current?.querySelector<HTMLElement>('.tour-map-destination-tools')
     const mapDock = stage.querySelector<HTMLElement>('.tour-map-view-dock')
     const discovery = preview.current?.querySelector<HTMLElement>('.tour-discovery-bar')
     const measure = () => {
@@ -589,7 +600,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const [displaySeason, setDisplaySeason] = useState<TourSeason>(() => route.season ?? seasonForToday())
   const [routeSearch, setRouteSearch] = useState('')
   const preview = useRef<HTMLElement>(null)
-  const text = (en: string, ko: string) => locale === 'en' ? en : ko
+  const text = (en: string, ko: string) => siteText(locale, en, ko)
   const finishInitialMapSequence = (delayMs: number) => {
     if (!onInitialMapSequenceComplete || initialMapSequenceCompletedRef.current || initialMapSequenceTimerRef.current !== null) return
     initialMapSequenceTimerRef.current = window.setTimeout(() => {
@@ -622,7 +633,9 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     setRoadviewPosition(current => current?.lat === point.lat && current.lng === point.lng ? current : point)
   }, [])
   useEffect(() => {
-    if (locale === 'en' && (view === 'google' || (view === 'kakao' && !roadviewEnabled))) setView('city')
+    const switchedToInternational = previousMapLocale.current !== locale && locale !== 'ko'
+    previousMapLocale.current = locale
+    if (locale !== 'ko' && (view === 'google' || (!roadviewEnabled && (switchedToInternational || view === 'kakao')))) setView('map')
   }, [locale, roadviewEnabled, view])
   const openFoodGuideAt = useCallback((point: LonLat, anchor?: Element, previewOnly = false) => {
     if (!previewOnly) { setFocusedPlacePoint(point); setActiveMapTool(null) }
@@ -1045,12 +1058,12 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   const chooseMapView = (nextView: 'city' | 'satellite' | 'map' | 'google' | 'kakao') => {
     setRotationRequest(null)
     if (nextView !== 'kakao') closeRoadview()
-    setView(locale === 'en' && (nextView === 'google' || (nextView === 'kakao' && !roadviewEnabled)) ? 'city' : nextView)
+    setView(locale !== 'ko' && (nextView === 'google' || (nextView === 'kakao' && !roadviewEnabled)) ? 'map' : nextView)
   }
   const chooseKakaoMapType = (nextType: 'roadmap' | 'skyview') => {
     setKakaoMapType(nextType)
     setActiveMapTool(null)
-    chooseMapView(locale === 'en' ? (nextType === 'roadmap' ? 'map' : 'satellite') : 'kakao')
+    chooseMapView(locale !== 'ko' ? (nextType === 'roadmap' ? 'map' : 'satellite') : 'kakao')
   }
   const toggleRoadview = () => {
     if (roadviewEnabled) { closeRoadview(); return }
@@ -1428,14 +1441,14 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
   }
   const locationIcon = useMemo(() => divIcon({
     className: 'tour-leaflet-location-icon',
-    html: `<span class="tour-journey-pin tour-journey-pin--start"><span>${locale === 'ko' ? '출발' : 'Start'}</span></span>`,
+    html: `<span class="tour-journey-pin tour-journey-pin--start"><span>${siteText(locale, 'Start', '출발')}</span></span>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   }), [locale])
   const exactDestination: LonLat | null = hasDestination ? [destinationStation.lng, destinationStation.lat] : null
   const arrivalMarker = routeArrivalMarker(displayRoutePath, exactDestination)
   const arrivalConnector = routeArrivalConnector(displayRoutePath, exactDestination)
-  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${locale === 'ko' ? '도착' : 'End'}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
+  const destinationIcon = useMemo(() => divIcon({ className: 'tour-leaflet-destination-icon', html: `<span class="tour-journey-pin tour-journey-pin--destination"><span>${siteText(locale, 'End', '도착')}</span></span>`, iconSize: [46, 54], iconAnchor: [23, 54] }), [locale])
   const map = <MapContainer className={`tour-explorer-map${destinationPicking ? ' tour-explorer-map--destination-picking' : ''}`} center={points[0]} zoom={13} zoomControl={false} minZoom={9.5} maxZoom={18} scrollWheelZoom maxBounds={latLngBounds(SEOUL_BIKE_MAP_BOUNDS_LATLNG)} maxBoundsViscosity={1}>
     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
     <Polygon positions={SEOUL_MASK_LATLNG} pathOptions={{ stroke: false, fillColor: SEOUL_OUTSIDE_DIM_COLOR, fillOpacity: SEOUL_OUTSIDE_DIM_OPACITY, fillRule: 'evenodd' }} interactive={false} />
@@ -1456,7 +1469,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     {showBikeStations && <BikeStationMarkers stations={mapBikeStations} locale={locale} />}
     {showAmenities && routeAmenities.map(amenity => <Marker key={amenity.id} position={[amenity.lat, amenity.lng]}
       eventHandlers={{ click: event => openFoodGuideAt([amenity.lng, amenity.lat], event.target.getElement()) }}
-      icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${locale === 'ko' ? AMENITY_DISPLAY[amenity.kind].shortKo : AMENITY_DISPLAY[amenity.kind].shortEn}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
+      icon={divIcon({ className: `tour-amenity-icon tour-amenity-icon--${amenity.kind}`, html: `<span>${AMENITY_DISPLAY[amenity.kind].icon}</span><b>${siteText(locale, AMENITY_DISPLAY[amenity.kind].shortEn, AMENITY_DISPLAY[amenity.kind].shortKo)}</b>`, iconSize: [86, 34], iconAnchor: [43, 17] })}>
       <Tooltip>{amenityTitle(amenity, locale)} · {distanceLabel(amenity.distanceMeters)}</Tooltip>
     </Marker>)}
     {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={locationIcon} zIndexOffset={1000}>
@@ -1541,7 +1554,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
               <b>{station.available === null ? text('N/A', '확인 불가') : station.available}<small>{station.available === null ? '' : text('bikes', '대')}</small></b>
             </button>)}</div>}
         {userLocation && <p className="tour-nearby-status">{activeNearbyBikes?.status === 'loading' ? text('Checking live bike counts…', '남은 자전거 수 확인 중…')
-          : activeNearbyBikes?.status === 'live' ? text(`Updated ${new Date(activeNearbyBikes.updatedAt ?? '').toLocaleTimeString(locale === 'ko' ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit' })} · availability may change`, `최근 조회 ${new Date(activeNearbyBikes.updatedAt ?? '').toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · 재고는 바뀔 수 있어요`)
+          : activeNearbyBikes?.status === 'live' ? text(`Updated ${new Date(activeNearbyBikes.updatedAt ?? '').toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · availability may change`, `최근 조회 ${new Date(activeNearbyBikes.updatedAt ?? '').toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · 재고는 바뀔 수 있어요`)
             : activeNearbyBikes?.status === 'unavailable'
               ? text('Live data could not be reached. Showing published station locations until it reconnects.', '실시간 자료를 불러오지 못해 공개 대여소 위치를 표시합니다. 연결 후 다시 확인해 주세요.')
               : text('Station locations are available now; live bike counts are loading.', '대여소 위치를 표시했어요. 실시간 자전거 수를 불러오고 있습니다.')}</p>}
@@ -1695,6 +1708,22 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
     </aside>
   )
 
+  const destinationTools = <div className="tour-map-destination-tools">
+    <button type="button" className="tour-map-menu-button" aria-expanded={mapMenuOpen} aria-controls="tour-map-control-rail" aria-label={text('Menu', '메뉴')} onClick={() => {
+      closeRoadview()
+      const open = !mapMenuOpen
+      setMapMenuOpen(open)
+      if (!open) setSidebarOpen(false)
+      setActiveMapTool(null)
+    }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
+    <div className="tour-height-legend" aria-label={text('Route elevation: rose low, red high', '길 높낮이: 낮으면 연한 빨강, 높으면 진한 빨강')}>
+      <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low > high', '낮음 > 높음')}</small>
+    </div>
+    <button type="button" aria-pressed={destinationPicking} onClick={() => { closeRoadview(); setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
+    {customDestination && <button type="button" className="tour-map-clear-destination" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}
+    {destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}
+  </div>
+
   return <div className={`tour-explorer-grid${sidebarOpen && !mapMenuOpen ? ' tour-explorer-grid--sidebar-open' : ' tour-explorer-grid--sidebar-closed'}${mapMenuOpen ? ' tour-explorer-grid--menu-open' : ''}${destinationPicking ? ' tour-explorer-grid--destination-picking' : ''}`}>
     <section className="tour-earth-preview" ref={preview} aria-label={text('Explore this route', '코스 지도 살펴보기')}>
       <div className={`tour-ride-toolbar${hasKakaoMapsKey ? ' tour-ride-toolbar--kakao' : ''}`}>
@@ -1715,7 +1744,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
         <span><b>2</b>{text('Check the map', '지도를 살펴봐요')}</span><i aria-hidden="true">›</i>
         <span><b>3</b>{text('Find a bike nearby', '내 주변 자전거를 찾아요')}</span>
       </div>
-      <MapDiscoveryBar locale={locale} selected={discoveryCategory} onSelect={selectDiscoveryCategory}
+      <MapDiscoveryBar locale={locale} selected={discoveryCategory} onSelect={selectDiscoveryCategory} controls={destinationTools}
         showDirectionsToggle={hasDestination} directionsVisible={directionsPanelVisible} onToggleDirections={toggleDirectionsPanel}
         cctvLocationStatus={userLocation ? 'ready' : locating ? 'locating' : 'unavailable'}
         status={discoveryCategory === 'signals' ? nearbySignals.status : discoveryCategory === 'cctv' ? (cctvData.loading ? 'loading' : cctvData.error ? 'error' : 'ready') : nearbyPlaces.status}
@@ -1738,21 +1767,6 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
           {rentalReminderStatus === 'permission_denied' && rentalDeadline !== null && <span className="tour-rental-permission-note" role="status">{text('Browser alerts are off; the timer will stay visible here.', '브라우저 알림이 꺼져 있어요. 화면에서 남은 시간을 확인해 주세요.')}</span>}
         </section>}{roadSign}</div>, rentalWidgetTarget)}
         {destinationPicking && <div className="tour-destination-picking-frame" role="status"><span>{text('Tap anywhere inside Seoul to set your destination', '서울 안의 원하는 위치를 눌러 도착지를 정하세요')}</span></div>}
-        <div className="tour-map-destination-tools">
-          <button type="button" className="tour-map-menu-button" aria-expanded={mapMenuOpen} aria-controls="tour-map-control-rail" aria-label={text('Menu', '메뉴')} onClick={() => {
-            closeRoadview()
-            const open = !mapMenuOpen
-            setMapMenuOpen(open)
-            if (!open) setSidebarOpen(false)
-            setActiveMapTool(null)
-          }}><span className="tour-journey-menu-bars" aria-hidden="true"><i /><i /><i /></span><small>{text('Menu', '메뉴')}</small></button>
-          <div className="tour-height-legend" aria-label={text('Route elevation: rose low, red high', '길 높낮이: 낮으면 연한 빨강, 높으면 진한 빨강')}>
-            <span>{text('Elevation', '길 높낮이')}</span><i aria-hidden="true" /><small>{text('low > high', '낮음 > 높음')}</small>
-          </div>
-          <button type="button" aria-pressed={destinationPicking} onClick={() => { closeRoadview(); setDestinationError(false); if (destinationPicking) setDestinationPicking(false); else { setMapLayers(current => ({ ...current, course: false })); setDestinationPicking(true); setSidebarOpen(false); setMapMenuOpen(false) } }}>{destinationPicking ? text('Cancel map selection', '도착지 선택 취소') : text('Choose any point on map', '지도에서 원하는 도착지 선택')}</button>
-          {customDestination && <button type="button" className="tour-map-clear-destination" onClick={() => { setCustomDestination(null); setDestinationPicking(false); setDestinationError(false); onDestinationStopChange(null) }}>{text('Clear destination', '도착지 해제')}</button>}
-          {destinationError && <span className="tour-destination-error" role="alert">{text('Choose a point inside Seoul.', '서울 안의 위치를 선택해 주세요.')}</span>}
-        </div>
         {(bikeUseMode !== 'ttareungi' || !rentalWidgetTarget) && roadSign}
         {hasKakaoMapsKey && <nav className="tour-map-view-dock" aria-label={text('Map view and type', '지도 화면과 종류')}>
           <div role="group" aria-label={text('3D view', '3D 보기')}>

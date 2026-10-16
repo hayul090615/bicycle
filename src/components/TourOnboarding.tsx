@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 첫 방문에는 튜토리얼 뒤 광고를 띄우고, 재방문에는 광고만 띄운다. 광고의 24시간 숨김 선택만 따로 확인한다.
  */
@@ -6,7 +8,7 @@ import { createPortal } from 'react-dom'
 import { claimTutorialPresentation, isReturningVisitor } from '../services/siteVisits'
 import './TourOnboarding.css'
 
-type Locale = 'en' | 'ko'
+type Locale = SiteLocale
 
 const TUTORIAL_STEPS = [
   {
@@ -96,7 +98,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   darkMode: boolean
   mapSequenceReady: boolean
 }) {
-  const ko = locale === 'ko'
   // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
   const [tutorialFinished, setTutorialFinished] = useState(false)
@@ -108,7 +109,6 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   const adHandledRef = useRef(false)
   const step = tutorialStep === null ? null : TUTORIAL_STEPS[tutorialStep]
   const ad = DEMO_ADS[adIndex]
-  const languageIndex = ko ? 1 : 0
 
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
@@ -168,25 +168,25 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   if (tutorialStep !== null && step) return createPortal(<div className={`tour-onboarding-overlay${darkMode ? ' tour-onboarding-overlay--dark' : ''}`}>
     <section className="tour-onboarding-card" role="dialog" aria-modal="true" aria-labelledby="tour-onboarding-title">
       <header className="tour-onboarding-header">
-        <span>{ko ? '처음 오셨나요?' : 'NEW HERE?'}</span>
+        <span>{siteText(locale, 'NEW HERE?', '처음 오셨나요?')}</span>
         <div className="tour-onboarding-navigation">
-          <button type="button" className="tour-onboarding-prev" onClick={() => setTutorialStep(current => current === null ? null : Math.max(0, current - 1))} disabled={tutorialStep === 0} aria-label={ko ? '이전 안내' : 'Previous tip'}>‹</button>
+          <button type="button" className="tour-onboarding-prev" onClick={() => setTutorialStep(current => current === null ? null : Math.max(0, current - 1))} disabled={tutorialStep === 0} aria-label={siteText(locale, 'Previous tip', '이전 안내')}>‹</button>
           <span>{tutorialStep + 1}<i> / </i>{TUTORIAL_STEPS.length}</span>
-          <button type="button" className="tour-onboarding-next" onClick={() => tutorialStep === TUTORIAL_STEPS.length - 1 ? finishTutorial() : setTutorialStep(tutorialStep + 1)} aria-label={ko ? tutorialStep === TUTORIAL_STEPS.length - 1 ? '튜토리얼 완료' : '다음 안내' : tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Finish tutorial' : 'Next tip'}>
+          <button type="button" className="tour-onboarding-next" onClick={() => tutorialStep === TUTORIAL_STEPS.length - 1 ? finishTutorial() : setTutorialStep(tutorialStep + 1)} aria-label={siteText(locale, tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Finish tutorial' : 'Next tip', tutorialStep === TUTORIAL_STEPS.length - 1 ? '튜토리얼 완료' : '다음 안내')}>
             {tutorialStep === TUTORIAL_STEPS.length - 1 ? '✓' : '›'}
           </button>
         </div>
-        <button type="button" className="tour-onboarding-close" onClick={finishTutorial} aria-label={ko ? '튜토리얼 닫기' : 'Close tutorial'} title={ko ? '튜토리얼 닫기' : 'Close tutorial'}>×</button>
+        <button type="button" className="tour-onboarding-close" onClick={finishTutorial} aria-label={siteText(locale, 'Close tutorial', '튜토리얼 닫기')} title={siteText(locale, 'Close tutorial', '튜토리얼 닫기')}>×</button>
       </header>
       <div className="tour-onboarding-content" aria-live="polite">
         <span className="tour-onboarding-icon" aria-hidden="true">{step.icon}</span>
-        <p className="tour-onboarding-kicker">{ko ? `사용 안내 ${tutorialStep + 1} / ${TUTORIAL_STEPS.length}` : `GUIDE ${tutorialStep + 1} / ${TUTORIAL_STEPS.length}`}</p>
-        <h2 id="tour-onboarding-title">{ko ? step.title[1] : step.title[0]}</h2>
-        <p className="tour-onboarding-description">{ko ? step.description[1] : step.description[0]}</p>
-        <p className="tour-onboarding-tip"><span aria-hidden="true">✦</span>{ko ? step.tip[1] : step.tip[0]}</p>
+        <p className="tour-onboarding-kicker">{siteText(locale, `GUIDE ${tutorialStep + 1} / ${TUTORIAL_STEPS.length}`, `사용 안내 ${tutorialStep + 1} / ${TUTORIAL_STEPS.length}`)}</p>
+        <h2 id="tour-onboarding-title">{siteText(locale, step.title[0], step.title[1])}</h2>
+        <p className="tour-onboarding-description">{siteText(locale, step.description[0], step.description[1])}</p>
+        <p className="tour-onboarding-tip"><span aria-hidden="true">✦</span>{siteText(locale, step.tip[0], step.tip[1])}</p>
       </div>
       <footer className="tour-onboarding-footer">
-        <div className="tour-onboarding-progress" aria-label={ko ? `${tutorialStep + 1}단계 중 ${TUTORIAL_STEPS.length}단계` : `Step ${tutorialStep + 1} of ${TUTORIAL_STEPS.length}`}>
+        <div className="tour-onboarding-progress" aria-label={siteText(locale, `Step ${tutorialStep + 1} of ${TUTORIAL_STEPS.length}`, `${tutorialStep + 1}단계 중 ${TUTORIAL_STEPS.length}단계`)}>
           {TUTORIAL_STEPS.map((item, index) => <span key={item.title[0]} className={index === tutorialStep ? 'is-active' : ''} />)}
         </div>
       </footer>
@@ -196,7 +196,7 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
   if (adOpen) return createPortal(<div className={`tour-onboarding-overlay tour-onboarding-overlay--ad${darkMode ? ' tour-onboarding-overlay--dark' : ''}`}>
     <section className="tour-ad-card" role="dialog" aria-modal="true" aria-labelledby="tour-ad-title">
       <div className={`tour-ad-art tour-ad-art--${ad.theme}`} aria-hidden="true">
-        <span className="tour-ad-label">{ko ? '추천' : 'FEATURED'}</span>
+        <span className="tour-ad-label">{siteText(locale, 'FEATURED', '추천')}</span>
         <svg viewBox="0 0 520 188" preserveAspectRatio="xMidYMid slice">
           <path className="tour-ad-sky" d="M0 0h520v188H0z" />
           <circle className="tour-ad-sun" cx="404" cy="48" r="25" />
@@ -210,17 +210,17 @@ export function TourOnboarding({ locale, darkMode, mapSequenceReady }: {
             <circle cx="27" cy="-1" r="4" />
           </g>
         </svg>
-        <div className="tour-ad-art-copy"><strong>{ad.headline[languageIndex]}</strong><span>{ad.caption[languageIndex]}</span></div>
+        <div className="tour-ad-art-copy"><strong>{siteText(locale, ad.headline[0], ad.headline[1])}</strong><span>{siteText(locale, ad.caption[0], ad.caption[1])}</span></div>
       </div>
       <div className="tour-ad-copy" aria-live="polite" aria-atomic="true">
-        <span className="tour-ad-eyebrow">{ad.eyebrow[languageIndex]}</span>
-        <h2 id="tour-ad-title">{ad.title[languageIndex]}</h2>
-        <p>{ad.description[languageIndex]}</p>
+        <span className="tour-ad-eyebrow">{siteText(locale, ad.eyebrow[0], ad.eyebrow[1])}</span>
+        <h2 id="tour-ad-title">{siteText(locale, ad.title[0], ad.title[1])}</h2>
+        <p>{siteText(locale, ad.description[0], ad.description[1])}</p>
       </div>
       <footer className="tour-ad-footer">
-        <label><input type="checkbox" checked={hideAdForDay} onChange={event => setHideAdForDay(event.target.checked)} /><span>{ko ? '24시간 동안 보지 않기' : "Don't show for 24 hours"}</span></label>
+        <label><input type="checkbox" checked={hideAdForDay} onChange={event => setHideAdForDay(event.target.checked)} /><span>{siteText(locale, "Don't show for 24 hours", '24시간 동안 보지 않기')}</span></label>
         <div>
-          <button type="button" className="tour-ad-close" onClick={closeAd}>{ko ? '닫기' : 'Close'}</button>
+          <button type="button" className="tour-ad-close" onClick={closeAd}>{siteText(locale, 'Close', '닫기')}</button>
         </div>
       </footer>
     </section>

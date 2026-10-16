@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * Three.js로 자전거를 따라가는 경로 재생 장면을 만든다. 주변 OSM 지형·건물을 구성하고 재생 진행률에 맞춰 자전거와 카메라를 이동한다.
  */
@@ -225,7 +227,7 @@ function addOsmContext(group: THREE.Group, data: OsmResult, centerLng: number, c
 }
 
 export function ThirdPersonRideScene({ route, progress, playing, onProgress, locale }: {
-  route: TouristRoute; progress: number; playing: boolean; onProgress: (value: number) => void; locale: 'en' | 'ko'
+  route: TouristRoute; progress: number; playing: boolean; onProgress: (value: number) => void; locale: SiteLocale
 }) {
   // 같은 입력이면 전에 계산한 값을 다시 쓴다. 대괄호 안의 값이 바뀔 때만 새로 계산한다.
   const stopCoordinates = useMemo(() => route.stops.map(({ stationId }) => {
@@ -242,10 +244,10 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
   useEffect(() => { updateRef.current = { progress, playing, onProgress } }, [progress, playing, onProgress])
   useEffect(() => {
     if (host.current) host.current.dataset.mapLabel = mapStatus === 'osm'
-      ? (locale === 'en' ? 'OpenStreetMap · roads, buildings & river' : 'OpenStreetMap · 도로 · 건물 · 강')
+      ? (siteText(locale, 'OpenStreetMap · roads, buildings & river', 'OpenStreetMap · 도로 · 건물 · 강'))
       : mapStatus === 'river'
-        ? (locale === 'en' ? 'Han River map · OSM route unavailable' : '한강 지도 · OSM 경로 연결 대기')
-        : (locale === 'en' ? 'Loading real bike route & surroundings…' : '실제 자전거 경로와 주변 지형 불러오는 중…')
+        ? (siteText(locale, 'Han River map · OSM route unavailable', '한강 지도 · OSM 경로 연결 대기'))
+        : (siteText(locale, 'Loading real bike route & surroundings…', '실제 자전거 경로와 주변 지형 불러오는 중…'))
   }, [mapStatus, locale])
 
   useEffect(() => {
@@ -382,5 +384,5 @@ export function ThirdPersonRideScene({ route, progress, playing, onProgress, loc
   }, [route, bikeRoute, stopCoordinates])
 
   // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
-  return <div className="third-person-scene" ref={host} data-map-label="" role="img" aria-label={locale === 'en' ? `Third-person 3D bicycle ride around ${route.title}` : `${route.titleKo} 3인칭 3D 자전거 주행 장면`} />
+  return <div className="third-person-scene" ref={host} data-map-label="" role="img" aria-label={siteText(locale, `Third-person 3D bicycle ride around ${route.title}`, `${route.titleKo} 3인칭 3D 자전거 주행 장면`)} />
 }

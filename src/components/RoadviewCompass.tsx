@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 로드뷰 시점의 방향을 표시하고 북쪽 정렬을 제공한다. 사용자가 방향 센서 사용을 선택하면 권한을 확인한 뒤 휴대폰의 절대 방위에 맞춰 시점을 회전한다.
  */
@@ -7,9 +9,15 @@ import { normalizeHeading, phoneCompassHeading } from '../utils/compassHeading'
 
 type CompassEvent = DeviceOrientationEvent & { webkitCompassHeading?: number; webkitCompassAccuracy?: number }
 type PermissionConstructor = typeof DeviceOrientationEvent & { requestPermission?: (absolute?: boolean) => Promise<PermissionState> }
-const DIRECTIONS = { ko: ['북', '북동', '동', '남동', '남', '남서', '서', '북서'], en: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] }
+const DIRECTIONS = {
+  ko: ['북', '북동', '동', '남동', '남', '남서', '서', '북서'],
+  en: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+  pt: ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'],
+  ja: ['北', '北東', '東', '南東', '南', '南西', '西', '北西'],
+  zh: ['北', '东北', '东', '东南', '南', '西南', '西', '西北'],
+}
 
-export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; roadview: KakaoRoadview; locale: 'ko' | 'en' }) {
+export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; roadview: KakaoRoadview; locale: SiteLocale }) {
   // 화면의 방위 이름은 언어만 바꾸며 SDK의 실제 회전 각도는 그대로 사용한다.
   const ko = locale === 'ko'
   // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
@@ -95,10 +103,10 @@ export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; 
   }
   const rounded = Math.round(heading) % 360
   const direction = DIRECTIONS[locale][Math.round(heading / 45) % 8]
-  const northLabel = ko ? `북쪽으로 맞추기 · 현재 ${direction} ${rounded}도` : `Face north · now ${direction} ${rounded} degrees`
-  const phoneLabel = ko ? following ? '휴대폰 방향 따라보기 끄기' : '휴대폰 방향 따라보기 켜기' : following ? 'Turn phone direction off' : 'Follow phone direction'
-  const message = sensorStatus === 'denied' ? (ko ? '방향 센서 권한을 허용해 주세요.' : 'Allow orientation access to use this.')
-    : sensorStatus === 'unavailable' ? (ko ? '이 기기에서 방향 정보를 받지 못했어요.' : 'Direction data is unavailable on this device.') : null
+  const northLabel = siteText(locale, `Face north · now ${direction} ${rounded} degrees`, `북쪽으로 맞추기 · 현재 ${direction} ${rounded}도`)
+  const phoneLabel = siteText(locale, following ? 'Turn phone direction off' : 'Follow phone direction', following ? '휴대폰 방향 따라보기 끄기' : '휴대폰 방향 따라보기 켜기')
+  const message = sensorStatus === 'denied' ? (siteText(locale, 'Allow orientation access to use this.', '방향 센서 권한을 허용해 주세요.'))
+    : sensorStatus === 'unavailable' ? (siteText(locale, 'Direction data is unavailable on this device.', '이 기기에서 방향 정보를 받지 못했어요.')) : null
 
   // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="tour-roadview-compass-dock">
@@ -111,7 +119,7 @@ export function RoadviewCompass({ api, roadview, locale }: { api: KakaoMapsApi; 
     </button>
     <button type="button" className={`tour-roadview-phone-direction${following ? ' is-active' : ''}`} onClick={() => void togglePhone()} disabled={sensorStatus === 'asking'} aria-pressed={following} aria-label={phoneLabel} title={phoneLabel}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2" /><path d="m10 11 2-3 2 3M12 8v7m-2 3h4" /></svg>
-      <span>{ko ? '방향' : 'Phone'}</span>
+      <span>{siteText(locale, 'Phone', '방향')}</span>
     </button>
     {message && <span className="tour-roadview-compass-message" role="status">{message}</span>}
   </div>

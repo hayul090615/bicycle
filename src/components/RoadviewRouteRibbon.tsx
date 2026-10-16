@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 로드뷰 사진 위에 파란 길을 그린다. 사진이 바뀌면 촬영 위치를 다시 확인하고, 앞으로 이동할 사진과 도착 여부를 찾는다.
  */
@@ -21,7 +23,7 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
   terrainPath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
   destination: { lat: number; lng: number }
-  locale: 'ko' | 'en'
+  locale: SiteLocale
   onDestinationArrival: () => void
 }) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
@@ -300,8 +302,8 @@ export function RoadviewRouteRibbon({ api, roadview, host, path, terrainPath, el
   return <>
     <svg className="tour-roadview-route-ribbon" aria-hidden="true"><path className="tour-roadview-route-band" ref={ribbon} /><path className="tour-roadview-route-centerline" ref={centerline} /></svg>
     <div className="tour-roadview-route-guide">
-      <span>{arrived ? (ko ? '도착지에 도착했어요' : 'You have arrived') : moveFailed ? (ko ? '다음 사진이 없어요. 다른 지점을 눌러 보세요.' : 'No next photo here. Try another point.') : offRoute ? (ko ? '선택한 경로로 이동해 보세요' : 'Go to your selected route') : finalStep ? (ko ? '마지막 구간 · 도착지로 이동' : 'Final stretch · arrive at your destination') : (ko ? '파란 경로를 따라 도착지까지' : 'Follow blue to your destination')}</span>
-      <button type="button" disabled={moving || arrived} onClick={() => advanceRef.current()}>{moving ? '…' : arrived || finalStep ? (ko ? '도착' : 'Arrive') : offRoute ? (ko ? '경로로' : 'To route') : (ko ? '다음 ›' : 'Next ›')}</button>
+      <span>{arrived ? (siteText(locale, 'You have arrived', '도착지에 도착했어요')) : moveFailed ? (siteText(locale, 'No next photo here. Try another point.', '다음 사진이 없어요. 다른 지점을 눌러 보세요.')) : offRoute ? (siteText(locale, 'Go to your selected route', '선택한 경로로 이동해 보세요')) : finalStep ? (siteText(locale, 'Final stretch · arrive at your destination', '마지막 구간 · 도착지로 이동')) : (siteText(locale, 'Follow blue to your destination', '파란 경로를 따라 도착지까지'))}</span>
+      <button type="button" disabled={moving || arrived} onClick={() => advanceRef.current()}>{moving ? '…' : arrived || finalStep ? (siteText(locale, 'Arrive', '도착')) : offRoute ? (siteText(locale, 'To route', '경로로')) : (siteText(locale, 'Next ›', '다음 ›'))}</button>
     </div>
   </>
 }

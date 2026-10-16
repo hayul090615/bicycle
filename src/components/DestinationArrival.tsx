@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 도착 문구와 폭죽을 화면 전체에 표시한다. 누르거나 Escape를 누르면 닫고, 이전에 선택했던 버튼으로 키보드 초점을 돌려준다.
  */
@@ -11,10 +13,9 @@ const BURSTS = [
   { x: 155, y: 345, color: '#ffb767' }, { x: 640, y: 345, color: '#80e9a7' },
 ] as const
 
-export function DestinationArrival({ locale, onClose }: { locale: 'ko' | 'en'; onClose: () => void }) {
+export function DestinationArrival({ locale, onClose }: { locale: SiteLocale; onClose: () => void }) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const closeTarget = useRef<HTMLButtonElement>(null)
-  const ko = locale === 'ko'
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -33,11 +34,11 @@ export function DestinationArrival({ locale, onClose }: { locale: 'ko' | 'en'; o
   }, [onClose])
 
   return createPortal(<div className="tour-arrival-overlay" role="dialog" aria-modal="true" aria-labelledby="tour-arrival-title">
-    <button className="tour-arrival-dismiss" ref={closeTarget} type="button" onClick={onClose} aria-label={ko ? '도착 축하 안내 닫기' : 'Close arrival celebration'}>
+    <button className="tour-arrival-dismiss" ref={closeTarget} type="button" onClick={onClose} aria-label={siteText(locale, 'Close arrival celebration', '도착 축하 안내 닫기')}>
       <span className="tour-arrival-message">
-        <span className="tour-arrival-eyebrow">{ko ? '도착지에 도착했어요' : 'You have arrived'}</span>
-        <strong id="tour-arrival-title">{ko ? '안전운전' : 'Thank you for'}<span>{ko ? '수고하셨습니다.' : 'riding safely.'}</span></strong>
-        <span className="tour-arrival-hint">{ko ? '화면을 누르면 닫혀요' : 'Tap anywhere to close'}</span>
+        <span className="tour-arrival-eyebrow">{siteText(locale, 'You have arrived', '도착지에 도착했어요')}</span>
+        <strong id="tour-arrival-title">{siteText(locale, 'Thank you for', '안전운전')}<span>{siteText(locale, 'riding safely.', '수고하셨습니다.')}</span></strong>
+        <span className="tour-arrival-hint">{siteText(locale, 'Tap anywhere to close', '화면을 누르면 닫혀요')}</span>
       </span>
     </button>
     <svg className="tour-arrival-fireworks" viewBox="0 0 800 480" aria-hidden="true">

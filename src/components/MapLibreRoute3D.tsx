@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 일반·위성·3D 지도에 길과 건물, 그림자를 표시한다. 좌표 자료로 지도 위에 그림을 만들고 지도를 떠날 때 정리한다.
  */
@@ -185,7 +187,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   rotationRequest: { direction: 'left' | 'right' | 'up' | 'down'; serial: number } | null
   onMapCenterChange: (point: { lat: number; lng: number }) => void
   onFoodGuideOpen: (point: LonLat, anchor?: Element, previewOnly?: boolean) => void
-  locale: 'en' | 'ko'
+  locale: SiteLocale
   userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
   onSelectStop: (index: number) => void
@@ -333,8 +335,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
           paint: { 'raster-opacity': 1, 'raster-fade-duration': 100 },
         }, 'park')
         const layers = map.getStyle().layers
-        const labelTextField: ExpressionSpecification = locale === 'en'
-          ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['case', ['==', ['get', 'class'], 'bus'], 'Bus Stop', ['get', 'name']]]
+        const labelTextField: ExpressionSpecification = locale !== 'ko'
+          ? ['coalesce', ['get', `name:${locale}`], ['get', `name_${locale}`], ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['case', ['==', ['get', 'class'], 'bus'], 'Bus Stop', ['get', 'name']]]
           : ['coalesce', ['get', 'name:ko'], ['get', 'name_ko'], ['get', 'name'], ['get', 'name:en']]
         for (const layer of map.getStyle().layers as Array<{ id: string; type: string; layout?: Record<string, unknown> }>) {
           if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
@@ -504,8 +506,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       const available = document.createElement('small')
       available.className = 'tour-live-bike-count'
       available.textContent = station.available === null
-        ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable')
-        : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
+        ? (siteText(locale, 'Live count unavailable', '실시간 잔여 대수 확인 불가'))
+        : siteText(locale, `${station.available} bikes available`, `${station.available}대 대여 가능`)
       popup.append(name, separator, available)
       element.append(count, popup)
       element.title = `${localizeBikeStationName(station.name, locale)} · ${available.textContent}`
@@ -533,10 +535,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     const map = mapRef.current
     if (!map || status !== 'ready' || !showAmenities) return
     const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' , parking: '🚲', repair: '🛠️', visit: '📍'}
-    const labels = locale === 'ko' ? { pump: '공기주입기', water: '음수대', toilet: '화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
-      : { pump: 'Bike pump', water: 'Water', toilet: 'Toilet', convenience: 'Shop' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}
-    const shortLabels = locale === 'ko' ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'}
-      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}
+    const labels = siteText(locale, { pump: 'Bike pump', water: 'Water', toilet: 'Toilet', convenience: 'Shop' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}, { pump: '공기주입기', water: '음수대', toilet: '화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'})
+    const shortLabels = siteText(locale, { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}, { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'})
     const markers = amenities.map(amenity => {
       const element = document.createElement('button')
       element.type = 'button'
@@ -639,8 +639,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       const element = document.createElement('div')
       element.className = `tour-road-event tour-road-event--${condition.kind}`
       const label = condition.kind === 'signal'
-        ? locale === 'ko' ? '지도에 기록된 교통 신호등' : 'Mapped traffic signal'
-        : `${condition.kind === 'uphill' ? (locale === 'ko' ? '오르막' : 'Uphill') : (locale === 'ko' ? '내리막' : 'Downhill')} ${condition.grade}%`
+        ? siteText(locale, 'Mapped traffic signal', '지도에 기록된 교통 신호등')
+        : `${condition.kind === 'uphill' ? (siteText(locale, 'Uphill', '오르막')) : (siteText(locale, 'Downhill', '내리막'))} ${condition.grade}%`
       element.setAttribute('role', 'img')
       element.setAttribute('aria-label', label)
       element.title = label
@@ -709,8 +709,8 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   useEffect(() => {
     const map = mapRef.current
     if (!map || status !== 'ready') return
-    const textField: ExpressionSpecification = locale === 'en'
-      ? ['coalesce', ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['case', ['==', ['get', 'class'], 'bus'], 'Bus Stop', ['get', 'name']]]
+    const textField: ExpressionSpecification = locale !== 'ko'
+      ? ['coalesce', ['get', `name:${locale}`], ['get', `name_${locale}`], ['get', 'name:en'], ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name_latin'], ['case', ['==', ['get', 'class'], 'bus'], 'Bus Stop', ['get', 'name']]]
       : ['coalesce', ['get', 'name:ko'], ['get', 'name_ko'], ['get', 'name'], ['get', 'name:en']]
     for (const layer of map.getStyle().layers as Array<{ id: string; type: string; layout?: Record<string, unknown> }>) {
       if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
@@ -728,10 +728,10 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     const element = document.createElement('div')
     element.className = 'tour-journey-pin tour-journey-pin--start'
     const pinLabel = document.createElement('span')
-    pinLabel.textContent = locale === 'ko' ? '출발' : 'Start'
+    pinLabel.textContent = siteText(locale, 'Start', '출발')
     element.append(pinLabel)
     element.setAttribute('role', 'img')
-    const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
+    const locationLabel = siteText(locale, 'You are here', '내 위치')
     element.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
     element.title = userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`
     userMarkerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
@@ -751,7 +751,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     const count = document.createElement('b')
     count.textContent = pickupStation.available === null ? '—' : String(pickupStation.available)
     element.append(icon, count)
-    const label = locale === 'ko' ? `${pickupStation.name} · 대여 가능 ${pickupStation.available ?? '확인 전'}대` : `${pickupStation.name} · ${pickupStation.available ?? 'unknown'} bikes available`
+    const label = siteText(locale, `${pickupStation.name} · ${pickupStation.available ?? 'unknown'} bikes available`, `${pickupStation.name} · 대여 가능 ${pickupStation.available ?? '확인 전'}대`)
     element.setAttribute('role', 'img')
     element.setAttribute('aria-label', label)
     element.title = label
@@ -773,7 +773,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     if (showCourse) activeStopIndexes.forEach(index => {
       const stop = route.stops[index]
       if (!stop || !points[index]) return
-      const label = locale === 'ko' ? stop.placeKo : stop.place
+      const label = siteText(locale, stop.place, stop.placeKo)
       const element = document.createElement('button')
       element.type = 'button'
       element.className = `tour-3d-stop-marker${selectedStop === index ? ' is-selected' : ''}${viaStopIndex === index ? ' is-via' : ''}${originStopIndex === index ? ' is-origin' : ''}`
@@ -820,7 +820,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       const element = document.createElement('div')
       element.className = 'tour-journey-pin tour-journey-pin--destination'
       const pinLabel = document.createElement('span')
-      pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
+      pinLabel.textContent = siteText(locale, 'End', '도착')
       element.append(pinLabel)
       destinationMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
         .setLngLat([destinationPoint.lng, destinationPoint.lat])
@@ -984,19 +984,17 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       const popupContent = document.createElement('div')
       popupContent.className = 'tour-cctv-popup'
       const heading = document.createElement('strong')
-      heading.textContent = String(properties.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV'))
+      heading.textContent = String(properties.purpose || (siteText(locale, 'Public CCTV', '공공 CCTV')))
       const name = document.createElement('div')
       name.textContent = String(properties.name || '')
       const address = document.createElement('div')
-      address.textContent = String(properties.address || (locale === 'ko' ? '주소 정보 없음' : 'Address not listed'))
+      address.textContent = String(properties.address || (siteText(locale, 'Address not listed', '주소 정보 없음')))
       const metadata = document.createElement('small')
-      metadata.textContent = `${locale === 'ko' ? '카메라' : 'Cameras'} ${String(properties.cameras || '—')} · ${String(properties.resolution || '—')} · ${String(properties.direction || '—')}`
+      metadata.textContent = `${siteText(locale, 'Cameras', '카메라')} ${String(properties.cameras || '—')} · ${String(properties.resolution || '—')} · ${String(properties.direction || '—')}`
       const date = document.createElement('small')
-      date.textContent = `${locale === 'ko' ? '자료 기준일' : 'Data date'} ${String(properties.updatedAt || '—')}`
+      date.textContent = `${siteText(locale, 'Data date', '자료 기준일')} ${String(properties.updatedAt || '—')}`
       const notice = document.createElement('small')
-      notice.textContent = locale === 'ko'
-        ? '공개 설치 위치 정보입니다. 실시간 영상 주소는 제공되지 않습니다.'
-        : 'Public installation record; no live video URL is provided.'
+      notice.textContent = siteText(locale, 'Public installation record; no live video URL is provided.', '공개 설치 위치 정보입니다. 실시간 영상 주소는 제공되지 않습니다.')
       popupContent.append(heading, name, address, metadata, date, notice)
       const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [number, number]
       cctvPopupRef.current?.remove()
@@ -1037,7 +1035,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
       const element = document.createElement('button')
       element.type = 'button'
       element.className = `tour-restaurant-map-marker tour-restaurant-map-marker--${place.kind}`
-      const kindLabel = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
+      const kindLabel = place.kind === 'cafe' ? (siteText(locale, 'Cafe', '카페')) : (siteText(locale, 'Restaurant', '음식점'))
       element.setAttribute('aria-label', `${place.name} · ${kindLabel}`)
       element.title = place.name
       element.textContent = place.kind === 'cafe' ? '☕' : '식'
@@ -1080,25 +1078,21 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
   }, [showSatellite, status])
 
   if (status === 'error') return <>
-    <p className="tour-earth-notice" role="status">{locale === 'ko'
-      ? '3D 지도 타일을 불러오지 못해 기본 코스 지도를 표시합니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
-      : 'The 3D map could not load, so the basic route map is shown. Check your connection and try again.'}</p>
+    <p className="tour-earth-notice" role="status">{siteText(locale, 'The 3D map could not load, so the basic route map is shown. Check your connection and try again.', '3D 지도 타일을 불러오지 못해 기본 코스 지도를 표시합니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.')}</p>
     <div className="tour-map-error-fallback">{fallback}</div>
   </>
 
-  const mapModeLabel = viewMode === 'city' ? (locale === 'ko' ? '위성 3D 지도' : '3D aerial map')
-    : viewMode === 'satellite' ? (locale === 'ko' ? '2D 위성 지도' : '2D satellite map')
-      : (locale === 'ko' ? '평면 지도' : 'Flat map')
+  const mapModeLabel = viewMode === 'city' ? (siteText(locale, '3D aerial map', '위성 3D 지도'))
+    : viewMode === 'satellite' ? (siteText(locale, '2D satellite map', '2D 위성 지도'))
+      : (siteText(locale, 'Flat map', '평면 지도'))
 
   return <div className={`tour-maplibre-3d tour-scene-${season}${isFlatMap ? ' tour-maplibre-2d' : ''}${viewMode === 'satellite' ? ' tour-maplibre-satellite' : ''}`}>
     {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
-    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={`${locale === 'ko' ? route.titleKo : route.title} ${mapModeLabel}`} />
+    <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={`${siteText(locale, route.title, route.titleKo)} ${mapModeLabel}`} />
     {is3DView && nightSky && <div className={`tour-sky-stars tour-sky-stars--${season}`} aria-hidden="true"><i /></div>}
-    {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={locale === 'ko' ? '위성 사진 배경 전환' : 'Toggle satellite imagery'} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
-      {locale === 'ko' ? '위성 사진' : 'Satellite'}
+    {!isFlatMap && <button className="tour-map-style-toggle" type="button" aria-label={siteText(locale, 'Toggle satellite imagery', '위성 사진 배경 전환')} aria-pressed={satellite} onClick={() => setSatellite(value => !value)}>
+      {siteText(locale, 'Satellite', '위성 사진')}
     </button>}
-    {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko'
-      ? viewMode === 'city' ? '도시 3D 지도를 불러오는 중…' : viewMode === 'satellite' ? '2D 위성 지도를 불러오는 중…' : '평면 지도를 불러오는 중…'
-      : viewMode === 'city' ? 'Loading the 3D city map…' : viewMode === 'satellite' ? 'Loading the 2D satellite map…' : 'Loading the flat map…'}</p>}
+    {status === 'loading' && <p className="google-route-loading" role="status">{siteText(locale, viewMode === 'city' ? 'Loading the 3D city map…' : viewMode === 'satellite' ? 'Loading the 2D satellite map…' : 'Loading the flat map…', viewMode === 'city' ? '도시 3D 지도를 불러오는 중…' : viewMode === 'satellite' ? '2D 위성 지도를 불러오는 중…' : '평면 지도를 불러오는 중…')}</p>}
   </div>
 }

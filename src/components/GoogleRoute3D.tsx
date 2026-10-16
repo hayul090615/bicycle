@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * Google 3D 지도에 길과 주변 장소를 표시한다. 지도를 떠날 때 만든 표시와 실행 중인 작업을 정리한다.
  */
@@ -46,7 +48,7 @@ function sampleRiderPositions(path: LonLat[], count: number): LonLat[] {
 }
 
 export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIndexes, originStopIndex, viaStopIndex, accessPath, routeConditions, restaurants, amenities, showAmenities, showCourse, showRestaurants, showRoadInfo, showRiders, showCctv, cctvCameras, locationFocusRequest, rotationRequest, locale, userLocation, selectedStop, onSelectStop, onHoverStop, onFoodGuideOpen, fallback }: {
-  route: TouristRoute; locale: 'en' | 'ko'; selectedStop: number | null
+  route: TouristRoute; locale: SiteLocale; selectedStop: number | null
   routePath: LonLat[] | null
   elevationProfile: RouteElevationPoint[]
   activeStopIndexes: number[]
@@ -126,7 +128,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     window.addEventListener('seoul-google-maps-error', fail)
     void loadGoogleMaps3D().then(library => {
       if (disposed || failed || !host.current) return
-      const mapOptions = { ...cameraRef.current, mode: library.MapMode.HYBRID, gestureHandling: 'COOPERATIVE', bounds: { south: 37.40, west: 126.75, north: 37.72, east: 127.19 }, description: locale === 'ko' ? route.titleKo : route.title }
+      const mapOptions = { ...cameraRef.current, mode: library.MapMode.HYBRID, gestureHandling: 'COOPERATIVE', bounds: { south: 37.40, west: 126.75, north: 37.72, east: 127.19 }, description: siteText(locale, route.title, route.titleKo) }
       map = new library.Map3DElement(mapOptions)
       map.style.width = '100%'
       map.style.height = '100%'
@@ -207,7 +209,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     const library = libraryRef.current
     if (!map || !library || status !== 'ready') return
     let riderFrame = 0
-    map.description = locale === 'ko' ? route.titleKo : route.title
+    map.description = siteText(locale, route.title, route.titleKo)
     routeLineRef.current.forEach(line => line.remove())
     routeLineRef.current = []
     markersRef.current.forEach(marker => marker.remove())
@@ -221,8 +223,8 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     markersRef.current = showCourse ? activeStopIndexes.map(index => {
       const position = points[index]
       const stop = route.stops[index]
-      const prefix = viaStopIndex === index ? (locale === 'ko' ? '경유' : 'Via') : originStopIndex === index ? (locale === 'ko' ? '출발' : 'Start') : selectedStop === index ? (locale === 'ko' ? '도착' : 'End') : `${index + 1}.`
-      const label = `${prefix} ${locale === 'ko' ? stop.placeKo : stop.place}`
+      const prefix = viaStopIndex === index ? (siteText(locale, 'Via', '경유')) : originStopIndex === index ? (siteText(locale, 'Start', '출발')) : selectedStop === index ? (siteText(locale, 'End', '도착')) : `${index + 1}.`
+      const label = `${prefix} ${siteText(locale, stop.place, stop.placeKo)}`
       const marker = new library.Marker3DInteractiveElement({ position, label, title: label, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
       marker.addEventListener('gmp-click', () => onSelectStop(index))
       marker.addEventListener('pointerenter', () => onHoverStop(index))
@@ -313,8 +315,8 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
       const signal = condition.kind === 'signal'
       const label = signal ? '🚦' : `${condition.kind === 'uphill' ? '↗' : '↘'} ${condition.grade}%`
       const title = signal
-        ? locale === 'ko' ? 'OpenStreetMap에 기록된 신호등 · 실시간 상태 아님' : 'OpenStreetMap signal record · not live state'
-        : `${condition.kind === 'uphill' ? (locale === 'ko' ? '오르막 경사 추정' : 'Estimated uphill') : (locale === 'ko' ? '내리막 경사 추정' : 'Estimated downhill')} ${condition.grade}%`
+        ? siteText(locale, 'OpenStreetMap signal record · not live state', 'OpenStreetMap에 기록된 신호등 · 실시간 상태 아님')
+        : `${condition.kind === 'uphill' ? (siteText(locale, 'Estimated uphill', '오르막 경사 추정')) : (siteText(locale, 'Estimated downhill', '내리막 경사 추정'))} ${condition.grade}%`
       const marker = new library.Marker3DElement({
         position: { lat: condition.lat, lng: condition.lng }, label, title,
         altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
@@ -336,7 +338,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     restaurantMarkersRef.current = []
     if (!showRestaurants) return
     restaurantMarkersRef.current = restaurants.map(place => {
-      const kindLabel = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
+      const kindLabel = place.kind === 'cafe' ? (siteText(locale, 'Cafe', '카페')) : (siteText(locale, 'Restaurant', '음식점'))
       const marker = new library.Marker3DInteractiveElement({
         position: { lat: place.lat, lng: place.lng },
         label: place.kind === 'cafe' ? '☕' : '식', title: `${place.name} · ${kindLabel}`,
@@ -360,7 +362,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     amenityMarkersRef.current = amenities.map(place => {
       const [icon, ko, en] = labels[place.kind]
       const marker = new library.Marker3DInteractiveElement({ position: { lat: place.lat, lng: place.lng },
-        label: icon, title: place.name || (locale === 'ko' ? ko : en), altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false })
+        label: icon, title: place.name || (siteText(locale, en, ko)), altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false })
       marker.addEventListener('gmp-click', () => onFoodGuideOpen([place.lng, place.lat], marker))
       map.append(marker)
       return marker
@@ -386,7 +388,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
     userMarkerRef.current?.remove()
     userMarkerRef.current = null
     if (!userLocation) return
-    const label = locale === 'ko' ? '내 위치' : 'You are here'
+    const label = siteText(locale, 'You are here', '내 위치')
     const title = userLocation.accuracy === undefined ? label : `${label} · ±${Math.round(userLocation.accuracy)} m`
     const marker = new library.Marker3DInteractiveElement({ position: { lat: userLocation.lat, lng: userLocation.lng, altitude: 0 }, label, title, altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND })
     map.append(marker)
@@ -409,7 +411,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
           const marker = new library.Marker3DInteractiveElement({
             position: { lat: cluster.lat, lng: cluster.lng },
             label: `${cluster.cameras.length} CCTV`,
-            title: locale === 'ko' ? `${cluster.cameras.length}개 CCTV · 확대해서 보기` : `${cluster.cameras.length} public cameras · zoom in`,
+            title: siteText(locale, `${cluster.cameras.length} public cameras · zoom in`, `${cluster.cameras.length}개 CCTV · 확대해서 보기`),
             altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND, drawsWhenOccluded: false,
           })
           marker.addEventListener('gmp-click', () => {
@@ -424,7 +426,7 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
         const camera = cluster.cameras[0]
         const marker = new library.Marker3DInteractiveElement({
           position: { lat: camera.lat, lng: camera.lng },
-          label: 'CCTV', title: `${camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')} · ${camera.name}`,
+          label: 'CCTV', title: `${camera.purpose || (siteText(locale, 'Public CCTV', '공공 CCTV'))} · ${camera.name}`,
           altitudeMode: library.AltitudeMode.CLAMP_TO_GROUND,
         })
         marker.addEventListener('gmp-click', () => setSelectedCamera(camera))
@@ -481,20 +483,20 @@ export function GoogleRoute3D({ route, routePath, elevationProfile, activeStopIn
   }, [rotationRequest, status])
 
   if (status === 'error') return <>
-    <p className="tour-earth-notice" role="status">{locale === 'ko' ? 'Google 3D 화면을 불러오지 못해 코스 지도를 표시합니다. 아래 버튼으로 Google Earth에서 볼 수 있습니다.' : 'Google 3D could not load. Showing the route map; you can still open this location in Google Earth below.'}</p>
+    <p className="tour-earth-notice" role="status">{siteText(locale, 'Google 3D could not load. Showing the route map; you can still open this location in Google Earth below.', 'Google 3D 화면을 불러오지 못해 코스 지도를 표시합니다. 아래 버튼으로 Google Earth에서 볼 수 있습니다.')}</p>
     {fallback}
   </>
   return <div className="google-route-3d">
     {status === 'loading' && <div className="google-route-underlay">{fallback}</div>}
     <div ref={host} className="google-route-host" style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} />
     {selectedCamera && <aside className="tour-google-cctv-card" aria-live="polite">
-      <button type="button" aria-label={locale === 'ko' ? 'CCTV 정보 닫기' : 'Close CCTV details'} onClick={() => setSelectedCamera(null)}>×</button>
-      <strong>{selectedCamera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')}</strong>
+      <button type="button" aria-label={siteText(locale, 'Close CCTV details', 'CCTV 정보 닫기')} onClick={() => setSelectedCamera(null)}>×</button>
+      <strong>{selectedCamera.purpose || (siteText(locale, 'Public CCTV', '공공 CCTV'))}</strong>
       <span>{selectedCamera.name}</span>
       <small>{selectedCamera.address}</small>
-      <small>{locale === 'ko' ? '카메라' : 'Cameras'} {selectedCamera.cameras || '—'} · {selectedCamera.resolution || '—'} · {selectedCamera.direction || '—'}</small>
-      <small>{locale === 'ko' ? '공개 설치 위치이며 실시간 영상은 제공되지 않습니다.' : 'Public installation record; live video is not provided.'}</small>
+      <small>{siteText(locale, 'Cameras', '카메라')} {selectedCamera.cameras || '—'} · {selectedCamera.resolution || '—'} · {selectedCamera.direction || '—'}</small>
+      <small>{siteText(locale, 'Public installation record; live video is not provided.', '공개 설치 위치이며 실시간 영상은 제공되지 않습니다.')}</small>
     </aside>}
-    {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? 'Google 3D 지도를 불러오는 중…' : 'Loading Google 3D imagery…'}</p>}
+    {status === 'loading' && <p className="google-route-loading" role="status">{siteText(locale, 'Loading Google 3D imagery…', 'Google 3D 지도를 불러오는 중…')}</p>}
   </div>
 }

@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 계절에 맞는 지도 장식 나무 버튼을 만든다. 나무 이미지·그림자·가지 요소를 구성하고 선택한 나무 구간을 확대하는 작업 뒤 실행할 함수을 연결한다.
  */
@@ -5,12 +7,12 @@ import type { TourSeason } from '../data/touristRoutes'
 import routeTreeSpriteUrl from '../assets/route-tree.png'
 
 /** Create a small, season-aware tree billboard for the route map. */
-export function createRouteTreeMarker(season: TourSeason, locale: 'en' | 'ko', variation: number, onFocus: () => void) {
+export function createRouteTreeMarker(season: TourSeason, locale: SiteLocale, variation: number, onFocus: () => void) {
   const tree = document.createElement('button')
   tree.type = 'button'
   tree.className = `tour-map-tree tour-map-tree--${season} tour-map-tree--variation-${variation % 2}`
   tree.style.setProperty('--tree-sprite', `url("${routeTreeSpriteUrl}")`)
-  tree.title = locale === 'ko' ? '이 나무가 있는 구간 확대' : 'Zoom to this tree'
+  tree.title = siteText(locale, 'Zoom to this tree', '이 나무가 있는 구간 확대')
   tree.setAttribute('aria-label', tree.title)
   tree.addEventListener('click', event => {
     event.stopPropagation()

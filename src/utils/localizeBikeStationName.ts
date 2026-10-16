@@ -52,7 +52,7 @@ function titleCase(value: string) {
 
 /** 선택 언어에 맞춰 대여소 원래 이름 또는 영어 표시 이름을 반환한다. */
 export function localizeBikeStationName(name: string, locale: string) {
-  if (locale !== 'en' || !/[가-힣]/.test(name)) return name
+  if (locale === 'ko' || !/[가-힣]/.test(name)) return name
   let english = name
   for (const [korean, translated] of ENGLISH_NAME_PARTS) english = english.replaceAll(korean, ` ${translated} `)
   english = english.replace(/[가-힣]+/g, match => romanizeHangul(match))

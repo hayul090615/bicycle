@@ -9,10 +9,10 @@ import { TourRouteExplorer } from './TourRouteExplorer'
 import { TourOnboarding } from './TourOnboarding'
 import { isInsideSeoul } from '../data/seoulBoundary'
 import { searchSeoulPlaces } from '../services/kakaoMaps'
-import { initialSiteLocale, saveSiteLocale } from '../services/siteLocale'
+import { initialSiteLocale, saveSiteLocale, SITE_LANGUAGES, type SiteLocale } from '../services/siteLocale'
+import { siteText as textFor } from '../services/tourTranslations'
 
-type Locale = 'en' | 'ko'
-const textFor = <T,>(locale: Locale, english: T, korean: T): T => locale === 'en' ? english : korean
+type Locale = SiteLocale
 const seasonNames: Record<TourSeason, [string, string]> = {
   spring: ['Spring', '봄'], summer: ['Summer', '여름'], autumn: ['Autumn', '가을'], winter: ['Winter', '겨울'],
 }
@@ -95,12 +95,11 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
   useEffect(() => {
     saveSiteLocale(locale)
     document.documentElement.lang = locale
-    document.title = locale === 'en' ? 'Ttareungi Seoul Journey' : '따릉이 서울 여행'
+    document.title = textFor(locale, 'Ttareungi Seoul Journey', '따릉이 서울 여행')
     return () => { document.documentElement.lang = 'ko'; document.title = '따릉이 서울 여행' }
   }, [locale])
 
-  const toggleLanguage = () => {
-    const nextLocale = locale === 'en' ? 'ko' : 'en'
+  const chooseLanguage = (nextLocale: SiteLocale) => {
     const url = new URL(window.location.href)
     url.searchParams.set('lang', nextLocale)
     window.history.replaceState(null, '', url)
@@ -148,7 +147,13 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
           <span className="tour-theme-icon" aria-hidden="true">{darkMode ? '☀' : '☾'}</span>
           <span className="tour-theme-label">{darkMode ? textFor(locale, 'Light', '라이트') : textFor(locale, 'Dark', '다크')}</span>
         </button>
-        <button type="button" className="tour-language-button" onClick={toggleLanguage}>{textFor(locale, '한국어', 'English')}</button>
+        <div className="tour-language-picker">
+          <select className="tour-language-button" aria-label={textFor(locale, 'Language', '언어 선택')} value={locale}
+            onChange={event => chooseLanguage(event.target.value as SiteLocale)}>
+            {SITE_LANGUAGES.map(language => <option key={language.code} value={language.code} lang={language.code}>{language.name}</option>)}
+          </select>
+          <svg className="tour-language-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+        </div>
         <button type="button" className="tour-timer-toggle" aria-expanded={rentalTimerOpen} aria-controls="tour-rental-timer-panel" onClick={() => setRentalTimerOpen(open => !open)}><span aria-hidden="true">⏱</span>{textFor(locale, 'Pass time', '이용시간')}</button>
         <div className="tour-typing-action">
           <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}>{textFor(locale, 'Typing game', '타자 게임')} ↗</button>

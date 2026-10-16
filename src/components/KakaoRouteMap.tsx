@@ -1,3 +1,5 @@
+import { siteText } from '../services/tourTranslations'
+import type { SiteLocale } from '../services/siteLocale'
 /**
  * 카카오 지도에 길과 현재 위치, 선택한 주변 장소를 표시한다. 지도를 옮기면 새 중심을 알려 주변 500m 정보를 다시 찾게 한다.
  */
@@ -44,15 +46,15 @@ function readMapCenter(map: KakaoMap): MapPoint | null {
 }
 
 /** 선택 CCTV의 안내와 닫기 동작을 가진 팝업 DOM을 만든다. */
-function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => void) {
+function makeCctvPopup(camera: PublicCamera, locale: SiteLocale, close: () => void) {
   const popup = document.createElement('div')
   popup.className = 'tour-cctv-popup tour-cctv-popup--kakao'
   const heading = document.createElement('strong')
-  heading.textContent = camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')
+  heading.textContent = camera.purpose || (siteText(locale, 'Public CCTV', '공공 CCTV'))
   const closeButton = document.createElement('button')
   closeButton.type = 'button'
   closeButton.className = 'tour-cctv-popup-close'
-  closeButton.setAttribute('aria-label', locale === 'ko' ? '닫기' : 'Close')
+  closeButton.setAttribute('aria-label', siteText(locale, 'Close', '닫기'))
   closeButton.textContent = '×'
   closeButton.addEventListener('click', event => {
     event.stopPropagation()
@@ -61,15 +63,13 @@ function makeCctvPopup(camera: PublicCamera, locale: 'en' | 'ko', close: () => v
   const name = document.createElement('div')
   name.textContent = camera.name
   const address = document.createElement('div')
-  address.textContent = camera.address || (locale === 'ko' ? '주소 정보 없음' : 'Address not listed')
+  address.textContent = camera.address || (siteText(locale, 'Address not listed', '주소 정보 없음'))
   const metadata = document.createElement('small')
-  metadata.textContent = `${locale === 'ko' ? '카메라' : 'Cameras'} ${camera.cameras || '—'} · ${camera.resolution || '—'} · ${camera.direction || '—'}`
+  metadata.textContent = `${siteText(locale, 'Cameras', '카메라')} ${camera.cameras || '—'} · ${camera.resolution || '—'} · ${camera.direction || '—'}`
   const date = document.createElement('small')
-  date.textContent = `${locale === 'ko' ? '자료 기준일' : 'Data date'} ${camera.updatedAt || '—'}`
+  date.textContent = `${siteText(locale, 'Data date', '자료 기준일')} ${camera.updatedAt || '—'}`
   const notice = document.createElement('small')
-  notice.textContent = locale === 'ko'
-    ? '공개된 설치 위치 정보입니다. 실시간 영상 주소는 제공되지 않습니다.'
-    : 'Public installation record; live video is not provided.'
+  notice.textContent = siteText(locale, 'Public installation record; live video is not provided.', '공개된 설치 위치 정보입니다. 실시간 영상 주소는 제공되지 않습니다.')
   popup.append(closeButton, heading, name, address, metadata, date, notice)
   return popup
 }
@@ -99,7 +99,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
   showCctv: boolean
   cctvCameras: PublicCamera[]
   locationFocusRequest: number
-  locale: 'en' | 'ko'
+  locale: SiteLocale
   userLocation: { lat: number; lng: number; heading?: number; accuracy?: number } | null
   selectedStop: number | null
   kakaoMapType: 'roadmap' | 'skyview'
@@ -311,7 +311,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     routeOverlaysRef.current.push(new api.Polyline({ map: showCourse ? map : null, path, strokeWeight: 2.5, strokeColor: '#294c3a', strokeOpacity: .92, strokeStyle: 'shortdash' }))
     activeStopIndexes.forEach(index => {
       const stop = route.stops[index]
-      const label = locale === 'ko' ? stop.placeKo : stop.place
+      const label = siteText(locale, stop.place, stop.placeKo)
       const button = document.createElement('button')
       button.type = 'button'
       button.className = `tour-3d-stop-marker kakao-stop-marker${selectedStop === index ? ' is-selected' : ''}${viaStopIndex === index ? ' is-via' : ''}${originStopIndex === index ? ' is-origin' : ''}`
@@ -446,7 +446,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     marker.className = 'tour-roadview-map-pin'
     marker.textContent = '📷'
     marker.setAttribute('role', 'img')
-    marker.setAttribute('aria-label', locale === 'ko' ? '로드뷰 촬영 위치' : 'Roadview camera location')
+    marker.setAttribute('aria-label', siteText(locale, 'Roadview camera location', '로드뷰 촬영 위치'))
     roadviewOverlayRef.current = new api.CustomOverlay({ map, position, content: marker, clickable: true, xAnchor: .5, yAnchor: 1, zIndex: 40 })
     map.setCenter(position)
     return () => {
@@ -468,7 +468,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const marker = document.createElement('div')
       marker.className = 'tour-journey-pin tour-journey-pin--destination'
       const pinLabel = document.createElement('span')
-      pinLabel.textContent = locale === 'ko' ? '도착' : 'End'
+      pinLabel.textContent = siteText(locale, 'End', '도착')
       marker.append(pinLabel)
       destinationOverlayRef.current = new api.CustomOverlay({
         map,
@@ -644,8 +644,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     conditionOverlaysRef.current = showRoadInfo ? routeConditions.map(condition => {
       const signal = condition.kind === 'signal'
       const label = signal
-        ? locale === 'ko' ? '지도에 기록된 신호등 · 실시간 아님' : 'Mapped signal · not live'
-        : `${condition.kind === 'uphill' ? (locale === 'ko' ? '오르막' : 'Uphill') : (locale === 'ko' ? '내리막' : 'Downhill')} ${condition.grade}%`
+        ? siteText(locale, 'Mapped signal · not live', '지도에 기록된 신호등 · 실시간 아님')
+        : `${condition.kind === 'uphill' ? (siteText(locale, 'Uphill', '오르막')) : (siteText(locale, 'Downhill', '내리막'))} ${condition.grade}%`
       const marker = document.createElement('div')
       marker.className = `tour-road-event tour-road-event--${condition.kind} kakao-road-event`
       marker.setAttribute('role', 'img')
@@ -686,8 +686,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const available = document.createElement('small')
       available.className = 'tour-live-bike-count'
       available.textContent = station.available === null
-        ? (locale === 'ko' ? '실시간 잔여 대수 확인 불가' : 'Live count unavailable')
-        : locale === 'ko' ? `${station.available}대 대여 가능` : `${station.available} bikes available`
+        ? (siteText(locale, 'Live count unavailable', '실시간 잔여 대수 확인 불가'))
+        : siteText(locale, `${station.available} bikes available`, `${station.available}대 대여 가능`)
       popup.append(name, separator, available)
       marker.append(count, popup)
       marker.title = `${localizeBikeStationName(station.name, locale)} · ${available.textContent}`
@@ -717,12 +717,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     if (!map || !api || status !== 'ready') return
     if (!showAmenities) return
     const glyphs: Record<RouteAmenity['kind'], string> = { pump: '🔧', water: '💧', toilet: '🚻', convenience: '🏪' , parking: '🚲', repair: '🛠️', visit: '📍'}
-    const labels: Record<RouteAmenity['kind'], string> = locale === 'ko'
-      ? { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'}
-      : { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}
-    const shortLabels: Record<RouteAmenity['kind'], string> = locale === 'ko'
-      ? { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'}
-      : { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}
+    const labels: Record<RouteAmenity['kind'], string> = siteText(locale, { pump: 'Bike pump', water: 'Drinking water', toilet: 'Public toilet', convenience: 'Convenience store' , parking: 'Bicycle parking', repair: 'Bicycle repair', visit: 'Attraction'}, { pump: '공기주입기', water: '음수대', toilet: '공중화장실', convenience: '편의점' , parking: '자전거 주차', repair: '자전거 수리', visit: '관광 명소'})
+    const shortLabels: Record<RouteAmenity['kind'], string> = siteText(locale, { pump: 'Air', water: 'Water', toilet: 'WC', convenience: 'Shop' , parking: 'Park', repair: 'Repair', visit: 'Visit'}, { pump: '공기', water: '물', toilet: '화장실', convenience: '편의점' , parking: '주차', repair: '수리', visit: '명소'})
     const overlays = amenities.map(amenity => {
       const marker = document.createElement('button')
       marker.type = 'button'
@@ -748,7 +744,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       marker.type = 'button'
       marker.className = `tour-restaurant-map-marker tour-restaurant-map-marker--${place.kind}`
       marker.textContent = place.kind === 'cafe' ? '☕' : '식'
-      const kind = place.kind === 'cafe' ? (locale === 'ko' ? '카페' : 'Cafe') : (locale === 'ko' ? '음식점' : 'Restaurant')
+      const kind = place.kind === 'cafe' ? (siteText(locale, 'Cafe', '카페')) : (siteText(locale, 'Restaurant', '음식점'))
       marker.setAttribute('aria-label', `${place.name} · ${kind}`)
       marker.title = `${place.name} · ${kind}${place.cuisine ? ` · ${place.cuisine}` : ''}`
       marker.addEventListener('click', event => { event.stopPropagation(); onFoodGuideOpen([place.lng, place.lat], marker) })
@@ -793,7 +789,7 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
           button.className = 'tour-cctv-cluster-marker kakao-cctv-marker'
           button.textContent = group.length.toLocaleString()
           button.setAttribute('aria-label', `${group.length} public CCTV locations`)
-          button.title = locale === 'ko' ? `CCTV ${group.length}곳 · 눌러서 확대` : `${group.length} CCTV locations · click to zoom`
+          button.title = siteText(locale, `${group.length} CCTV locations · click to zoom`, `CCTV ${group.length}곳 · 눌러서 확대`)
           button.addEventListener('click', () => {
             map.setLevel(Math.max(1, level - 2), { animate: false })
             map.setCenter(new api.LatLng(lat, lng))
@@ -805,8 +801,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
       const marker = document.createElement('button')
       marker.type = 'button'
       marker.className = 'tour-cctv-map-marker kakao-cctv-marker'
-      marker.setAttribute('aria-label', `${camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')}: ${camera.name}`)
-      marker.title = `${camera.purpose || (locale === 'ko' ? '공공 CCTV' : 'Public CCTV')} · ${camera.name}`
+      marker.setAttribute('aria-label', `${camera.purpose || (siteText(locale, 'Public CCTV', '공공 CCTV'))}: ${camera.name}`)
+      marker.title = `${camera.purpose || (siteText(locale, 'Public CCTV', '공공 CCTV'))} · ${camera.name}`
       marker.textContent = 'C'
       const position = new api.LatLng(camera.lat, camera.lng)
       marker.addEventListener('click', () => {
@@ -866,10 +862,10 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
     const marker = document.createElement('div')
     marker.className = 'tour-journey-pin tour-journey-pin--start'
     const pinLabel = document.createElement('span')
-    pinLabel.textContent = locale === 'ko' ? '출발' : 'Start'
+    pinLabel.textContent = siteText(locale, 'Start', '출발')
     marker.append(pinLabel)
     marker.setAttribute('role', 'img')
-    const locationLabel = locale === 'ko' ? '내 위치' : 'You are here'
+    const locationLabel = siteText(locale, 'You are here', '내 위치')
     marker.setAttribute('aria-label', userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`)
     marker.title = userLocation.accuracy === undefined ? locationLabel : `${locationLabel} · ±${Math.round(userLocation.accuracy)} m`
     userOverlayRef.current = new api.CustomOverlay({
@@ -888,8 +884,8 @@ export function KakaoRouteMap({ route, routePath, elevationProfile, activeStopIn
 
   return <div className="kakao-route-map">
     {status === 'loading' && <div className="kakao-route-underlay" inert={roadviewEnabled}>{fallback}</div>}
-    <div ref={host} className="kakao-route-host" role="region" aria-label={locale === 'ko' ? `${route.titleKo} 카카오 지도` : `${route.title} Kakao map`}
+    <div ref={host} className="kakao-route-host" role="region" aria-label={siteText(locale, `${route.title} Kakao map`, `${route.titleKo} 카카오 지도`)}
       style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} />
-    {status === 'loading' && <p className="google-route-loading" role="status">{locale === 'ko' ? '카카오 지도를 불러오는 중…' : 'Loading Kakao map…'}</p>}
+    {status === 'loading' && <p className="google-route-loading" role="status">{siteText(locale, 'Loading Kakao map…', '카카오 지도를 불러오는 중…')}</p>}
   </div>
 }
