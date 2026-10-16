@@ -2,7 +2,7 @@
  * 로그인과 회원가입 입력 화면이다. Supabase 인증 결과와 오류를 보여 주고 로그인·회원가입 화면 사이의 이동을 처리한다.
  */
 import { useEffect, useState, type FormEvent } from 'react'
-import { siteAuth } from '../services/siteAuth'
+import { authErrorMessage, siteAuth } from '../services/siteAuth'
 import { SeoulRideIllustration } from './SeoulRideIllustration'
 
 export type AuthPageKind = 'login' | 'signup'
@@ -37,7 +37,7 @@ export function AuthPage({ kind, onHome, onNavigate }: {
     try {
       if (isSignup) {
         const { data, error } = await siteAuth.auth.signUp({ email, password, options: {
-          data: { nickname }, emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+          data: { nickname }, emailRedirectTo: `${window.location.origin}${window.location.pathname}?page=typing`,
         } })
         if (error) throw error
         if (data.session) onHome()
@@ -47,10 +47,8 @@ export function AuthPage({ kind, onHome, onNavigate }: {
         if (error) throw error
         onHome()
       }
-    } catch {
-      setMessage(isSignup
-        ? '회원가입을 완료하지 못했습니다. 입력 정보를 확인하고 다시 시도해 주세요.'
-        : '로그인하지 못했습니다. 이메일과 비밀번호, 가입 확인 메일을 확인해 주세요.')
+    } catch (error) {
+      setMessage(authErrorMessage(error, kind))
     } finally { setBusy(false) }
   }
 
@@ -71,7 +69,7 @@ export function AuthPage({ kind, onHome, onNavigate }: {
       <p className="auth-description">{isSignup ? '따릉이 서울 여행에 오신 것을 환영합니다.' : '다시 만나 반가워요. 오늘도 서울을 달려볼까요?'}</p>
       {emailSent ? <div className="auth-success" role="status">
         <h2>이메일을 확인해 주세요</h2>
-        <p>가입 확인 메일을 보냈습니다. 메일의 링크를 눌러 가입을 완료한 뒤 로그인해 주세요.</p>
+        <p>받은편지함과 스팸함을 확인해 주세요. 가입 확인 메일의 링크를 누르면 이용할 수 있습니다. 이미 가입한 이메일이라면 로그인해 주세요.</p>
         <button type="button" className="button button--primary" onClick={() => onNavigate('login')}>로그인으로 이동</button>
       </div> : <>
         {!siteAuth && <p className="auth-notice" role="status">로그인·회원가입 서비스를 준비 중입니다. 연결이 완료되면 이용할 수 있어요.</p>}

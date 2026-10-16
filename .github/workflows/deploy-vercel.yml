@@ -18,7 +18,8 @@ jobs:
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
       VITE_KAKAO_MAP_KEY: ${{ secrets.VITE_KAKAO_MAP_KEY }}
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
@@ -63,8 +64,9 @@ jobs:
           if [ -n "$NAVER_CLIENT_ID" ] && [ -n "$NAVER_CLIENT_SECRET" ]; then
             deploy_args+=(--env "NAVER_CLIENT_ID=$NAVER_CLIENT_ID" --env "NAVER_CLIENT_SECRET=$NAVER_CLIENT_SECRET")
           fi
-          if [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ]; then
-            deploy_args+=(--build-env "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" --build-env "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY")
+          auth_public_key="${VITE_SUPABASE_PUBLISHABLE_KEY:-$VITE_SUPABASE_ANON_KEY}"
+          if [ -n "$VITE_SUPABASE_URL" ] && [ -n "$auth_public_key" ]; then
+            deploy_args+=(--build-env "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" --build-env "VITE_SUPABASE_PUBLISHABLE_KEY=$auth_public_key")
           fi
           database_url="${SUPABASE_URL:-$VITE_SUPABASE_URL}"
           if [ -n "$database_url" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
