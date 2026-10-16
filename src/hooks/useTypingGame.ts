@@ -8,7 +8,7 @@ import { useGameTimer } from './useGameTimer'
 
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 
-export function useTypingGame(course: DistrictCourse, onFinish: (result: GameResultData) => void) {
+export function useTypingGame(course: DistrictCourse, onFinish: (result: GameResultData) => void, suspended = false) {
   // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
   const [status, setStatus] = useState<GameStatus>('countdown')
   const [countdown, setCountdown] = useState(3)
@@ -34,7 +34,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   const visualPrefixRef = useRef(0)
   const inputLengthRef = useRef(0)
   const acceptedInputRef = useRef('')
-  const active = status === 'playing' && hasStartedTyping
+  const active = status === 'playing' && hasStartedTyping && !suspended
   const { elapsedSeconds } = useGameTimer(active)
   const currentStation = course.stations[stationIndex]
   const nextStation = course.stations[stationIndex + 1]
@@ -56,14 +56,14 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
 
   // 화면이 열리거나 대괄호 안의 값이 바뀌면 실행한다. return 안의 함수는 이전 작업을 정리할 때 실행된다.
   useEffect(() => {
-    if (status !== 'countdown') return
+    if (suspended || status !== 'countdown') return
     if (countdown === 0) {
       setStatus('playing')
       return
     }
     const timeoutId = window.setTimeout(() => setCountdown((value) => value - 1), 1000)
     return () => window.clearTimeout(timeoutId)
-  }, [countdown, status])
+  }, [countdown, status, suspended])
 
   // 다른 화면에 전달할 함수를 기억한다. 대괄호 안의 값이 바뀌면 함수를 새로 만든다.
   const buildResult = useCallback((
@@ -126,7 +126,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
   }, [stationIndex])
 
   const updateInput = useCallback((value: string, isComposing: boolean) => {
-    if (status !== 'playing' || !nextStation) return acceptedInputRef.current
+    if (suspended || status !== 'playing' || !nextStation) return acceptedInputRef.current
     // 한글 조합 확정을 위해 누른 스페이스는 게임 입력에서 제거한다.
     const sanitizedValue = value.normalize('NFC').replace(/\s+/gu, '')
     setCompositionActive(isComposing)
@@ -160,10 +160,10 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     // 조합 중에도 완성형 음절에 맞춰 이동하되, 목적지 전환은 조합 종료 뒤 처리한다.
     if (nextAnalysis.isComplete && !isComposing) arrive(correctUnitsRef.current)
     return sanitizedValue
-  }, [arrive, nextStation, status])
+  }, [arrive, nextStation, status, suspended])
 
   const commitComposition = useCallback((value: string) => {
-    if (status !== 'playing' || !nextStation) return acceptedInputRef.current
+    if (suspended || status !== 'playing' || !nextStation) return acceptedInputRef.current
     const sanitizedValue = value.normalize('NFC').replace(/\s+/gu, '')
     setCompositionActive(false)
     const target = nextStation.typingName ?? nextStation.name
@@ -187,10 +187,10 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
       arrive(correctUnitsRef.current)
     }
     return sanitizedValue
-  }, [arrive, nextStation, status])
+  }, [arrive, nextStation, status, suspended])
 
   const submitInput = useCallback((value: string) => {
-    if (status !== 'playing' || !nextStation) return
+    if (suspended || status !== 'playing' || !nextStation) return
     const sanitizedValue = value.normalize('NFC').replace(/\s+/gu, '')
     const target = nextStation.typingName ?? nextStation.name
     const submitted = analyzeInput(sanitizedValue, target)
@@ -209,7 +209,7 @@ export function useTypingGame(course: DistrictCourse, onFinish: (result: GameRes
     setWrongAttempts((count) => count + 1)
     setCombo(0)
     setErrorPulse((pulse) => pulse + 1)
-  }, [arrive, nextStation, status])
+  }, [arrive, nextStation, status, suspended])
 
   const togglePause = () => setStatus((value) => value === 'playing' ? 'paused' : 'playing')
   const attempts = correctUnits + wrongAttempts

@@ -526,7 +526,7 @@ export function TourRouteExplorer({ route, routes, category, onRouteSelect, loca
       if (rentalStack && header) {
         const headerBounds = header.getBoundingClientRect(), stackBounds = rentalStack.getBoundingClientRect()
         let stackTop = Math.max(headerBounds.bottom, stageBounds.top) + 12
-        const obstacles = [...(tools?.children ?? []), ...(mapDock ? [mapDock] : [])]
+        const obstacles = [...(discovery ? [discovery] : []), ...(tools?.children ?? []), ...(mapDock ? [mapDock] : [])]
         obstacles.forEach(element => {
           const bounds = element.getBoundingClientRect()
           if (bounds.height && bounds.left < stackBounds.right && bounds.right > stackBounds.left) stackTop = Math.max(stackTop, bounds.bottom + 12)

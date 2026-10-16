@@ -18,6 +18,7 @@ import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/g
 import { SEOUL_BOUNDARY } from './data/seoulBoundary'
 import { savedSiteLocale } from './services/siteLocale'
 import { registerSiteVisit } from './services/siteVisits'
+import { GameGuide, shouldShowGameGuide } from './components/GameGuide'
 
 type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour' | AuthPageKind
 /** URL에 지정된 화면을 읽어 최초 진입 화면을 결정한다. */
@@ -26,7 +27,14 @@ function screenFromUrl(): AppScreen {
   const page = params.get('page')
   if (page === 'login' || page === 'signup') return page
   if (page === 'typing') return 'select'
+  if (page === 'learn') return 'game'
   return 'tour'
+}
+function learningDistrictFromUrl(): SeoulDistrict | null {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('page') !== 'learn') return null
+  const district = params.get('district')
+  return district && Object.hasOwn(districtCourses, district) ? district as SeoulDistrict : '강남구'
 }
 const HIGH_SCORE_KEY = 'seoul-typing-bike-high-score'
 const PLAYED_STATIONS_KEY = 'seoul-typing-bike-played-stations-v1'
@@ -58,7 +66,8 @@ const SEOUL_SPLASH_PATH = SEOUL_BOUNDARY.map(([lng, lat], index) => {
 function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onToggleTheme }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void; lightMode: boolean; onToggleTheme: () => void }) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const inputRef = useRef<HTMLInputElement>(null)
-  const game = useTypingGame(course, onResult)
+  const [guideOpen, setGuideOpen] = useState(shouldShowGameGuide)
+  const game = useTypingGame(course, onResult, guideOpen)
   const stationData = useBikeStations(course.district as SeoulDistrict)
   const overallProgress = ((game.stationIndex + game.segmentProgress) / (course.stations.length - 1)) * 100
   const upcomingStation = course.stations[game.stationIndex + 2]
@@ -81,9 +90,9 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
       document.documentElement.style.removeProperty('--game-visual-top')
     }
   }, [])
-  useEffect(() => { if (game.status === 'playing') inputRef.current?.focus() }, [game.status, game.stationIndex])
+  useEffect(() => { if (game.status === 'playing' && !guideOpen) inputRef.current?.focus() }, [game.status, game.stationIndex, guideOpen])
   const focusGame = (event: MouseEvent<HTMLElement>) => {
-    if (game.status === 'playing' && !(event.target as HTMLElement).closest('button, input')) inputRef.current?.focus()
+    if (!guideOpen && game.status === 'playing' && !(event.target as HTMLElement).closest('button, input')) inputRef.current?.focus()
   }
   // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <main className={`game-screen ${lightMode ? 'game-screen--light' : ''}`} onClick={focusGame}>
@@ -92,7 +101,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
       dataStatus={stationData.status} lightMode={lightMode} allDistrictStations={stationData.stations} playedStationIds={playedStationIds} />
     <GameHeader district={course.district} elapsedSeconds={game.elapsedSeconds} score={game.score} accuracy={game.accuracy}
       combo={game.combo} onPause={game.togglePause} onHome={onHome} paused={game.status === 'paused'}
-      progress={overallProgress} lightMode={lightMode} onToggleTheme={onToggleTheme} />
+      progress={overallProgress} lightMode={lightMode} onToggleTheme={onToggleTheme} onHelp={() => setGuideOpen(true)} />
     <div className="game-hud">
       <div className="station-strip">
         <div className="hud-station-card hud-station-card--current">
@@ -100,7 +109,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
         </div>
         <div className="game-typing-area">
           {game.nextStation && <TypingInput key={game.stationIndex} ref={inputRef} target={game.targetText} value={game.input} analysis={game.analysis}
-            disabled={game.status !== 'playing'} timerStarted={game.hasStartedTyping} onValueChange={game.updateInput} onCompositionCommit={game.commitComposition}
+            disabled={guideOpen || game.status !== 'playing'} timerStarted={game.hasStartedTyping} onValueChange={game.updateInput} onCompositionCommit={game.commitComposition}
             onSubmitAttempt={game.submitInput} />}
         </div>
         <div className="hud-station-card hud-station-card--next">
@@ -108,8 +117,9 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
         </div>
       </div>
     </div>
-    {game.status === 'countdown' && <Countdown value={game.countdown} courseTitle={course.title} stationName={game.currentStation.name} />}
-    {game.status === 'paused' && <div className="pause-overlay" role="dialog" aria-modal="true" aria-label="일시 정지">
+    {guideOpen && <GameGuide onClose={() => setGuideOpen(false)} />}
+    {!guideOpen && game.status === 'countdown' && <Countdown value={game.countdown} courseTitle={course.title} stationName={game.currentStation.name} />}
+    {!guideOpen && game.status === 'paused' && <div className="pause-overlay" role="dialog" aria-modal="true" aria-label="일시 정지">
       <button type="button" className="pause-overlay-close" onClick={game.togglePause} aria-label="계속 달리기">×</button>
       <div className="pause-overlay-content"><h2>잠시 쉬어가요</h2></div>
     </div>}
@@ -137,10 +147,13 @@ export default function App() {
     const timer = window.setTimeout(() => setShowSiteSplash(false), duration)
     return () => window.clearTimeout(timer)
   }, [])
-  const [selected, setSelected] = useState<SeoulDistrict | null>(null)
+  const [selected, setSelected] = useState<SeoulDistrict | null>(learningDistrictFromUrl)
   const [runKey, setRunKey] = useState(0)
   const [result, setResult] = useState<GameResultData | null>(null)
-  const [activeCourse, setActiveCourse] = useState<DistrictCourse | null>(null)
+  const [activeCourse, setActiveCourse] = useState<DistrictCourse | null>(() => {
+    const district = learningDistrictFromUrl()
+    return district ? createDistrictCourse(district, []) : null
+  })
   const [currentRankingId, setCurrentRankingId] = useState<string | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => {
     try { return JSON.parse(localStorage.getItem(LEADERBOARD_KEY) ?? '[]') as LeaderboardEntry[] }
@@ -186,6 +199,7 @@ export default function App() {
     const url = new URL(window.location.href)
     url.searchParams.delete('lang')
     url.searchParams.delete('route')
+    url.searchParams.delete('district')
     url.searchParams.set('page', 'typing')
     window.history.replaceState(null, '', url)
     setScreen('select'); setResult(null); setActiveCourse(null)

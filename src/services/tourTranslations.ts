@@ -1,4 +1,5 @@
 /** 화면 문구만 번역한다. 장소 이름·주소·외부 후기 원문은 제공처 정보를 유지한다. */
+import french from './tourFrench'
 type Translation = readonly [portuguese: string, japanese: string, chinese: string]
 const translations: Record<string, Translation> = {
   'Language': ['Idioma', '言語', '语言'],
@@ -545,8 +546,12 @@ const aliases: Record<string, string> = {
   'Loading real bike route & surroundings…': 'Loading map…', 'Preparing the 3D city view…': 'Loading map…',
 }
 
-const languageIndex: Record<string, number> = { pt: 0, ja: 1, zh: 2 }
-const patterns = Object.entries(translations).filter(([key]) => /\{\d+\}/.test(key))
+const dictionaries: Record<string, Record<string, string>> = {
+  pt: Object.fromEntries(Object.entries(translations).map(([key, values]) => [key, values[0]])),
+  ja: Object.fromEntries(Object.entries(translations).map(([key, values]) => [key, values[1]])),
+  fr: french,
+}
+const patterns = Object.fromEntries(Object.entries(dictionaries).map(([locale, dictionary]) => [locale, Object.entries(dictionary).filter(([key]) => /\{\d+\}/.test(key))
   .sort(([a], [b]) => b.replace(/\{\d+\}/g, '').length - a.replace(/\{\d+\}/g, '').length).map(([key, values]) => {
   const slots: string[] = []
   const parts = key.split(/(\{\d+\})/).map(part => {
@@ -554,24 +559,24 @@ const patterns = Object.entries(translations).filter(([key]) => /\{\d+\}/.test(k
     return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   })
   return { matcher: new RegExp(`^${parts.join('')}$`, 's'), slots, values }
-})
+})]))
 
 /** 번역이 없는 제공처 원문은 영어를 유지하고, 한국어·영어의 기존 동작도 보존한다. */
 export function siteText<T>(locale: string, english: T, korean: T): T {
   if (locale === 'ko') return korean
-  const index = languageIndex[locale]
-  if (index === undefined) return english
+  const dictionary = dictionaries[locale]
+  if (!dictionary) return english
   if (typeof english !== 'string') {
     if (english && typeof english === 'object' && Object.getPrototypeOf(english) === Object.prototype && !('$$typeof' in english)) {
       return Object.fromEntries(Object.entries(english).map(([key, value]) => [key, siteText(locale, value, value)])) as T
     }
     return english
   }
-  const exact = translations[aliases[english] ?? english]?.[index]
+  const exact = dictionary[aliases[english] ?? english]
   if (exact !== undefined) return exact as T
-  for (const { matcher, slots, values } of patterns) {
+  for (const { matcher, slots, values } of patterns[locale]) {
     const match = matcher.exec(english)
-    if (match) return values[index].replace(/\{\d+\}/g, slot => match[slots.indexOf(slot) + 1] ?? slot) as T
+    if (match) return values.replace(/\{\d+\}/g, slot => match[slots.indexOf(slot) + 1] ?? slot) as T
   }
   return english
 }

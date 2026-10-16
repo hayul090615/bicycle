@@ -4096,7 +4096,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 
 /* Rounded header pills with a dark active action and a soft logout accent. */
-.typing-main-nav > button {
+.typing-main-nav > button,
+.typing-main-nav > a {
   min-height: 38px;
   padding: .45rem .9rem;
   border: 1px solid #dce2e7;
@@ -4106,7 +4107,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   font-weight: 750;
   transition: background .16s ease, color .16s ease, border-color .16s ease, transform .16s ease;
 }
-.typing-main-nav > button:hover { transform: translateY(-1px); border-color: #aebbc4; }
+.typing-main-nav > button:hover, .typing-main-nav > a:hover { transform: translateY(-1px); border-color: #aebbc4; }
 .typing-main-nav > button.is-active { border-color: #18232d; color: #fff; background: #18232d; box-shadow: none; }
 .typing-account-actions button {
   min-height: 36px;
@@ -4237,7 +4238,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
   .tour-screen .tour-explorer-grid--menu-open .tour-map-stage--custom-destination .tour-map-control-rail { top: 6.8rem; }
 }
 @media (max-width: 700px) {
-  .typing-main-nav > button { min-height: 32px; padding: .32rem .62rem; font-size: .68rem; }
+  .typing-main-nav > button, .typing-main-nav > a { min-height: 32px; padding: .32rem .62rem; font-size: .68rem; }
   .typing-account-actions button { min-height: 30px; padding: .3rem .55rem; font-size: .58rem; }
   .tour-screen .tour-header-actions .tour-theme-button,
   .tour-screen .tour-header-actions .tour-language-button,
@@ -4263,11 +4264,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:hover,
 .tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:focus-visible { border-color: #9b5de5; box-shadow: 0 0 0 1px #9b5de5, 0 0 14px #9b5de580; }
 
-/* 지도 도구와 주변 정보 버튼을 같은 높이에 두고 작은 화면에서는 한 줄로 스크롤한다. */
-.tour-discovery-toolbar { display: flex; align-items: center; gap: 10px; padding: 2px; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
-.tour-screen .tour-discovery-toolbar > .tour-map-destination-tools { position: static; display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; max-width: none; }
+/* 주변 정보 버튼 묶음은 지도 중앙에, 도착지 도구는 그 아래에 놓는다. */
+.tour-discovery-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 2px; }
+.tour-screen .tour-discovery-toolbar > .tour-map-destination-tools { position: static; display: flex; flex: 0 1 auto; flex-wrap: nowrap; align-items: center; max-width: 100%; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
 .tour-screen .tour-discovery-toolbar > .tour-map-destination-tools > button:not(.tour-map-menu-button) { width: auto; height: 48px; min-height: 48px; }
-.tour-discovery-toolbar > .tour-discovery-chips { flex: 1 0 auto; min-width: max-content; overflow: visible; padding: 0; }
+.tour-discovery-toolbar > .tour-discovery-chips { flex: 1 0 100%; min-width: 0; max-width: 100%; overflow-x: auto; padding: 2px; }
 .tour-discovery-toolbar > .tour-discovery-chips > button { min-height: 48px; }
 .tour-screen .tour-map-view-dock { top: calc(var(--tour-discovery-height, 66px) + .55rem); }
 .tour-earth-preview:has(.tour-map-stage--tool-open) .tour-discovery-toolbar > .tour-map-destination-tools { visibility: hidden; }

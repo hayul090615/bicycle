@@ -26,7 +26,6 @@ export function MapDiscoveryBar({ locale, selected, onSelect, status, count, pla
   // 아래 JSX는 화면에 보일 내용이다. 중괄호 안에는 위에서 계산한 값이나 버튼 동작을 넣는다.
   return <div className="tour-discovery-bar">
     <div className="tour-discovery-toolbar">
-    {controls}
     <nav className="tour-discovery-chips" aria-label={siteText(locale, 'Nearby map places', '주변 지도 정보')}>
       {OPTIONS.map(option => <button key={option.id} type="button" aria-pressed={selected === option.id}
         onClick={() => onSelect(option.id)}><span aria-hidden="true">{option.icon}</span>{siteText(locale, option.en, option.ko)}
@@ -36,6 +35,7 @@ export function MapDiscoveryBar({ locale, selected, onSelect, status, count, pla
         {directionsVisible ? (siteText(locale, 'Close list', '목록 닫기')) : (siteText(locale, 'Show list', '목록 열기'))}
       </button>}
     </nav>
+    {controls}
     </div>
     {selected === 'cctv' && <div className="tour-discovery-note" role="status">
       <span>{cctvLocationStatus === 'locating' ? (siteText(locale, 'Finding your location…', '내 위치를 확인하는 중…'))

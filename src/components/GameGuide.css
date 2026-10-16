@@ -1,0 +1,34 @@
+.game-guide { position: fixed; inset: 0; box-sizing: border-box; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; overflow: hidden; border: 0; color: #fff; background: transparent; font-family: 'Noto Sans KR', system-ui, sans-serif; }
+.game-guide::backdrop { background: #07151bc4; }
+.game-guide-highlight { position: absolute; box-sizing: border-box; border: 3px solid #ff936c; border-radius: 17px; box-shadow: 0 0 0 1px #ffe7d955, 0 0 24px #ff936c30; }
+.game-guide-highlight > b { position: absolute; top: -14px; left: 12px; display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid #fff; border-radius: 50%; color: #17262a; background: #ffad86; font-size: 13px; }
+.game-guide-diagram { pointer-events: none; }
+.game-guide-arrows { position: absolute; inset: 0; overflow: visible; fill: none; }
+.game-guide-arrows > path { stroke: #fff8ed; stroke-width: 2; stroke-dasharray: 5 6; }
+.game-guide-arrows marker path { stroke: #fff8ed; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.game-guide-callouts { margin: 0; padding: 0; list-style: none; }
+.game-guide-callouts > li { position: absolute; display: flex; align-items: flex-start; gap: 12px; box-sizing: border-box; padding: 14px 16px; border: 1px solid #f7e0cf33; border-radius: 14px; background: #15262be6; box-shadow: 0 8px 24px #0003; }
+.game-guide-callouts > li > span { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #17262a; background: #ffad86; font-size: 12px; font-weight: 850; }
+.game-guide h3 { margin: 0 0 6px; color: #ffb18b; font-size: 16px; line-height: 1.5; }
+.game-guide-callouts p, .game-guide-step p { margin: 0; color: #f0f3ed; font-size: 13px; line-height: 1.75; word-break: keep-all; }
+.game-guide-card { position: absolute; top: 31%; left: 50%; box-sizing: border-box; width: 410px; padding: 22px; border: 1px solid #ffffff2e; border-radius: 20px; color: #f7f8f4; background: #10252cf5; box-shadow: 0 14px 48px #0003; text-align: center; transform: translateX(-50%); }
+.game-guide-kicker { margin: 0 0 8px; color: #ffad86; font-size: 12px; font-weight: 850; letter-spacing: .08em; }
+.game-guide h2 { margin: 0; color: #fff; font-size: 23px; line-height: 1.5; letter-spacing: -.04em; }
+.game-guide-intro { margin: 12px 0; color: #cddbd9; font-size: 13px; line-height: 1.7; }
+.game-guide-remember { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; color: #dce8e2; font-size: 12px; cursor: pointer; }
+.game-guide-remember input { flex: none; width: 17px; height: 17px; accent-color: #ffad86; }
+.game-guide-start { min-height: 44px; width: 100%; padding: 10px 18px; border: 1px solid #ffc6a8; border-radius: 10px; color: #172c2b; background: #ffad86; font: 850 14px 'Noto Sans KR', sans-serif; cursor: pointer; }
+.game-guide-start:hover { background: #ffc2a7; }
+.game-guide button:focus-visible, .game-guide input:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.game-guide--compact .game-guide-card { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); width: min(440px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 18px; }
+.game-guide--compact .game-guide-card--top { top: max(14px, env(safe-area-inset-top)); bottom: auto; }
+.game-guide--compact h2 { font-size: 19px; }
+.game-guide-step { margin-top: 14px; text-align: left; }
+.game-guide-step > span { display: block; margin-bottom: 6px; color: #a7c9be; font-size: 12px; }
+.game-guide-step h3 { font-size: 16px; }
+.game-guide-navigation { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.game-guide-navigation button { min-height: 38px; min-width: 76px; padding: 6px 12px; border: 1px solid #56716d; border-radius: 8px; color: #fff; background: #25413e; font: inherit; font-size: 12px; cursor: pointer; }
+.game-guide-navigation button:disabled { opacity: .4; cursor: default; }
+.typing-main-nav > a { padding: .55rem .3rem; color: #4d635a; font: inherit; font-size: .82rem; white-space: nowrap; text-decoration: none; }
+.game-header .header-actions { flex-wrap: wrap; }
+@media (max-width: 700px) { .typing-main-nav > a { font-size: .68rem; padding: .32rem .62rem; } }
