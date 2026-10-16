@@ -1929,6 +1929,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen--dark .tour-season-guide-facts > div, .tour-screen--dark .tour-season-guide-heading b { border-color: #4b6152; background: #304239; color: #d9e5d9; }
 .tour-screen--dark .tour-season-guide-footer { border-color: #4b6152; }
 .tour-screen--dark .tour-maplibre-host canvas { filter: brightness(.7) saturate(.8) contrast(1.08); }
+/* 평면지도는 언어·계절·테마와 관계없이 지도 원래 색상을 유지한다. */
+.tour-screen .tour-maplibre-2d .tour-maplibre-host canvas { filter: none; }
 .tour-screen--dark .tour-map-locate, .tour-screen--dark .tour-journey-legend, .tour-screen--dark .tour-season-picker,
 .tour-screen--dark .tour-season-weather, .tour-screen--dark .tour-shadow-status { color: #e3eee7; border-color: #4b6156; background: #26372fef; }
 .tour-screen--dark .tour-season-picker button { color: #d8e7da; }

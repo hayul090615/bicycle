@@ -1086,7 +1086,7 @@ export function MapLibreRoute3D({ viewMode, route, routePath, elevationProfile, 
     : viewMode === 'satellite' ? (siteText(locale, '2D satellite map', '2D 위성 지도'))
       : (siteText(locale, 'Flat map', '평면 지도'))
 
-  return <div className={`tour-maplibre-3d tour-scene-${season}${isFlatMap ? ' tour-maplibre-2d' : ''}${viewMode === 'satellite' ? ' tour-maplibre-satellite' : ''}`}>
+  return <div className={`tour-maplibre-3d${is3DView ? ` tour-scene-${season}` : ' tour-maplibre-2d'}${viewMode === 'satellite' ? ' tour-maplibre-satellite' : ''}`}>
     {status === 'loading' && <div className="tour-maplibre-fallback">{fallback}</div>}
     <div className="tour-maplibre-host" ref={host} style={{ visibility: status === 'loading' ? 'hidden' : 'visible' }} role="region" aria-label={`${siteText(locale, route.title, route.titleKo)} ${mapModeLabel}`} />
     {is3DView && nightSky && <div className={`tour-sky-stars tour-sky-stars--${season}`} aria-hidden="true"><i /></div>}
