@@ -4264,11 +4264,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 .tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:hover,
 .tour-screen:not(.tour-screen--dark) .tour-discovery-chips > button:focus-visible { border-color: #9b5de5; box-shadow: 0 0 0 1px #9b5de5, 0 0 14px #9b5de580; }
 
-/* 주변 정보 버튼 묶음은 지도 중앙에, 도착지 도구는 그 아래에 놓는다. */
-.tour-discovery-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 2px; }
-.tour-screen .tour-discovery-toolbar > .tour-map-destination-tools { position: static; display: flex; flex: 0 1 auto; flex-wrap: nowrap; align-items: center; max-width: 100%; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
+/* 지도 도구와 주변 정보 버튼은 같은 줄·높이를 유지하고 좁은 화면에서는 함께 가로로 이동한다. */
+.tour-discovery-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; padding: 2px; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.tour-screen .tour-discovery-toolbar > .tour-map-destination-tools { position: static; display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; max-width: none; }
 .tour-screen .tour-discovery-toolbar > .tour-map-destination-tools > button:not(.tour-map-menu-button) { width: auto; height: 48px; min-height: 48px; }
-.tour-discovery-toolbar > .tour-discovery-chips { flex: 1 0 100%; min-width: 0; max-width: 100%; overflow-x: auto; padding: 2px; }
+.tour-discovery-toolbar > .tour-discovery-chips { flex: 1 0 auto; min-width: max-content; overflow: visible; padding: 0; }
 .tour-discovery-toolbar > .tour-discovery-chips > button { min-height: 48px; }
 .tour-screen .tour-map-view-dock { top: calc(var(--tour-discovery-height, 66px) + .55rem); }
 .tour-earth-preview:has(.tour-map-stage--tool-open) .tour-discovery-toolbar > .tour-map-destination-tools { visibility: hidden; }
@@ -4291,4 +4291,39 @@ button:focus-visible, input:focus-visible { outline: 3px solid #73e0bd; outline-
 }
 @media (min-width: 701px) {
   .tour-earth-preview:has(.tour-map-stage--roadview) > .tour-discovery-bar { width: 50%; }
+}
+
+/* 국기는 선택한 언어와 펼친 목록 양쪽에서 같은 모양으로 표시한다. */
+.tour-screen .tour-header-actions .tour-language-picker > .tour-language-button { display: flex; align-items: center; justify-content: center; gap: .4rem; max-width: none; }
+.tour-language-flag { flex: none; width: 23px; height: 16px; overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px #66756f44; }
+.tour-language-options { position: absolute; z-index: 1700; top: calc(100% + 8px); right: 0; display: grid; gap: 3px; width: 190px; padding: 6px; border: 1px solid #dce2e7; border-radius: 14px; color: #26333d; background: #fff; box-shadow: 0 8px 26px #142b2630; }
+.tour-language-options > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid transparent; border-radius: 9px; color: inherit; background: transparent; font: 700 14px/1.3 system-ui, sans-serif; text-align: left; cursor: pointer; }
+.tour-language-options > button:hover, .tour-language-options > button:focus-visible { outline: none; border-color: #9b5de5; background: #f4eefc; }
+.tour-language-options > button[aria-selected='true'] { color: #18533a; background: #edf6f0; }
+.tour-language-check { margin-left: auto; }
+.tour-screen--dark .tour-language-options { color: #eaf0f1; border-color: #46545c; background: #202c33; }
+.tour-screen--dark .tour-language-options > button:hover, .tour-screen--dark .tour-language-options > button:focus-visible { background: #40314d; }
+.tour-screen--dark .tour-language-options > button[aria-selected='true'] { color: #eaf0f1; background: #286344; }
+
+/* 이용시간은 열림 상태와 눌림·초점을 색과 테두리로 명확하게 구분한다. */
+.tour-screen .tour-header-actions .tour-timer-toggle,
+.tour-rental-pass-options > button { transition: border-color .16s, box-shadow .16s, transform .16s, background .16s; }
+.tour-screen .tour-header-actions .tour-timer-toggle:hover,
+.tour-screen .tour-header-actions .tour-timer-toggle:focus-visible,
+.tour-rental-pass-options > button:hover,
+.tour-rental-pass-options > button:focus-visible { outline: none; border-color: #9b5de5; box-shadow: 0 0 0 1px #9b5de5, 0 0 14px #9b5de550; transform: translateY(-1px); }
+.tour-screen .tour-header-actions .tour-timer-toggle:active,
+.tour-rental-pass-options > button:active { transform: scale(.96); }
+.tour-screen .tour-header-actions .tour-timer-toggle[aria-expanded='true'] { border-color: #9b5de5; color: #18533a; background: #fff; box-shadow: 0 0 0 2px #9b5de540; }
+.tour-screen--dark .tour-header-actions .tour-timer-toggle[aria-expanded='true'] { color: #f3f7ef; background: #286344; }
+.tour-rental-pass-options > button[aria-pressed='true'] { box-shadow: 0 0 0 2px #6dd9ba; }
+.tour-timer-toggle[aria-expanded='true'] > span { animation: tour-timer-turn .3s ease-out; }
+@keyframes tour-timer-turn { from { transform: rotate(-25deg) scale(.8); } to { transform: rotate(0) scale(1); } }
+@media (max-width: 700px) {
+  .tour-screen .tour-header-actions .tour-language-picker > .tour-language-button { gap: .25rem; }
+  .tour-language-flag { width: 18px; height: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-screen .tour-header-actions .tour-timer-toggle, .tour-rental-pass-options > button { transition: none; transform: none; }
+  .tour-timer-toggle[aria-expanded='true'] > span { animation: none; }
 }
