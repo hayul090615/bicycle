@@ -6,7 +6,6 @@ export const SITE_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'pt', name: 'Português' },
   { code: 'ja', name: '日本語' },
-  { code: 'zh', name: '中文' },
 ] as const
 export type SiteLocale = typeof SITE_LANGUAGES[number]['code']
 export const isSiteLocale = (value: string | null): value is SiteLocale => SITE_LANGUAGES.some(language => language.code === value)
