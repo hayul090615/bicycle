@@ -149,9 +149,9 @@ export function TouristGuide({ onBack, darkMode, onToggleTheme }: { onBack: () =
           <span className="tour-theme-label">{darkMode ? textFor(locale, 'Light', '라이트') : textFor(locale, 'Dark', '다크')}</span>
         </button>
         <LanguagePicker locale={locale} onChange={chooseLanguage} />
-        <button type="button" className="tour-timer-toggle" aria-expanded={rentalTimerOpen} aria-controls="tour-rental-timer-panel" onClick={() => setRentalTimerOpen(open => !open)}><span aria-hidden="true">⏱</span>{textFor(locale, 'Pass time', '이용시간')}</button>
+        <button type="button" className="tour-timer-toggle" aria-expanded={rentalTimerOpen} aria-controls="tour-rental-timer-panel" onClick={() => setRentalTimerOpen(open => !open)}><span className="tour-timer-icon" aria-hidden="true">⏱</span><span className="tour-action-label">{textFor(locale, 'Pass time', '이용시간')}</span></button>
         <div className="tour-typing-action">
-          <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}>{textFor(locale, 'Typing game', '타자 게임')} ↗</button>
+          <button type="button" className="tour-back" aria-label={textFor(locale, 'Open the typing game', '타자 게임 열기')} onClick={onBack}><span className="tour-action-label">{textFor(locale, 'Typing game', '타자 게임')}</span><span className="tour-action-arrow" aria-hidden="true">↗</span></button>
           <div className="tour-rental-widget-slot" ref={setRentalWidgetTarget} />
         </div>
       </div>
