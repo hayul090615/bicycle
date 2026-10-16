@@ -13,7 +13,6 @@ interface GameHeaderProps {
   progress: number
   lightMode: boolean
   onToggleTheme: () => void
-  onHelp: () => void
 }
 
 export function GameHeader(props: GameHeaderProps) {
@@ -38,7 +37,6 @@ export function GameHeader(props: GameHeaderProps) {
       </div>
     </div>
     <div className="header-actions">
-      <button className="button button--ghost" type="button" onClick={props.onHelp}>? 도움말</button>
       <button className="button button--ghost" onClick={props.onToggleTheme}>{props.lightMode ? '☾ 다크' : '☀ 라이트'}</button>
       <button className="button button--ghost" onClick={props.onPause}>{props.paused ? '▶ 계속하기' : 'Ⅱ 일시 정지'}</button>
       <button className="button button--ghost" onClick={props.onHome}>처음으로</button>

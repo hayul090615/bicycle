@@ -21,7 +21,7 @@ interface DistrictSelectorProps {
 
 export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPractice, onOpenTours, onOpenAuth, highScore, playedStations }: DistrictSelectorProps) {
   // useState는 화면에 필요한 값을 기억한다. set으로 시작하는 함수를 부르면 새 값으로 화면도 바뀐다.
-  const [activeTab, setActiveTab] = useState('타자 연습')
+  const [activeTab, setActiveTab] = useState('타자 게임')
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [dialog, setDialog] = useState<SiteDialogKind | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -47,14 +47,10 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
   const playedStationCounts = Object.fromEntries(
     Object.entries(playedStations).map(([district, ids]) => [district, ids?.length ?? 0]),
   ) as Partial<Record<SeoulDistrict, number>>
-  const mainTabs = ['타자 연습', '타자 학습', '필사']
-  const learningUrl = new URL(window.location.href)
-  learningUrl.searchParams.set('page', 'learn')
-  learningUrl.searchParams.set('district', selected ?? '강남구')
-  learningUrl.searchParams.delete('route')
+  const mainTabs = ['타자 게임', '필사']
   const selectMainTab = (tab: string) => {
     setActiveTab(tab)
-    if (tab === '타자 연습') return
+    if (tab === '타자 게임') return
     if (tab === '필사') { onOpenTextPractice(); return }
     setDialog('learn')
   }
@@ -102,9 +98,7 @@ export function DistrictSelector({ selected, onSelect, onStart, onOpenTextPracti
     <header className="start-topbar">
       <div className="start-brand"><span className="brand-bike">🚲</span><div><b>따릉이 서울 여행</b><small>TTAREUNGI SEOUL JOURNEY</small></div></div>
       <nav className="typing-main-nav" aria-label="주 메뉴">
-        {mainTabs.map((tab) => tab === '타자 학습'
-          ? <a key={tab} href={learningUrl.toString()} target="_blank" rel="noopener noreferrer" aria-label="타자 학습 — 새 탭에서 열기">{tab} <span aria-hidden="true">↗</span></a>
-          : <button key={tab} type="button" className={activeTab === tab ? 'is-active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => selectMainTab(tab)}>{tab}</button>)}
+        {mainTabs.map((tab) => <button key={tab} type="button" className={activeTab === tab ? 'is-active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => selectMainTab(tab)}>{tab}</button>)}
       </nav>
       <div className="start-top-actions">
         <div className="typing-account-actions">

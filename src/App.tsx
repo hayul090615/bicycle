@@ -18,7 +18,7 @@ import type { DistrictCourse, GameResultData, LeaderboardEntry } from './types/g
 import { SEOUL_BOUNDARY } from './data/seoulBoundary'
 import { savedSiteLocale } from './services/siteLocale'
 import { registerSiteVisit } from './services/siteVisits'
-import { GameGuide, shouldShowGameGuide } from './components/GameGuide'
+import { GameGuide } from './components/GameGuide'
 
 type AppScreen = 'select' | 'text' | 'game' | 'result' | 'tour' | AuthPageKind
 /** URL에 지정된 화면을 읽어 최초 진입 화면을 결정한다. */
@@ -66,7 +66,7 @@ const SEOUL_SPLASH_PATH = SEOUL_BOUNDARY.map(([lng, lat], index) => {
 function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onToggleTheme }: { course: DistrictCourse; playedStationIds: readonly string[]; onHome: () => void; onResult: (result: GameResultData) => void; lightMode: boolean; onToggleTheme: () => void }) {
   // useRef는 지도 객체나 이전 값을 기억하는 상자다. current를 바꿔도 화면을 다시 그리지는 않는다.
   const inputRef = useRef<HTMLInputElement>(null)
-  const [guideOpen, setGuideOpen] = useState(shouldShowGameGuide)
+  const [guideOpen, setGuideOpen] = useState(true)
   const game = useTypingGame(course, onResult, guideOpen)
   const stationData = useBikeStations(course.district as SeoulDistrict)
   const overallProgress = ((game.stationIndex + game.segmentProgress) / (course.stations.length - 1)) * 100
@@ -101,7 +101,7 @@ function GameScreen({ course, playedStationIds, onHome, onResult, lightMode, onT
       dataStatus={stationData.status} lightMode={lightMode} allDistrictStations={stationData.stations} playedStationIds={playedStationIds} />
     <GameHeader district={course.district} elapsedSeconds={game.elapsedSeconds} score={game.score} accuracy={game.accuracy}
       combo={game.combo} onPause={game.togglePause} onHome={onHome} paused={game.status === 'paused'}
-      progress={overallProgress} lightMode={lightMode} onToggleTheme={onToggleTheme} onHelp={() => setGuideOpen(true)} />
+      progress={overallProgress} lightMode={lightMode} onToggleTheme={onToggleTheme} />
     <div className="game-hud">
       <div className="station-strip">
         <div className="hud-station-card hud-station-card--current">
@@ -164,7 +164,6 @@ export default function App() {
     catch { return {} }
   })
   const [highScore, setHighScore] = useState(() => Number(localStorage.getItem(HIGH_SCORE_KEY) ?? 0))
-  const selectedCourse = selected ? districtCourses[selected] : undefined
   const handleResult = useCallback((gameResult: GameResultData) => {
     setResult(gameResult)
     setHighScore((value) => Math.max(value, gameResult.score))
@@ -222,11 +221,12 @@ export default function App() {
     if (!selected) setSelected('강남구')
     setScreen('text')
   }
-  const startGame = () => {
-    if (!selected || !selectedCourse) return
-    setActiveCourse(createDistrictCourse(selected, playedStations[selected] ?? []))
+  const startDistrictGame = (district: SeoulDistrict) => {
+    setSelected(district)
+    setActiveCourse(createDistrictCourse(district, playedStations[district] ?? []))
     setRunKey((value) => value + 1); setResult(null); setCurrentRankingId(null); setScreen('game')
   }
+  const startGame = () => { if (selected) startDistrictGame(selected) }
   let screenContent: ReactNode
   if (screen === 'game' && activeCourse) screenContent = <GameScreen key={runKey} course={activeCourse} playedStationIds={selected ? (playedStations[selected] ?? []) : []} onHome={goHome} onResult={handleResult} lightMode={lightMode} onToggleTheme={toggleTheme} />
   else if (screen === 'result' && activeCourse && result) screenContent = <GameResult district={activeCourse.district} result={result} highScore={highScore}
@@ -234,7 +234,7 @@ export default function App() {
   else if (screen === 'tour') screenContent = <TouristGuide onBack={goHome} darkMode={!lightMode} onToggleTheme={toggleTheme} />
   else if (screen === 'login' || screen === 'signup') screenContent = <AuthPage key={screen} kind={screen} onHome={goHome} onNavigate={openAuth} />
   else if (screen === 'text') screenContent = <TextPractice district={selected} onDistrictChange={setSelected} onBack={goHome} />
-  else screenContent = <DistrictSelector selected={selected} onSelect={setSelected} onStart={startGame} onOpenTours={openTours}
+  else screenContent = <DistrictSelector selected={selected} onSelect={startDistrictGame} onStart={startGame} onOpenTours={openTours}
     onOpenTextPractice={openTextPractice}
     onOpenAuth={openAuth}
     highScore={highScore} playedStations={playedStations} />

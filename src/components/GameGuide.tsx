@@ -2,14 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import './GameGuide.css'
 
-const HIDDEN_KEY = 'seoul-typing-game-guide-hidden-v1'
-export function shouldShowGameGuide() {
-  try { return localStorage.getItem(HIDDEN_KEY) !== '1' } catch { return true }
-}
-
 const PARTS = [
   { id: 'stats', selector: '.game-header .stats-row', title: '시간·점수·정확도', description: '첫 글자를 입력하면 시간이 시작돼요. 맞게 입력한 기록과 연속 정답을 여기서 확인하세요.' },
-  { id: 'actions', selector: '.game-header .header-actions', title: '쉬거나 다시 살펴보기', description: '일시 정지로 잠깐 쉬고, 도움말로 이 설명을 다시 볼 수 있어요. 처음으로를 누르면 자치구 선택 화면으로 돌아가요.' },
+  { id: 'actions', selector: '.game-header .header-actions', title: '잠깐 쉬거나 구 선택으로 돌아가기', description: '일시 정지로 잠깐 쉬었다 이어갈 수 있어요. 처음으로를 누르면 자치구 선택 화면으로 돌아가요.' },
   { id: 'current', selector: '.hud-station-card--current', title: '지금 있는 대여소', description: '자전거가 출발한 대여소예요. 글자를 맞게 입력할수록 지도 위 자전거가 다음 대여소로 움직여요.' },
   { id: 'input', selector: '.game-typing-area', title: '이 이름을 그대로 입력하세요', description: '가운데 크게 보이는 대여소 이름을 아래 칸에 입력하세요. 이름을 완성하면 다음 구간으로 넘어가요.' },
   { id: 'next', selector: '.hud-station-card--next', title: '그다음 대여소 미리 보기', description: '현재 입력 중인 구간을 마친 뒤 이어서 갈 대여소예요. 마지막 구간에는 코스 도착이라고 표시돼요.' },
@@ -21,17 +16,10 @@ type Layout = { width: number; height: number; targets: Array<Bounds | null> }
 export function GameGuide({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
-  const [hideAgain, setHideAgain] = useState(() => !shouldShowGameGuide())
   const [step, setStep] = useState(0)
   const [layout, setLayout] = useState<Layout>(() => ({ width: window.innerWidth, height: window.innerHeight, targets: [] }))
   const compact = layout.width < 1200 || layout.height < 850
-  const dismiss = () => {
-    try {
-      if (hideAgain) localStorage.setItem(HIDDEN_KEY, '1')
-      else localStorage.removeItem(HIDDEN_KEY)
-    } catch { /* 안내는 저장이 차단되어도 닫을 수 있다. */ }
-    onClose()
-  }
+  const dismiss = onClose
   useEffect(() => {
     const element = dialog.current
     if (!element) return
@@ -110,7 +98,6 @@ export function GameGuide({ onClose }: { onClose: () => void }) {
         <div className="game-guide-navigation"><button type="button" disabled={step === 0} onClick={() => setStep(value => value - 1)}>이전</button>
           <button type="button" disabled={step === PARTS.length - 1} onClick={() => setStep(value => value + 1)}>다음</button></div>
       </div> : <p className="game-guide-intro">표시된 다섯 곳을 확인해 보세요.<br />설명을 보는 동안 게임은 멈춰 있어요.</p>}
-      <label className="game-guide-remember"><input type="checkbox" checked={hideAgain} onChange={event => setHideAgain(event.target.checked)} />다음부터 이 설명 보지 않기</label>
       <button ref={closeButton} className="game-guide-start" type="button" onClick={dismiss}>설명 닫고 시작</button>
     </section>
   </dialog>, document.body)
